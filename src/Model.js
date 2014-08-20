@@ -4,9 +4,10 @@
 "use strict";
 var instances   = {},
     cache       = {},
-    extend      = MetaphorJs.apply,
+    extend      = MetaphorJs.extend,
     ajax        = MetaphorJs.ajax,
-    create      = MetaphorJs.create;
+    create      = MetaphorJs.create,
+    Promise     = MetaphorJs.lib.Promise;
 
 
 /**
@@ -292,19 +293,7 @@ MetaphorJs.define("MetaphorJs.data.Model", {
      * @returns MetaphorJs.lib.Promise
      */
     loadRecord: function(id) {
-
-        var self    = this;/*,
-            p       = ajax(self._createAjaxCfg("record", "load", id)),
-            df      = new jQuery.Deferred;
-
-        p.done(function(response){
-                self._processRecordResponse("load", response, df);
-            })
-            .fail(df.reject);
-
-        return df.promise();*/
-
-        return ajax(self._createAjaxCfg("record", "load", id));
+        return ajax(this._createAjaxCfg("record", "load", id));
     },
 
     /**
@@ -331,9 +320,6 @@ MetaphorJs.define("MetaphorJs.data.Model", {
     deleteRecord: function(rec) {
         return ajax(this._createAjaxCfg("record", "delete", rec.getId()));
     },
-
-
-
 
     /**
      * @access public

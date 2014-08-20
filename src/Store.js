@@ -13,7 +13,7 @@ var create      = MetaphorJs.create,
     Model       = MetaphorJs.data.Model,
     is          = MetaphorJs.is,
     emptyFn     = MetaphorJs.emptyFn,
-    extend      = MetaphorJs.apply;
+    extend      = MetaphorJs.extend;
 
 
 /**
@@ -382,12 +382,13 @@ MetaphorJs.d("MetaphorJs.data.Store", "MetaphorJs.cmp.Base", {
             self.loading    = false;
 
             self.onLoad();
+
             self.trigger("load", self);
         },
 
         /**
          * @param {object} params
-         * @returns jQuery.Deferred
+         * @returns MetaphorJs.lib.Promise
          */
         load: function(params) {
 
@@ -427,7 +428,7 @@ MetaphorJs.d("MetaphorJs.data.Store", "MetaphorJs.cmp.Base", {
         onFailedLoad: emptyFn,
 
         /**
-         * @returns jQuery.Deferred
+         * @returns MetaphorJs.lib.Promise
          */
         save: function() {
 
@@ -492,7 +493,7 @@ MetaphorJs.d("MetaphorJs.data.Store", "MetaphorJs.cmp.Base", {
 
         /**
          * @param {[]} ids
-         * @returns jQuery.Deferred
+         * @returns MetaphorJs.lib.Promise
          */
         deleteById: function(ids) {
 
@@ -541,7 +542,7 @@ MetaphorJs.d("MetaphorJs.data.Store", "MetaphorJs.cmp.Base", {
 
         /**
          * @param {number} inx
-         * @returns jQuery.Deferred
+         * @returns MetaphorJs.lib.Promise
          */
         deleteAt: function(inx) {
             var self    = this,
@@ -555,7 +556,7 @@ MetaphorJs.d("MetaphorJs.data.Store", "MetaphorJs.cmp.Base", {
 
         /**
          * @param {MetaphorJs.data.Record} rec
-         * @returns jQuery.Deferred
+         * @returns MetaphorJs.lib.Promise
          */
         "delete": function(rec) {
             var self    = this;
@@ -564,7 +565,7 @@ MetaphorJs.d("MetaphorJs.data.Store", "MetaphorJs.cmp.Base", {
 
         /**
          * @param {MetaphorJs.data.Record[]} recs
-         * @returns jQuery.Deferred
+         * @returns MetaphorJs.lib.Promise
          */
         deleteRecords: function(recs) {
             var ids     = [],
@@ -810,6 +811,7 @@ MetaphorJs.d("MetaphorJs.data.Store", "MetaphorJs.cmp.Base", {
                     if (!silent) {
                         self.trigger('add', prevLength, rec);
                     }
+
                     return;
                 }
                 else {
@@ -831,12 +833,14 @@ MetaphorJs.d("MetaphorJs.data.Store", "MetaphorJs.cmp.Base", {
             self.items.push(rec);
             self.keys.push(id);
 
+
             if (rec instanceof Record) {
                 rec.attachStore(self);
                 self.bindRecord("on", rec);
             }
 
             self.onAdd(self.length - 1, [rec]);
+
             if (!silent) {
                 self.trigger('add', self.length - 1, [rec]);
             }

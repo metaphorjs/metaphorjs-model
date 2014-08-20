@@ -4,7 +4,7 @@
     var Model   = MetaphorJs.data.Model,
         create  = MetaphorJs.create,
         is      = MetaphorJs.is,
-        extend  = MetaphorJs.apply;
+        extend  = MetaphorJs.extend;
 
 
 /**
