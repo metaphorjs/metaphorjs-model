@@ -1,0 +1,7 @@
+{
+    "metaphorjs": {
+        "files": [
+            "src/*"
+        ]
+    }
+}

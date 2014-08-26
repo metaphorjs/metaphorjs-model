@@ -1,3 +1,11 @@
+//#require ../../metaphorjs/src/func/class/defineClass.js
+//#require ../../metaphorjs/src/func/array/isArray.js
+//#require ../../metaphorjs/src/func/class/isInstanceOf.js
+//#require ../../metaphorjs/src/func/class/factory.js
+//#require ../../metaphorjs/src/func/emptyFn.js
+//#require ../../metaphorjs/src/func/extend.js
+//#require vars/Model.js
+//#require vars/Record.js
 
 (function(){
 
@@ -7,21 +15,13 @@ var storeId     = 0;
 var allStores   = {};
 
 
-var create      = MetaphorJs.create,
-    isArray     = MetaphorJs.isArray,
-    Record      = MetaphorJs.data.Record,
-    Model       = MetaphorJs.data.Model,
-    is          = MetaphorJs.is,
-    emptyFn     = MetaphorJs.emptyFn,
-    extend      = MetaphorJs.extend;
-
 
 /**
  * @namespace MetaphorJs
  * @class MetaphorJs.data.Store
  * @extends MetaphorJs.cmp.Observable
  */
-MetaphorJs.d("MetaphorJs.data.Store", "MetaphorJs.cmp.Base", {
+defineClass("MetaphorJs.data.Store", "MetaphorJs.cmp.Base", {
 
         /**
          * @var {string}
@@ -186,10 +186,10 @@ MetaphorJs.d("MetaphorJs.data.Store", "MetaphorJs.cmp.Base", {
             allStores[self.id]  = self;
 
             if (typeof self.model == "string") {
-                self.model  = create(self.model);
+                self.model  = factory(self.model);
             }
-            else if (!is(self.model, Model)) {
-                self.model  = create("MetaphorJs.data.Model", self.model);
+            else if (!isInstanceOf(self.model, Model)) {
+                self.model  = factory("MetaphorJs.data.Model", self.model);
             }
 
             if (url || options.url) {
@@ -368,6 +368,7 @@ MetaphorJs.d("MetaphorJs.data.Store", "MetaphorJs.cmp.Base", {
          * @param {[]} recs
          */
         importData: function(recs) {
+
             var self    = this;
 
             self.suspendAllEvents();
@@ -382,7 +383,6 @@ MetaphorJs.d("MetaphorJs.data.Store", "MetaphorJs.cmp.Base", {
             self.loading    = false;
 
             self.onLoad();
-
             self.trigger("load", self);
         },
 
@@ -418,9 +418,9 @@ MetaphorJs.d("MetaphorJs.data.Store", "MetaphorJs.cmp.Base", {
                     self.importData(response.data);
                     self.totalLength    = parseInt(response.total);
                 })
-                .fail(function() {
+                .fail(function(reason) {
                     self.onFailedLoad();
-                    self.trigger("failedload", self);
+                    self.trigger("failedload", self, reason);
                 });
         },
 
@@ -729,7 +729,7 @@ MetaphorJs.d("MetaphorJs.data.Store", "MetaphorJs.cmp.Base", {
                 }
 
                 if (!r) {
-                    r       = create(type, id, item, {
+                    r       = factory(type, id, item, {
                                 model:      self.model,
                                 standalone: false
                     });
@@ -1427,7 +1427,7 @@ MetaphorJs.d("MetaphorJs.data.Store", "MetaphorJs.cmp.Base", {
                                 o.value : o.text;
                 d.push([value, o.text]);
             }
-            var s   = create("MetaphorJs.data.Store", {server: {load: {id: 0}}});
+            var s   = factory("MetaphorJs.data.Store", {server: {load: {id: 0}}});
             s.loadArray(d);
             return s;
         },

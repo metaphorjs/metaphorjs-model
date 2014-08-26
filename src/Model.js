@@ -1,20 +1,22 @@
+//#require ../../metaphorjs/src/func/extend.js
+//#require ../../metaphorjs/src/func/class/defineClass.js
+//#require ../../metaphorjs-ajax/src/vars/ajax.js
+//#require ../../metaphorjs/src/func/class/factory.js
+//#require ../../metaphorjs/src/vars/Promise.js
+
 
 (function(){
 
 "use strict";
 var instances   = {},
-    cache       = {},
-    extend      = MetaphorJs.extend,
-    ajax        = MetaphorJs.ajax,
-    create      = MetaphorJs.create,
-    Promise     = MetaphorJs.lib.Promise;
+    cache       = {};
 
 
 /**
  * @namespace MetaphorJs
  * @class MetaphorJs.data.Model
  */
-MetaphorJs.define("MetaphorJs.data.Model", {
+defineClass("MetaphorJs.data.Model", {
 
     type:           null,
     fields:         null,
@@ -97,8 +99,8 @@ MetaphorJs.define("MetaphorJs.data.Model", {
 
         self.fields     = {};
 
-        extend(self, defaults, false);
-        extend(self, cfg, true);
+        extend(self, defaults, false, true);
+        extend(self, cfg, true, true);
 
         self.plain      = !self.type;
     },
@@ -170,8 +172,11 @@ MetaphorJs.define("MetaphorJs.data.Model", {
 
         var self        = this,
             profile     = self[what],
-            cfg         = extend({}, typeof profile[type] == "string" ?
-                            {url: profile[type]} : profile[type]),
+            cfg         = extend({},
+                                typeof profile[type] == "string" ?
+                                    {url: profile[type]} :
+                                    profile[type]
+                                ),
             idProp      = self.getProp(what, type, "id"),
             dataProp    = self.getProp(what, type, "data"),
             url         = self.getProp(what, type, "url"),
@@ -201,12 +206,11 @@ MetaphorJs.define("MetaphorJs.data.Model", {
             cfg.data,
             self.extra,
             profile.extra,
-            profile[type] ? profile[type].extra : {}
+            profile[type] ? profile[type].extra : {},
+            false,
+            true
         );
 
-        /*if (!cfg.type) {
-            cfg.type    = type == "load" ? "GET" : "POST";
-        }*/
         if (!cfg.method) {
             cfg.method = type == "load" ? "GET" : "POST";
         }
@@ -328,7 +332,7 @@ MetaphorJs.define("MetaphorJs.data.Model", {
      * @returns MetaphorJs.lib.Promise
      */
     loadStore: function(store, params) {
-        return ajax(extend(this._createAjaxCfg("store", "load"), params, true));
+        return ajax(extend(this._createAjaxCfg("store", "load"), params, true, true));
     },
 
     /**
@@ -505,18 +509,18 @@ MetaphorJs.define("MetaphorJs.data.Model", {
     create: function(model, cfg) {
 
         if (model == "MetaphorJs.data.Model") {
-            return create(model, cfg);
+            return factory(model, cfg);
         }
         else {
             if (cfg) {
-                return create(model, cfg);
+                return factory(model, cfg);
             }
             else {
                 if (instances[model]) {
                     return instances[model];
                 }
                 else {
-                    return instances[model] = create(model);
+                    return instances[model] = factory(model);
                 }
             }
         }

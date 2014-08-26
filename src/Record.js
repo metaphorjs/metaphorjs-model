@@ -1,10 +1,8 @@
-
-(function(){
-
-    var Model   = MetaphorJs.data.Model,
-        create  = MetaphorJs.create,
-        is      = MetaphorJs.is,
-        extend  = MetaphorJs.extend;
+//#require ../../metaphorjs/src/func/class/defineClass.js
+//#require ../../metaphorjs/src/func/class/factory.js
+//#require ../../metaphorjs/src/func/class/isInstanceOf.js
+//#require ../../metaphorjs/src/func/extend.js
+//#require vars/Model.js
 
 
 /**
@@ -12,7 +10,7 @@
  * @class MetaphorJs.data.Record
  * @extends MetaphorJs.cmp.Observable
  */
-MetaphorJs.define("MetaphorJs.data.Record", "MetaphorJs.cmp.Base", {
+defineClass("MetaphorJs.data.Record", "MetaphorJs.cmp.Base", {
 
     /**
      * @var mixed
@@ -116,10 +114,10 @@ MetaphorJs.define("MetaphorJs.data.Record", "MetaphorJs.cmp.Base", {
         self.supr(cfg);
 
         if (typeof self.model == "string") {
-            self.model  = create(self.model);
+            self.model  = factory(self.model);
         }
-        else if (!is(self.model, "MetaphorJs.data.Model")) {
-            self.model  = create("MetaphorJs.data.Model", self.model);
+        else if (!isInstanceOf(self.model, "MetaphorJs.data.Model")) {
+            self.model  = factory("MetaphorJs.data.Model", self.model);
         }
 
         self.id     = id;
@@ -434,5 +432,3 @@ MetaphorJs.define("MetaphorJs.data.Record", "MetaphorJs.cmp.Base", {
     }
 
 });
-
-}());
