@@ -1,8 +1,11 @@
-//#require ../../metaphorjs/src/func/extend.js
-//#require ../../metaphorjs/src/func/class/defineClass.js
-//#require ../../metaphorjs-ajax/src/vars/ajax.js
-//#require ../../metaphorjs/src/func/class/factory.js
-//#require ../../metaphorjs/src/vars/Promise.js
+
+var extend  = require("../../metaphorjs/src/func/extend.js"),
+    defineClass = require("../../metaphorjs-class/src/func/defineClass.js"),
+    ajax = require("../../metaphorjs-ajax/src/metaphorjs.ajax.js"),
+    factory = require("../../metaphorjs-class/src/func/factory.js"),
+    Promise = require("../../metaphorjs-promise/src/metaphorjs.promise.js"),
+    isString = require("../../metaphorjs/src/func/isString.js");
+
 
 
 (function(){
@@ -173,7 +176,7 @@ defineClass("MetaphorJs.data.Model", {
         var self        = this,
             profile     = self[what],
             cfg         = extend({},
-                                typeof profile[type] == "string" ?
+                                isString(profile[type]) ?
                                     {url: profile[type]} :
                                     profile[type]
                                 ),
@@ -190,7 +193,7 @@ defineClass("MetaphorJs.data.Model", {
                 throw what + "." + type + " not defined";
             }
         }
-        if (typeof cfg == "string") {
+        if (isString(cfg)) {
             cfg         = {url: cfg};
         }
 
@@ -376,7 +379,7 @@ defineClass("MetaphorJs.data.Model", {
             f       = self.fields[name];
 
         if (f) {
-            var type = typeof f == "string" ? f : f.type;
+            var type = isString(f) ? f : f.type;
 
             switch (type) {
                 case "int": {
@@ -385,7 +388,7 @@ defineClass("MetaphorJs.data.Model", {
                 }
                 case "bool":
                 case "boolean": {
-                    if (typeof value == "string") {
+                    if (isString(value)) {
                         value   = value.toLowerCase();
                         value   = !(value === "off" || value === "no" || value === "0" ||
                                     value == "false" || value == "null");
@@ -449,7 +452,7 @@ defineClass("MetaphorJs.data.Model", {
             f       = self.fields[name];
 
         if (f) {
-            var type = typeof f == "string" ? f : f.type;
+            var type = isString(f) ? f : f.type;
 
             switch (type) {
                 case "bool":
@@ -574,3 +577,6 @@ defineClass("MetaphorJs.data.Model", {
 
 
 }());
+
+
+module.exports = MetaphorJs.data.Model;

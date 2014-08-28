@@ -1,7 +1,8 @@
 {
     "metaphorjs": {
         "files": [
-            "src/*"
+            "src/*",
+            "src/directive/*"
         ]
     }
 }

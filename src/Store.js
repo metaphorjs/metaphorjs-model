@@ -1,11 +1,16 @@
-//#require ../../metaphorjs/src/func/class/defineClass.js
-//#require ../../metaphorjs/src/func/array/isArray.js
-//#require ../../metaphorjs/src/func/class/isInstanceOf.js
-//#require ../../metaphorjs/src/func/class/factory.js
-//#require ../../metaphorjs/src/func/emptyFn.js
-//#require ../../metaphorjs/src/func/extend.js
-//#require vars/Model.js
-//#require vars/Record.js
+
+var Model   = require("./Model.js"),
+    Record  = require("./Record.js"),
+    extend  = require("../../metaphorjs/src/func/extend.js"),
+    emptyFn = require("../../metaphorjs/src/func/emptyFn.js"),
+    isArray = require("../../metaphorjs/src/func/isArray.js"),
+    defineClass = require("../../metaphorjs-class/src/func/defineClass.js"),
+    isInstanceOf = require("../../metaphorjs-class/src/func/isInstanceOf.js"),
+    factory = require("../../metaphorjs-class/src/func/factory.js"),
+    isString = require("../../metaphorjs/src/func/isString.js"),
+    isNumber = require("../../metaphorjs/src/func/isNumber.js"),
+    isNull = require("../../metaphorjs/src/func/isNull.js"),
+    isUndefined = require("../../metaphorjs/src/func/isUndefined.js");
 
 (function(){
 
@@ -172,7 +177,7 @@ defineClass("MetaphorJs.data.Store", "MetaphorJs.cmp.Base", {
             self.loaded     = false;
             self.extraParams    = self.extraParams || {};
 
-            if (url && typeof url != "string") {
+            if (url && !isString(url)) {
                 initialData = options;
                 options     = url;
                 url         = null;
@@ -185,7 +190,7 @@ defineClass("MetaphorJs.data.Store", "MetaphorJs.cmp.Base", {
             self.id             = self.id || ++storeId;
             allStores[self.id]  = self;
 
-            if (typeof self.model == "string") {
+            if (isString(self.model)) {
                 self.model  = factory(self.model);
             }
             else if (!isInstanceOf(self.model, Model)) {
@@ -789,7 +794,7 @@ defineClass("MetaphorJs.data.Store", "MetaphorJs.cmp.Base", {
                 throw "Cannot add to filtered store";
             }
 
-            if (typeof id != "string" && typeof id != "number") {
+            if (!isString(id) && !isNumber(id)) {
 
                 rec = arguments[0];
 
@@ -820,9 +825,9 @@ defineClass("MetaphorJs.data.Store", "MetaphorJs.cmp.Base", {
                 }
             }
 
-            if (typeof id != 'undefined' && id !== null){
+            if (!isUndefined(id) && !isNull(id)){
                 var old = self.map[id];
-                if(typeof old != 'undefined'){
+                if(!isUndefined(old)){
                     self.replace(id, rec);
                     return;
                 }
@@ -862,7 +867,7 @@ defineClass("MetaphorJs.data.Store", "MetaphorJs.cmp.Base", {
                 var rec = self.items[index];
                 self.items.splice(index, 1);
                 var id = self.keys[index];
-                if(typeof id != 'undefined'){
+                if(!isUndefined(id)){
                     delete self.map[id];
                 }
                 self.keys.splice(index, 1);
@@ -912,7 +917,7 @@ defineClass("MetaphorJs.data.Store", "MetaphorJs.cmp.Base", {
             }
             self.length++;
             self.items.splice(index, 0, rec);
-            if(typeof id != 'undefined' && id !== null){
+            if(!isUndefined(id) && !isNull(id)){
                 self.map[id] = rec;
             }
             self.keys.splice(index, 0, id);
@@ -948,7 +953,7 @@ defineClass("MetaphorJs.data.Store", "MetaphorJs.cmp.Base", {
             rec         = self.processRawDataItem(rec);
             old         = self.map[id];
 
-            if(typeof id == 'undefined' || id === null || typeof old == 'undefined'){
+            if(isUndefined(id) || isNull(id) || isUndefined(old)){
                 return self.add(id, rec);
             }
 
@@ -1002,7 +1007,7 @@ defineClass("MetaphorJs.data.Store", "MetaphorJs.cmp.Base", {
          * @returns bool
          */
         containsId: function(id) {
-            return typeof this.map[id] != 'undefined';
+            return !isUndefined(this.map[id]);
         },
 
         /**
@@ -1270,7 +1275,7 @@ defineClass("MetaphorJs.data.Store", "MetaphorJs.cmp.Base", {
                 return [];
             }
             start = start || 0;
-            end = Math.min(typeof end == 'undefined' || end === null ? self.length-1 : end, self.length-1);
+            end = Math.min(isUndefined(end) || isNull(end) ? self.length-1 : end, self.length-1);
             var i, r = [];
             if(start <= end){
                 for(i = start; i <= end; i++) {

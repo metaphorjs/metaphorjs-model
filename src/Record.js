@@ -1,8 +1,11 @@
-//#require ../../metaphorjs/src/func/class/defineClass.js
-//#require ../../metaphorjs/src/func/class/factory.js
-//#require ../../metaphorjs/src/func/class/isInstanceOf.js
-//#require ../../metaphorjs/src/func/extend.js
-//#require vars/Model.js
+
+var Model   = require("./Model.js"),
+    defineClass = require("../../metaphorjs-class/src/func/defineClass.js"),
+    factory = require("../../metaphorjs-class/src/func/factory.js"),
+    isInstanceOf = require("../../metaphorjs-class/src/func/isInstanceOf.js"),
+    extend  = require("../../metaphorjs/src/func/extend.js"),
+    isString = require("../../metaphorjs/src/func/isString.js");
+
 
 
 /**
@@ -113,7 +116,7 @@ defineClass("MetaphorJs.data.Record", "MetaphorJs.cmp.Base", {
         cfg             = cfg || {};
         self.supr(cfg);
 
-        if (typeof self.model == "string") {
+        if (isString(self.model)) {
             self.model  = factory(self.model);
         }
         else if (!isInstanceOf(self.model, "MetaphorJs.data.Model")) {
@@ -252,7 +255,7 @@ defineClass("MetaphorJs.data.Record", "MetaphorJs.cmp.Base", {
     },
 
     /**
-     * @param {array|null|string} keys
+     * @param {[]|null|string} keys
      * @returns object
      */
     getData: function(keys) {
@@ -260,7 +263,7 @@ defineClass("MetaphorJs.data.Record", "MetaphorJs.cmp.Base", {
             var data = {}, i, len,
                 self    = this;
 
-            keys = typeof keys == "string" ? [keys] : keys;
+            keys = isString(keys) ? [keys] : keys;
 
             for (i = 0, len = keys.length; i < len; i++) {
                 data[keys[i]] = self.data[keys[i]];
@@ -432,3 +435,6 @@ defineClass("MetaphorJs.data.Record", "MetaphorJs.cmp.Base", {
     }
 
 });
+
+
+module.exports = MetaphorJs.data.Record;
