@@ -1,8 +1,67 @@
 {
-    "metaphorjs": {
+    "standalone": {
+        "wrap": true,
+        "global": true,
+        "target": "dist/metaphorjs.model.js",
         "files": [
-            "src/*",
-            "src/directive/*"
+            "src/*"
         ]
+    },
+
+    "npm": {
+        "target": "dist/metaphorjs.model.npm.js",
+        "files": [
+            "src/*"
+        ],
+        "omit": [
+            "../metaphorjs-ajax/src/metaphorjs.ajax.js",
+            "../metaphorjs-promise/src/metaphorjs.promise.js",
+            "../metaphorjs-observable/src/metaphorjs.observable.js",
+            "../metaphorjs-select/src/metaphorjs.select.js",
+            "../metaphorjs-namespace/src/metaphorjs.namespace.js",
+            "../metaphorjs-class/src/metaphorjs.class.js"
+        ],
+        "exports": "MetaphorJs.data",
+        "require": {
+            "metaphorjs-ajax": "ajax",
+            "metaphorjs-promise": "Promise",
+            "metaphorjs-namespace": "Namespace",
+            "metaphorjs-class": "Class"
+        }
+    },
+
+    "amd": {
+        "target": "dist/metaphorjs.model.amd.js",
+        "files": [
+            "src/*"
+        ],
+        "omit": [
+            "../metaphorjs-ajax/src/metaphorjs.ajax.js",
+            "../metaphorjs-promise/src/metaphorjs.promise.js",
+            "../metaphorjs-observable/src/metaphorjs.observable.js",
+            "../metaphorjs-select/src/metaphorjs.select.js",
+            "../metaphorjs-namespace/src/metaphorjs.namespace.js",
+            "../metaphorjs-class/src/metaphorjs.class.js"
+        ],
+        "define": {
+            "name": "metaphorjs-model",
+            "return": "MetaphorJs.data",
+            "deps": {
+                "metaphorjs-ajax": "ajax",
+                "metaphorjs-promise": "Promise",
+                "metaphorjs-namespace": "Namespace",
+                "metaphorjs-class": "Class"
+            }
+        }
+    },
+
+    "compile-standalone": {
+        "target": "dist/metaphorjs.model.min.js",
+        "compile": "standalone"
+    },
+
+    "compile-amd": {
+        "target": "dist/metaphorjs.model.amd.min.js",
+        "compile": "amd"
     }
 }

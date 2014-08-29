@@ -6,14 +6,14 @@ var Model   = require("./Model.js"),
     extend  = require("../../metaphorjs/src/func/extend.js"),
     isString = require("../../metaphorjs/src/func/isString.js");
 
-
+require("../../metaphorjs/src/cmp/Base.js");
 
 /**
  * @namespace MetaphorJs
  * @class MetaphorJs.data.Record
  * @extends MetaphorJs.cmp.Observable
  */
-defineClass("MetaphorJs.data.Record", "MetaphorJs.cmp.Base", {
+module.exports = defineClass("MetaphorJs.data.Record", "MetaphorJs.cmp.Base", {
 
     /**
      * @var mixed
@@ -436,5 +436,3 @@ defineClass("MetaphorJs.data.Record", "MetaphorJs.cmp.Base", {
 
 });
 
-
-module.exports = MetaphorJs.data.Record;
