@@ -1,4 +1,9 @@
-define("metaphorjs-model", ['metaphorjs-ajax', 'metaphorjs-promise', 'metaphorjs-namespace', 'metaphorjs-class'], function(ajax, Promise, Namespace, Class) {
+define("metaphorjs-model", ['metaphorjs-ajax', 'metaphorjs-promise', 'metaphorjs-namespace', 'metaphorjs-class', 'metaphorjs'], function(ajax, Promise, Namespace, Class, MetaphorJs) {
+
+
+var defineClass = MetaphorJs.cs.define,
+    factory     = MetaphorJs.cs.factory,
+    isInstanceOf    = MetaphorJs.cs.isInstanceOf;
 
 
 var slice = Array.prototype.slice;
@@ -88,26 +93,6 @@ var extend = function extend() {
 };
 
 
-var MetaphorJs = {
-    lib: {},
-    cmp: {},
-    view: {}
-};
-
-
-
-var ns  = new Namespace(MetaphorJs, "MetaphorJs");
-
-
-var cs = new Class(ns);
-
-
-
-
-var defineClass = cs.define;
-
-
-var factory = cs.factory;
 var isString = function(value) {
     return typeof value == "string";
 };
@@ -685,9 +670,6 @@ var Model = function(){
 
 }();
 
-
-
-var isInstanceOf = cs.isInstanceOf;
 
 var emptyFn = function(){};
 
@@ -2054,7 +2036,6 @@ var isArray = function(value) {
                 self.length++;
                 self.items.push(rec);
                 self.keys.push(id);
-
 
                 if (rec instanceof Record) {
                     rec.attachStore(self);

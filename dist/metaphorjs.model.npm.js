@@ -2058,7 +2058,6 @@ var isArray = function(value) {
                 self.items.push(rec);
                 self.keys.push(id);
 
-
                 if (rec instanceof Record) {
                     rec.attachStore(self);
                     self.bindRecord("on", rec);
