@@ -4,7 +4,8 @@ var extend  = require("../../metaphorjs/src/func/extend.js"),
     ajax = require("../../metaphorjs-ajax/src/metaphorjs.ajax.js"),
     factory = require("../../metaphorjs-class/src/func/factory.js"),
     Promise = require("../../metaphorjs-promise/src/metaphorjs.promise.js"),
-    isString = require("../../metaphorjs/src/func/isString.js");
+    isString = require("../../metaphorjs/src/func/isString.js"),
+    undf = require("../../metaphorjs/src/var/undf.js");
 
 
 
@@ -286,7 +287,7 @@ module.exports = function(){
             var self    = this,
                 sucProp = self.getProp(what, type, "success");
 
-            if (sucProp && response[sucProp] != undefined) {
+            if (sucProp && response[sucProp] != undf) {
                 return response[sucProp];
             }
             else {

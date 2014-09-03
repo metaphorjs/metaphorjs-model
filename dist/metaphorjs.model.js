@@ -3,24 +3,74 @@
 
 
 var slice = Array.prototype.slice;
-/**
- * @param {*} obj
- * @returns {boolean}
- */
-var isPlainObject = function(obj) {
-    return !!(obj && obj.constructor === Object);
+var toString = Object.prototype.toString;
+var undf = undefined;
+
+
+
+var varType = function(){
+
+    var types = {
+        '[object String]': 0,
+        '[object Number]': 1,
+        '[object Boolean]': 2,
+        '[object Object]': 3,
+        '[object Function]': 4,
+        '[object Array]': 5,
+        '[object RegExp]': 9,
+        '[object Date]': 10
+    };
+
+
+    /**
+        'string': 0,
+        'number': 1,
+        'boolean': 2,
+        'object': 3,
+        'function': 4,
+        'array': 5,
+        'null': 6,
+        'undefined': 7,
+        'NaN': 8,
+        'regexp': 9,
+        'date': 10
+    */
+
+    return function(val) {
+
+        if (!val) {
+            if (val === null) {
+                return 6;
+            }
+            if (val === undf) {
+                return 7;
+            }
+        }
+
+        var num = types[toString.call(val)];
+
+        if (num === undf) {
+            return -1;
+        }
+
+        if (num == 1 && isNaN(val)) {
+            num = 8;
+        }
+
+        return num;
+    };
+
+}();
+
+
+var isPlainObject = function(value) {
+    return varType(value) === 3;
 };
+
 
 var isBool = function(value) {
-    return typeof value == "boolean";
+    return varType(value) === 2;
 };
-var strUndef = "undefined";
-
-
-var isUndefined = function(any) {
-    return typeof any == strUndef;
-};
-
 var isNull = function(value) {
     return value === null;
 };
@@ -57,14 +107,14 @@ var extend = function extend() {
         if (src = args.shift()) {
             for (k in src) {
 
-                if (src.hasOwnProperty(k) && !isUndefined((value = src[k]))) {
+                if (src.hasOwnProperty(k) && (value = src[k]) !== undf) {
 
                     if (deep) {
                         if (dst[k] && isPlainObject(dst[k]) && isPlainObject(value)) {
                             extend(dst[k], value, override, deep);
                         }
                         else {
-                            if (override === true || isUndefined(dst[k]) || isNull(dst[k])) {
+                            if (override === true || dst[k] == undf) { // == checks for null and undefined
                                 if (isPlainObject(value)) {
                                     dst[k] = {};
                                     extend(dst[k], value, override, true);
@@ -76,7 +126,7 @@ var extend = function extend() {
                         }
                     }
                     else {
-                        if (override === true || isUndefined(dst[k]) || isNull(dst[k])) {
+                        if (override === true || dst[k] == undf) {
                             dst[k] = value;
                         }
                     }
@@ -90,13 +140,17 @@ var extend = function extend() {
 
 
 var isFunction = function(value) {
-    return typeof value === 'function';
+    return typeof value == 'function';
 };
+
+
 var isString = function(value) {
-    return typeof value == "string";
+    return varType(value) === 0;
 };
+
+
 var isObject = function(value) {
-    return value != null && typeof value === 'object';
+    return value !== null && typeof value == "object" && varType(value) > 2;
 };
 
 
@@ -121,7 +175,7 @@ var Namespace   = function(root, rootName) {
         self    = this;
 
     if (!root) {
-        if (!isUndefined(global)) {
+        if (global) {
             root    = global;
         }
         else {
@@ -158,7 +212,7 @@ var Namespace   = function(root, rootName) {
                     }
                 }
 
-                if (isUndefined(current[name])) {
+                if (current[name] === undf) {
                     current[name]   = {};
                 }
 
@@ -183,16 +237,16 @@ var Namespace   = function(root, rootName) {
      */
     var get       = function(ns, cacheOnly) {
 
-        if (!isUndefined(cache[ns])) {
+        if (cache[ns] !== undf) {
             return cache[ns];
         }
 
-        if (rootName && !isUndefined(cache[rootName + "." + ns])) {
+        if (rootName && cache[rootName + "." + ns] !== undf) {
             return cache[rootName + "." + ns];
         }
 
         if (cacheOnly) {
-            return undefined;
+            return undf;
         }
 
         var tmp     = ns.split("."),
@@ -212,8 +266,8 @@ var Namespace   = function(root, rootName) {
                 }
             }
 
-            if (isUndefined(current[name])) {
-                return undefined;
+            if (current[name] === undf) {
+                return undf;
             }
 
             current = current[name];
@@ -238,8 +292,7 @@ var Namespace   = function(root, rootName) {
             parent  = parse[0],
             name    = parse[1];
 
-        if (isObject(parent) &&
-            isUndefined(parent[name])) {
+        if (isObject(parent) && parent[name] === undf) {
 
             parent[name]        = value;
             cache[parse[2]]     = value;
@@ -255,7 +308,7 @@ var Namespace   = function(root, rootName) {
      * @returns boolean
      */
     var exists      = function(ns) {
-        return !isUndefined(cache[ns]);
+        return cache[ns] !== undf;
     };
 
     /**
@@ -268,7 +321,7 @@ var Namespace   = function(root, rootName) {
         if (rootName && ns.indexOf(rootName) !== 0) {
             ns = rootName + "." + ns;
         }
-        if (isUndefined(cache[ns])) {
+        if (cache[ns] === undf) {
             cache[ns] = value;
         }
         return value;
@@ -295,8 +348,35 @@ Namespace.prototype = {
 
 
 
+/**
+ * @param {Function} fn
+ * @param {Object} context
+ * @param {[]} args
+ */
+var async = function(fn, context, args) {
+    setTimeout(function(){
+        fn.apply(context, args || []);
+    }, 0);
+};
+var strUndef = "undefined";
 
 
+var error = function(e) {
+
+    var stack = e.stack || (new Error).stack;
+
+    if (typeof console != strUndef && console.log) {
+        async(function(){
+            console.log(e);
+            if (stack) {
+                console.log(stack);
+            }
+        });
+    }
+    else {
+        throw e;
+    }
+};
 
 /*!
  * inspired by and based on klass
@@ -322,15 +402,17 @@ var Class = function(ns){
         wrap    = function(parent, k, fn) {
 
             return function() {
-                var ret     = undefined,
+                var ret,
                     prev    = this.supr;
 
                 this.supr   = parent[proto][k] || function(){};
 
-                try {
+                //try {
                     ret     = fn.apply(this, arguments);
-                }
-                catch(thrownError) {}
+                //}
+                //catch(thrownError) {
+                //    error(thrownError);
+                //}
 
                 this.supr   = prev;
                 return ret;
@@ -364,13 +446,14 @@ var Class = function(ns){
             };
 
             process(prototype, cls, parent);
-            fn[proto]   = prototype;
-            fn[proto].constructor = fn;
+            prototype.constructor = fn;
+            fn[proto] = prototype;
+            //fn[proto].constructor = fn;
             fn[proto].getClass = function() {
-                return this.__proto__.constructor.__class;
+                return fn.__class;
             };
             fn[proto].getParentClass = function() {
-                return this.__proto__.constructor.__parentClass;
+                return fn.__parentClass;
             };
             fn.__instantiate = function(fn) {
 
@@ -684,23 +767,14 @@ var trim = function() {
     return function(value) {
         return isString(value) ? value.trim() : value;
     };
-}();/**
- * @param {Function} fn
- * @param {Object} context
- * @param {[]} args
- */
-var async = function(fn, context, args) {
-    setTimeout(function(){
-        fn.apply(context, args || []);
-    }, 0);
-};
+}();
 
 var emptyFn = function(){};
 
 
 var parseJSON = function() {
 
-    return isUndefined(JSON) ?
+    return typeof JSON != strUndef ?
            function(data) {
                return JSON.parse(data);
            } :
@@ -725,7 +799,7 @@ var parseXML = function(data, type) {
         tmp = new DOMParser();
         xml = tmp.parseFromString(data, type || "text/xml");
     } catch (thrownError) {
-        xml = undefined;
+        xml = undf;
     }
 
     if (!xml || xml.getElementsByTagName("parsererror").length) {
@@ -741,7 +815,7 @@ var parseXML = function(data, type) {
  * @returns {[]}
  */
 var toArray = function(list) {
-    if (list && !isUndefined(list.length) && !isString(list)) {
+    if (list && !list.length != undf && !isString(list)) {
         for(var a = [], i =- 1, l = list.length>>>0; ++i !== l; a[i] = list[i]){}
         return a;
     }
@@ -1333,10 +1407,6 @@ var select = function() {
 
     return select;
 }();
-var toString = Object.prototype.toString;
-var isNumber = function(value) {
-    return typeof value == "number" && !isNaN(value);
-};
 
 
 /**
@@ -1344,8 +1414,7 @@ var isNumber = function(value) {
  * @returns {boolean}
  */
 var isArray = function(value) {
-    return !!(value && isObject(value) && isNumber(value.length) &&
-                toString.call(value) == '[object Array]' || false);
+    return varType(value) === 5;
 };
 var addListener = function(el, event, func) {
     if (el.attachEvent) {
@@ -1763,7 +1832,7 @@ var Event = function(name, returnResult) {
     self.uni            = '$$' + name + '_' + self.hash;
     self.suspended      = false;
     self.lid            = 0;
-    self.returnResult   = isUndefined(returnResult) ? null : returnResult; // first|last|all
+    self.returnResult   = returnResult === undf ? null : returnResult; // first|last|all
 };
 
 
@@ -2072,29 +2141,11 @@ Event.prototype = {
  */
 var isThenable = function(any) {
     var then;
-    if (!any) {
-        return false;
-    }
-    if (!isObject(any) && !isFunction(any)) {
+    if (!any || (!isObject(any) && !isFunction(any))) {
         return false;
     }
     return isFunction((then = any.then)) ?
            then : false;
-};
-
-
-var error = function(e) {
-
-    var stack = e.stack || (new Error).stack;
-
-    async(function(){
-        if (!isUndefined(console) && console.log) {
-            console.log(e);
-            if (stack) {
-                console.log(stack);
-            }
-        }
-    });
 };
 
 
@@ -2197,7 +2248,7 @@ var Promise = function(){
         self._dones      = [];
         self._fails      = [];
 
-        if (!isUndefined(fn)) {
+        if (arguments.length > 0) {
 
             if (then = isThenable(fn)) {
                 if (fn instanceof Promise) {
@@ -2989,7 +3040,7 @@ var ajax = function(){
 
         httpSuccess     = function(r) {
             try {
-                return (!r.status && !isUndefined(location) && location.protocol == "file:")
+                return (!r.status && location && location.protocol == "file:")
                            || (r.status >= 200 && r.status < 300)
                            || r.status === 304 || r.status === 1223; // || r.status === 0;
             } catch(thrownError){}
@@ -3044,7 +3095,7 @@ var ajax = function(){
     var AJAX    = function(opt) {
 
         var self        = this,
-            href        = !isUndefined(window) ? window.location.href : "",
+            href        = window ? window.location.href : "",
             local       = rurl.exec(href.toLowerCase()) || [],
             parts       = rurl.exec(opt.url.toLowerCase());
 
@@ -3064,9 +3115,7 @@ var ajax = function(){
         }
         else if (opt.form) {
             self._form = opt.form;
-            if (opt.method == "POST" && (isUndefined(window) || !window.FormData) &&
-                opt.transport != "iframe") {
-
+            if (opt.method == "POST" && (!window || !window.FormData)) {
                 opt.transport = "iframe";
             }
         }
@@ -3184,10 +3233,10 @@ var ajax = function(){
 
             self._jsonpName = cbName;
 
-            if (!isUndefined(window)) {
+            if (window) {
                 window[cbName] = bind(self.jsonpCallback, self);
             }
-            if (!isUndefined(global)) {
+            if (global) {
                 global[cbName] = bind(self.jsonpCallback, self);
             }
 
@@ -3281,10 +3330,10 @@ var ajax = function(){
             delete self._form;
 
             if (self._jsonpName) {
-                if (!isUndefined(window)) {
+                if (window) {
                     delete window[self._jsonpName];
                 }
-                if (!isUndefined(global)) {
+                if (global) {
                     delete global[self._jsonpName];
                 }
             }
@@ -3412,8 +3461,22 @@ var ajax = function(){
             addListener(xhr.upload, "progress", bind(opt.uploadProgress, opt.callbackScope));
         }
 
-        try {
-            var i;
+        xhr.onreadystatechange = bind(self.onReadyStateChange, self);
+    };
+
+    XHRTransport.prototype = {
+
+        _xhr: null,
+        _deferred: null,
+        _ajax: null,
+
+        setHeaders: function() {
+
+            var self = this,
+                opt = self._opt,
+                xhr = self._xhr,
+                i;
+
             if (opt.xhrFields) {
                 for (i in opt.xhrFields) {
                     xhr[i] = opt.xhrFields[i];
@@ -3431,16 +3494,8 @@ var ajax = function(){
             for (i in opt.headers) {
                 xhr.setRequestHeader(i, opt.headers[i]);
             }
-        } catch(thrownError){}
 
-        xhr.onreadystatechange = bind(self.onReadyStateChange, self);
-    };
-
-    XHRTransport.prototype = {
-
-        _xhr: null,
-        _deferred: null,
-        _ajax: null,
+        },
 
         onReadyStateChange: function() {
 
@@ -3460,7 +3515,7 @@ var ajax = function(){
                 if (httpSuccess(xhr)) {
 
                     self._ajax.processResponse(
-                        isString(xhr.responseText) ? xhr.responseText : undefined,
+                        isString(xhr.responseText) ? xhr.responseText : undf,
                         xhr.getResponseHeader("content-type") || ''
                     );
                 }
@@ -3483,6 +3538,7 @@ var ajax = function(){
 
             try {
                 self._xhr.open(opt.method, opt.url, true, opt.username, opt.password);
+                self.setHeaders();
                 self._xhr.send(opt.data);
             }
             catch (thrownError) {
@@ -3951,7 +4007,7 @@ var Model = function(){
             var self    = this,
                 sucProp = self.getProp(what, type, "success");
 
-            if (sucProp && response[sucProp] != undefined) {
+            if (sucProp && response[sucProp] != undf) {
                 return response[sucProp];
             }
             else {
@@ -4765,6 +4821,11 @@ var Record = defineClass("MetaphorJs.data.Record", "MetaphorJs.cmp.Base", {
 });
 
 
+
+
+var isNumber = function(value) {
+    return varType(value) === 1;
+};
 
 
 
@@ -5581,9 +5642,9 @@ var Record = defineClass("MetaphorJs.data.Record", "MetaphorJs.cmp.Base", {
                     }
                 }
 
-                if (!isUndefined(id) && !isNull(id)){
+                if (id != undf){
                     var old = self.map[id];
-                    if(!isUndefined(old)){
+                    if(old != undf){
                         self.replace(id, rec);
                         return;
                     }
@@ -5622,7 +5683,7 @@ var Record = defineClass("MetaphorJs.data.Record", "MetaphorJs.cmp.Base", {
                     var rec = self.items[index];
                     self.items.splice(index, 1);
                     var id = self.keys[index];
-                    if(!isUndefined(id)){
+                    if(id != undf){
                         delete self.map[id];
                     }
                     self.keys.splice(index, 1);
@@ -5672,7 +5733,7 @@ var Record = defineClass("MetaphorJs.data.Record", "MetaphorJs.cmp.Base", {
                 }
                 self.length++;
                 self.items.splice(index, 0, rec);
-                if(!isUndefined(id) && !isNull(id)){
+                if(id != undf){
                     self.map[id] = rec;
                 }
                 self.keys.splice(index, 0, id);
@@ -5708,7 +5769,7 @@ var Record = defineClass("MetaphorJs.data.Record", "MetaphorJs.cmp.Base", {
                 rec         = self.processRawDataItem(rec);
                 old         = self.map[id];
 
-                if(isUndefined(id) || isNull(id) || isUndefined(old)){
+                if(id == undf || old == undf){
                     return self.add(id, rec);
                 }
 
@@ -5762,7 +5823,7 @@ var Record = defineClass("MetaphorJs.data.Record", "MetaphorJs.cmp.Base", {
              * @returns bool
              */
             containsId: function(id) {
-                return !isUndefined(this.map[id]);
+                return this.map[id] !== undf;
             },
 
             /**
@@ -6030,7 +6091,7 @@ var Record = defineClass("MetaphorJs.data.Record", "MetaphorJs.cmp.Base", {
                     return [];
                 }
                 start = start || 0;
-                end = Math.min(isUndefined(end) || isNull(end) ? self.length-1 : end, self.length-1);
+                end = Math.min(end == undf ? self.length-1 : end, self.length-1);
                 var i, r = [];
                 if(start <= end){
                     for(i = start; i <= end; i++) {

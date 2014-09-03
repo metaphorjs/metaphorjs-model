@@ -7,24 +7,74 @@ var defineClass = MetaphorJs.cs.define,
 
 
 var slice = Array.prototype.slice;
-/**
- * @param {*} obj
- * @returns {boolean}
- */
-var isPlainObject = function(obj) {
-    return !!(obj && obj.constructor === Object);
+var toString = Object.prototype.toString;
+var undf = undefined;
+
+
+
+var varType = function(){
+
+    var types = {
+        '[object String]': 0,
+        '[object Number]': 1,
+        '[object Boolean]': 2,
+        '[object Object]': 3,
+        '[object Function]': 4,
+        '[object Array]': 5,
+        '[object RegExp]': 9,
+        '[object Date]': 10
+    };
+
+
+    /**
+        'string': 0,
+        'number': 1,
+        'boolean': 2,
+        'object': 3,
+        'function': 4,
+        'array': 5,
+        'null': 6,
+        'undefined': 7,
+        'NaN': 8,
+        'regexp': 9,
+        'date': 10
+    */
+
+    return function(val) {
+
+        if (!val) {
+            if (val === null) {
+                return 6;
+            }
+            if (val === undf) {
+                return 7;
+            }
+        }
+
+        var num = types[toString.call(val)];
+
+        if (num === undf) {
+            return -1;
+        }
+
+        if (num == 1 && isNaN(val)) {
+            num = 8;
+        }
+
+        return num;
+    };
+
+}();
+
+
+var isPlainObject = function(value) {
+    return varType(value) === 3;
 };
+
 
 var isBool = function(value) {
-    return typeof value == "boolean";
+    return varType(value) === 2;
 };
-var strUndef = "undefined";
-
-
-var isUndefined = function(any) {
-    return typeof any == strUndef;
-};
-
 var isNull = function(value) {
     return value === null;
 };
@@ -61,14 +111,14 @@ var extend = function extend() {
         if (src = args.shift()) {
             for (k in src) {
 
-                if (src.hasOwnProperty(k) && !isUndefined((value = src[k]))) {
+                if (src.hasOwnProperty(k) && (value = src[k]) !== undf) {
 
                     if (deep) {
                         if (dst[k] && isPlainObject(dst[k]) && isPlainObject(value)) {
                             extend(dst[k], value, override, deep);
                         }
                         else {
-                            if (override === true || isUndefined(dst[k]) || isNull(dst[k])) {
+                            if (override === true || dst[k] == undf) { // == checks for null and undefined
                                 if (isPlainObject(value)) {
                                     dst[k] = {};
                                     extend(dst[k], value, override, true);
@@ -80,7 +130,7 @@ var extend = function extend() {
                         }
                     }
                     else {
-                        if (override === true || isUndefined(dst[k]) || isNull(dst[k])) {
+                        if (override === true || dst[k] == undf) {
                             dst[k] = value;
                         }
                     }
@@ -93,8 +143,10 @@ var extend = function extend() {
 };
 
 
+
+
 var isString = function(value) {
-    return typeof value == "string";
+    return varType(value) === 0;
 };
 
 
@@ -378,7 +430,7 @@ var Model = function(){
             var self    = this,
                 sucProp = self.getProp(what, type, "success");
 
-            if (sucProp && response[sucProp] != undefined) {
+            if (sucProp && response[sucProp] != undf) {
                 return response[sucProp];
             }
             else {
@@ -1191,13 +1243,6 @@ var Record = defineClass("MetaphorJs.data.Record", "MetaphorJs.cmp.Base", {
 });
 
 
-var toString = Object.prototype.toString;
-var isObject = function(value) {
-    return value != null && typeof value === 'object';
-};
-var isNumber = function(value) {
-    return typeof value == "number" && !isNaN(value);
-};
 
 
 /**
@@ -1205,8 +1250,12 @@ var isNumber = function(value) {
  * @returns {boolean}
  */
 var isArray = function(value) {
-    return !!(value && isObject(value) && isNumber(value.length) &&
-                toString.call(value) == '[object Array]' || false);
+    return varType(value) === 5;
+};
+
+
+var isNumber = function(value) {
+    return varType(value) === 1;
 };
 
 
@@ -2024,9 +2073,9 @@ var isArray = function(value) {
                     }
                 }
 
-                if (!isUndefined(id) && !isNull(id)){
+                if (id != undf){
                     var old = self.map[id];
-                    if(!isUndefined(old)){
+                    if(old != undf){
                         self.replace(id, rec);
                         return;
                     }
@@ -2065,7 +2114,7 @@ var isArray = function(value) {
                     var rec = self.items[index];
                     self.items.splice(index, 1);
                     var id = self.keys[index];
-                    if(!isUndefined(id)){
+                    if(id != undf){
                         delete self.map[id];
                     }
                     self.keys.splice(index, 1);
@@ -2115,7 +2164,7 @@ var isArray = function(value) {
                 }
                 self.length++;
                 self.items.splice(index, 0, rec);
-                if(!isUndefined(id) && !isNull(id)){
+                if(id != undf){
                     self.map[id] = rec;
                 }
                 self.keys.splice(index, 0, id);
@@ -2151,7 +2200,7 @@ var isArray = function(value) {
                 rec         = self.processRawDataItem(rec);
                 old         = self.map[id];
 
-                if(isUndefined(id) || isNull(id) || isUndefined(old)){
+                if(id == undf || old == undf){
                     return self.add(id, rec);
                 }
 
@@ -2205,7 +2254,7 @@ var isArray = function(value) {
              * @returns bool
              */
             containsId: function(id) {
-                return !isUndefined(this.map[id]);
+                return this.map[id] !== undf;
             },
 
             /**
@@ -2473,7 +2522,7 @@ var isArray = function(value) {
                     return [];
                 }
                 start = start || 0;
-                end = Math.min(isUndefined(end) || isNull(end) ? self.length-1 : end, self.length-1);
+                end = Math.min(end == undf ? self.length-1 : end, self.length-1);
                 var i, r = [];
                 if(start <= end){
                     for(i = start; i <= end; i++) {

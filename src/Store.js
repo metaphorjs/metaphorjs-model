@@ -10,7 +10,7 @@ var Model   = require("./Model.js"),
     isString = require("../../metaphorjs/src/func/isString.js"),
     isNumber = require("../../metaphorjs/src/func/isNumber.js"),
     isNull = require("../../metaphorjs/src/func/isNull.js"),
-    isUndefined = require("../../metaphorjs/src/func/isUndefined.js");
+    undf = require("../../metaphorjs/src/var/undf.js");
 
 require("../../metaphorjs/src/cmp/Base.js");
 
@@ -826,9 +826,9 @@ module.exports = (function(){
                     }
                 }
 
-                if (!isUndefined(id) && !isNull(id)){
+                if (id != undf){
                     var old = self.map[id];
-                    if(!isUndefined(old)){
+                    if(old != undf){
                         self.replace(id, rec);
                         return;
                     }
@@ -867,7 +867,7 @@ module.exports = (function(){
                     var rec = self.items[index];
                     self.items.splice(index, 1);
                     var id = self.keys[index];
-                    if(!isUndefined(id)){
+                    if(id != undf){
                         delete self.map[id];
                     }
                     self.keys.splice(index, 1);
@@ -917,7 +917,7 @@ module.exports = (function(){
                 }
                 self.length++;
                 self.items.splice(index, 0, rec);
-                if(!isUndefined(id) && !isNull(id)){
+                if(id != undf){
                     self.map[id] = rec;
                 }
                 self.keys.splice(index, 0, id);
@@ -953,7 +953,7 @@ module.exports = (function(){
                 rec         = self.processRawDataItem(rec);
                 old         = self.map[id];
 
-                if(isUndefined(id) || isNull(id) || isUndefined(old)){
+                if(id == undf || old == undf){
                     return self.add(id, rec);
                 }
 
@@ -1007,7 +1007,7 @@ module.exports = (function(){
              * @returns bool
              */
             containsId: function(id) {
-                return !isUndefined(this.map[id]);
+                return this.map[id] !== undf;
             },
 
             /**
@@ -1275,7 +1275,7 @@ module.exports = (function(){
                     return [];
                 }
                 start = start || 0;
-                end = Math.min(isUndefined(end) || isNull(end) ? self.length-1 : end, self.length-1);
+                end = Math.min(end == undf ? self.length-1 : end, self.length-1);
                 var i, r = [];
                 if(start <= end){
                     for(i = start; i <= end; i++) {
