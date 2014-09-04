@@ -28,6 +28,8 @@ module.exports = function(){
         store:          null,
         plain:          false,
 
+        lastAjaxResponse: null,
+
 
         /**
          * @var object {
@@ -239,11 +241,13 @@ module.exports = function(){
 
             if (what == "record") {
                 cfg.processResponse = function(response, deferred) {
+                    self.lastAjaxResponse = response;
                     self._processRecordResponse(type, response, deferred);
                 }
             }
             else if (what == "store") {
                 cfg.processResponse = function(response, deferred) {
+                    self.lastAjaxResponse = response;
                     self._processStoreResponse(type, response, deferred);
                 };
             }

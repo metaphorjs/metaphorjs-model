@@ -4,7 +4,10 @@ var registerAttributeHandler = require("../../../metaphorjs/src/func/directive/r
     defineClass = require("../../../metaphorjs-class/src/func/defineClass.js"),
     createGetter = require("../../../metaphorjs-watchable/src/func/createGetter.js"),
     createWatchable = require("../../../metaphorjs-watchable/src/func/createWatchable.js"),
-    async = require("../../../metaphorjs/src/func/async.js");
+    async = require("../../../metaphorjs/src/func/async.js"),
+    ns = require("../../../metaphorjs-namespace/src/var/ns.js"),
+    animate = require("../../../metaphorjs-animate/src/metaphorjs.animate.js"),
+    bind = require("../../../metaphorjs/src/func/bind.js");
 
 require("../../../metaphorjs/src/directive/attr/each.js");
 
@@ -32,7 +35,13 @@ registerAttributeHandler("mjs-each-in-store", 100, defineClass(null, "attr.mjs-e
         self.scope      = scope;
         self.store      = store = createGetter(self.model)(scope);
 
+        self.animateMove    = node.getAttribute("mjs-animate-move") !== null && animate.cssAnimations;
+        node.removeAttribute("mjs-animate-move");
+
         self.parentEl.removeChild(node);
+
+        self.trackByFn      = bind(store.getRecordId, store);
+        self.griDelegate    = bind(store.indexOfId, store);
 
         self.initWatcher();
         self.render(self.watcher.getValue());
@@ -52,8 +61,7 @@ registerAttributeHandler("mjs-each-in-store", 100, defineClass(null, "attr.mjs-e
 
     initWatcher: function() {
         var self        = this;
-        self.watcher    = createWatchable(self.store, ".items", null);
-        self.watcher.subscribe(self.onChange, self);
+        self.watcher    = createWatchable(self.store, ".current", self.onChange, self, null, ns);
     },
 
     resetWatcher: function() {
@@ -65,17 +73,8 @@ registerAttributeHandler("mjs-each-in-store", 100, defineClass(null, "attr.mjs-e
 
         var self    = this;
 
-        store[fn]("load", self.onStoreUpdate, self);
         store[fn]("update", self.onStoreUpdate, self);
-        store[fn]("add", self.onStoreUpdate, self);
-        store[fn]("remove", self.onStoreUpdate, self);
-        store[fn]("replace", self.onStoreUpdate, self);
-
-        store[fn]("filter", self.onStoreFilter, self);
-        store[fn]("clearfilter", self.onStoreFilter, self);
-
-        store[fn]("clear", self.onStoreClear, self);
-
+        store[fn]("clear", self.onStoreUpdate, self);
         store[fn]("destroy", self.onStoreDestroy, self);
     },
 
@@ -83,19 +82,10 @@ registerAttributeHandler("mjs-each-in-store", 100, defineClass(null, "attr.mjs-e
         this.watcher.check();
     },
 
-    onStoreFilter: function() {
-        this.resetWatcher();
-        this.onStoreUpdate();
-    },
-
-    onStoreClear: function() {
-        this.resetWatcher();
-        this.onStoreUpdate();
-    },
 
     onStoreDestroy: function() {
         var self = this;
-        self.onStoreClear();
+        self.onStoreUpdate();
         self.watcher.unsubscribeAndDestroy(self.onChange, self);
         delete self.watcher;
     }
