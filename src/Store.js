@@ -183,7 +183,7 @@ module.exports = (function(){
              * @var {boolean}
              * @access protected
              */
-            public: true,
+            publicStore: false,
 
             /**
              * @var {string}
@@ -211,6 +211,7 @@ module.exports = (function(){
                 self.items      = [];
                 self.current    = [];
                 self.map        = {};
+                self.currentMap = {};
                 self.loaded     = false;
                 self.extraParams    = self.extraParams || {};
 
@@ -222,27 +223,21 @@ module.exports = (function(){
 
                 options         = options || {};
 
+                if (url) {
+                    options.url = url;
+                }
+
                 self.supr(options);
 
                 self.id             = self.id || nextUid();
                 
-                if (self.public) {
+                if (self.publicStore) {
                     allStores[self.id]  = self;
                 }
 
-                if (isString(self.model)) {
-                    self.model  = factory(self.model);
-                }
-                else if (!(self.model instanceof Model)) {
-                    self.model  = factory("MetaphorJs.data.Model", self.model);
-                }
-
-                if (url || options.url) {
-                    self.model.store.load    = url || options.url;
-                }
+                self.initModel(options);
 
                 self.createEvent("beforeload", false);
-                self.idProp = self.model.getStoreProp("load", "id");
 
                 if (!self.local && self.autoLoad) {
                     self.load();
@@ -259,6 +254,24 @@ module.exports = (function(){
                 if (self.local) {
                     self.loaded     = true;
                 }
+            },
+
+            initModel: function(options) {
+
+                var self = this;
+
+                if (isString(self.model)) {
+                    self.model  = factory(self.model);
+                }
+                else if (!(self.model instanceof Model)) {
+                    self.model  = factory("MetaphorJs.data.Model", self.model);
+                }
+
+                if (options.url) {
+                    self.model.store.load    = options.url;
+                }
+
+                self.idProp = self.model.getStoreProp("load", "id");
             },
 
             /**
@@ -720,7 +733,7 @@ module.exports = (function(){
                 if (!rec) {
                     throw new Error("Record not found at " + inx);
                 }
-                return self.delete(rec, silent, skipUpdate);
+                return self["delete"](rec, silent, skipUpdate);
             },
 
             /**
@@ -831,6 +844,10 @@ module.exports = (function(){
                 else {
                     return rec[this.idProp] || null;
                 }
+            },
+
+            getRecordData: function(rec) {
+                return this.model.isPlain() ? rec : rec.data;
             },
 
             /**
@@ -1122,7 +1139,7 @@ module.exports = (function(){
 
                 index   = self.items.indexOf(old);
 
-                self.remove(old, true, true);
+                self.removeAt(index, true, true, true);
                 self.insert(index, rec, true, true);
 
                 if (!skipUpdate) {

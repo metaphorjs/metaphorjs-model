@@ -82,6 +82,9 @@ registerAttributeHandler("mjs-each-in-store", 100, defineClass(null, "attr.mjs-e
         this.watcher.check();
     },
 
+    getListItem: function(list, index) {
+        return this.store.getRecordData(list[index]);
+    },
 
     onStoreDestroy: function() {
         var self = this;

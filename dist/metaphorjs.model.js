@@ -1,8 +1,9 @@
 (function(){
 "use strict";
 
-
-var slice = Array.prototype.slice;
+var isFunction = function(value) {
+    return typeof value == 'function';
+};
 var toString = Object.prototype.toString;
 var undf = undefined;
 
@@ -61,87 +62,6 @@ var varType = function(){
     };
 
 }();
-
-
-var isPlainObject = function(value) {
-    return varType(value) === 3;
-};
-
-
-var isBool = function(value) {
-    return varType(value) === 2;
-};
-var isNull = function(value) {
-    return value === null;
-};
-
-
-/**
- * @param {Object} dst
- * @param {Object} src
- * @param {Object} src2 ... srcN
- * @param {boolean} override = false
- * @param {boolean} deep = false
- * @returns {*}
- */
-var extend = function extend() {
-
-
-    var override    = false,
-        deep        = false,
-        args        = slice.call(arguments),
-        dst         = args.shift(),
-        src,
-        k,
-        value;
-
-    if (isBool(args[args.length - 1])) {
-        override    = args.pop();
-    }
-    if (isBool(args[args.length - 1])) {
-        deep        = override;
-        override    = args.pop();
-    }
-
-    while (args.length) {
-        if (src = args.shift()) {
-            for (k in src) {
-
-                if (src.hasOwnProperty(k) && (value = src[k]) !== undf) {
-
-                    if (deep) {
-                        if (dst[k] && isPlainObject(dst[k]) && isPlainObject(value)) {
-                            extend(dst[k], value, override, deep);
-                        }
-                        else {
-                            if (override === true || dst[k] == undf) { // == checks for null and undefined
-                                if (isPlainObject(value)) {
-                                    dst[k] = {};
-                                    extend(dst[k], value, override, true);
-                                }
-                                else {
-                                    dst[k] = value;
-                                }
-                            }
-                        }
-                    }
-                    else {
-                        if (override === true || dst[k] == undf) {
-                            dst[k] = value;
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    return dst;
-};
-
-
-var isFunction = function(value) {
-    return typeof value == 'function';
-};
 
 
 var isString = function(value) {
@@ -351,7 +271,9 @@ Namespace.prototype = {
 
 
 
-/**
+
+
+var slice = Array.prototype.slice;/**
  * @param {Function} fn
  * @param {Object} context
  * @param {[]} args
@@ -754,6 +676,86 @@ var bind = Function.prototype.bind ?
 
 
 
+var emptyFn = function(){};
+
+
+var isPlainObject = function(value) {
+    return varType(value) === 3;
+};
+
+
+var isBool = function(value) {
+    return varType(value) === 2;
+};
+var isNull = function(value) {
+    return value === null;
+};
+
+
+/**
+ * @param {Object} dst
+ * @param {Object} src
+ * @param {Object} src2 ... srcN
+ * @param {boolean} override = false
+ * @param {boolean} deep = false
+ * @returns {*}
+ */
+var extend = function extend() {
+
+
+    var override    = false,
+        deep        = false,
+        args        = slice.call(arguments),
+        dst         = args.shift(),
+        src,
+        k,
+        value;
+
+    if (isBool(args[args.length - 1])) {
+        override    = args.pop();
+    }
+    if (isBool(args[args.length - 1])) {
+        deep        = override;
+        override    = args.pop();
+    }
+
+    while (args.length) {
+        if (src = args.shift()) {
+            for (k in src) {
+
+                if (src.hasOwnProperty(k) && (value = src[k]) !== undf) {
+
+                    if (deep) {
+                        if (dst[k] && isPlainObject(dst[k]) && isPlainObject(value)) {
+                            extend(dst[k], value, override, deep);
+                        }
+                        else {
+                            if (override === true || dst[k] == undf) { // == checks for null and undefined
+                                if (isPlainObject(value)) {
+                                    dst[k] = {};
+                                    extend(dst[k], value, override, true);
+                                }
+                                else {
+                                    dst[k] = value;
+                                }
+                            }
+                        }
+                    }
+                    else {
+                        if (override === true || dst[k] == undf) {
+                            dst[k] = value;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    return dst;
+};
+
+
+
 
 /**
  * @param {String} value
@@ -770,8 +772,6 @@ var trim = function() {
         return isString(value) ? value.trim() : value;
     };
 }();
-
-var emptyFn = function(){};
 
 
 var parseJSON = function() {
@@ -5222,7 +5222,7 @@ if (!aIndexOf) {
              * @var {boolean}
              * @access protected
              */
-            public: true,
+            publicStore: false,
 
             /**
              * @var {string}
@@ -5250,6 +5250,7 @@ if (!aIndexOf) {
                 self.items      = [];
                 self.current    = [];
                 self.map        = {};
+                self.currentMap = {};
                 self.loaded     = false;
                 self.extraParams    = self.extraParams || {};
 
@@ -5261,27 +5262,21 @@ if (!aIndexOf) {
 
                 options         = options || {};
 
+                if (url) {
+                    options.url = url;
+                }
+
                 self.supr(options);
 
                 self.id             = self.id || nextUid();
                 
-                if (self.public) {
+                if (self.publicStore) {
                     allStores[self.id]  = self;
                 }
 
-                if (isString(self.model)) {
-                    self.model  = factory(self.model);
-                }
-                else if (!(self.model instanceof Model)) {
-                    self.model  = factory("MetaphorJs.data.Model", self.model);
-                }
-
-                if (url || options.url) {
-                    self.model.store.load    = url || options.url;
-                }
+                self.initModel(options);
 
                 self.createEvent("beforeload", false);
-                self.idProp = self.model.getStoreProp("load", "id");
 
                 if (!self.local && self.autoLoad) {
                     self.load();
@@ -5298,6 +5293,24 @@ if (!aIndexOf) {
                 if (self.local) {
                     self.loaded     = true;
                 }
+            },
+
+            initModel: function(options) {
+
+                var self = this;
+
+                if (isString(self.model)) {
+                    self.model  = factory(self.model);
+                }
+                else if (!(self.model instanceof Model)) {
+                    self.model  = factory("MetaphorJs.data.Model", self.model);
+                }
+
+                if (options.url) {
+                    self.model.store.load    = options.url;
+                }
+
+                self.idProp = self.model.getStoreProp("load", "id");
             },
 
             /**
@@ -5759,7 +5772,7 @@ if (!aIndexOf) {
                 if (!rec) {
                     throw new Error("Record not found at " + inx);
                 }
-                return self.delete(rec, silent, skipUpdate);
+                return self["delete"](rec, silent, skipUpdate);
             },
 
             /**
@@ -5870,6 +5883,10 @@ if (!aIndexOf) {
                 else {
                     return rec[this.idProp] || null;
                 }
+            },
+
+            getRecordData: function(rec) {
+                return this.model.isPlain() ? rec : rec.data;
             },
 
             /**
@@ -6161,7 +6178,7 @@ if (!aIndexOf) {
 
                 index   = self.items.indexOf(old);
 
-                self.remove(old, true, true);
+                self.removeAt(index, true, true, true);
                 self.insert(index, rec, true, true);
 
                 if (!skipUpdate) {
@@ -6685,6 +6702,99 @@ if (!aIndexOf) {
 
 
 }());
+
+
+
+
+defineClass("MetaphorJs.data.FirebaseStore", "MetaphorJs.data.Store", {
+
+    firebase: null,
+
+    initialize: function(ref) {
+
+        var self    = this;
+
+        self.firebase = isString(ref) ? new Firebase(ref) : ref;
+
+        self.firebase.on("child_added", bind(self.onChildAdded, self));
+        self.firebase.on("child_removed", bind(self.onChildRemoved, self));
+        self.firebase.on("child_changed", bind(self.onChildChanged, self));
+        self.firebase.on("child_moved", bind(self.onChildMoved, self));
+
+        self.supr();
+    },
+
+    initModel: emptyFn,
+
+    ref: function() {
+        return this.firebase.ref ?
+                this.firebase.ref() :
+                this.firebase;
+    },
+
+    load: function() {
+        var self = this;
+        if (!self.loaded) {
+            self.firebase.once("value", bind(self.onSnapshotLoaded, self));
+        }
+    },
+
+    onSnapshotLoaded: function(recordsSnapshot) {
+
+        var self = this;
+
+        recordsSnapshot.forEach(function(snapshot) {
+            self.add(snapshot, true, true);
+        });
+
+        self.update();
+        self.loaded = true;
+        self.trigger("load", self);
+    },
+
+    onChildAdded: function(snapshot, prevName) {
+        var self = this;
+        if (self.loaded) {
+            var index = self.indexOfId(prevName, true);
+            self.insert(index + 1, snapshot);
+        }
+    },
+
+    onChildRemoved: function(snapshot) {
+        var self = this;
+        if (self.loaded) {
+            self.removeId(snapshot.name());
+        }
+    },
+
+    onChildChanged: function(snapshot, prevName) {
+        var self = this;
+        if (self.loaded) {
+            var old = self.getById(snapshot.name(), true);
+            self.replace(old, snapshot);
+        }
+    },
+
+    onChildMoved: function(snapshot, prevName) {
+        // not yet implemented
+    },
+
+    getRecordId: function(item) {
+        return item.name();
+    },
+
+    getRecordData: function(item) {
+        return item.val();
+    },
+
+    processRawDataItem: function(item) {
+        return item;
+    },
+
+    bindRecord: emptyFn
+
+
+});
 typeof global != "undefined" ? (global['MetaphorJs'] = MetaphorJs) : (window['MetaphorJs'] = MetaphorJs);
 
 }());
