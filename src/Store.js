@@ -543,8 +543,12 @@ module.exports = (function(){
                 params      = extend({}, self.extraParams, params || {});
 
                 if (ps !== null && !params[sp] && !params[lp]) {
-                    params[sp]    = self.start;
-                    params[lp]    = ps;
+                    if (sp) {
+                        params[sp]    = self.start;
+                    }
+                    if (lp) {
+                        params[lp]    = ps;
+                    }
                 }
 
                 if (!options.silent && self.trigger("beforeload", self) === false) {
@@ -827,11 +831,26 @@ module.exports = (function(){
 
                 if (!self.local) {
                     self.start -= self.pageSize;
+                    if (self.start < 0) {
+                        self.start = 0;
+                    }
                     self.load(null, options);
                 }
             },
 
-
+            /**
+             * @method
+             */
+            loadPage: function(start, options) {
+                var self = this;
+                if (!self.local) {
+                    self.start = parseInt(start, 10);
+                    if (self.start < 0) {
+                        self.start = 0;
+                    }
+                    self.load(null, options);
+                }
+            },
 
 
             /**
@@ -1218,6 +1237,7 @@ module.exports = (function(){
              */
             reset: function() {
                 this._reset();
+                this.start = 0;
             },
 
             _reset: function(keepRecords) {
@@ -1234,7 +1254,6 @@ module.exports = (function(){
                     }
                 }
 
-                self.start          = 0;
                 self.length         = 0;
                 self.currentLength  = 0;
                 self.totalLength    = 0;

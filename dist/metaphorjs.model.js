@@ -55,7 +55,7 @@ var varType = function(){
         }
 
         if (num == 1 && isNaN(val)) {
-            num = 8;
+            return 8;
         }
 
         return num;
@@ -65,13 +65,16 @@ var varType = function(){
 
 
 var isString = function(value) {
-    return varType(value) === 0;
+    return typeof value == "string" || varType(value) === 0;
 };
 
 
 var isObject = function(value) {
+    if (value === null || typeof value != "object") {
+        return false;
+    }
     var vt = varType(value);
-    return value !== null && typeof value == "object" && (vt > 2 || vt == -1);
+    return vt > 2 || vt == -1;
 };
 var strUndef = "undefined";
 
@@ -319,6 +322,8 @@ var Class = function(ns){
 
     var proto   = "prototype",
 
+        constr  = "__construct",
+
         create  = function(cls, constructor) {
             return extend(function(){}, cls, constructor);
         },
@@ -327,28 +332,32 @@ var Class = function(ns){
 
             return function() {
                 var ret,
-                    prev    = this.supr;
+                    self    = this,
+                    prev    = self.supr;
 
-                this.supr   = parent[proto][k] || function(){};
+                if (k == constr) {
+                    self.supr   = parent[proto][k] || parent[proto].constructor;
+                }
+                else {
+                    self.supr   = parent[proto][k] || function(){};
+                }
+                ret         = fn.apply(self, arguments);
+                self.supr   = prev;
 
-                //try {
-                    ret     = fn.apply(this, arguments);
-                //}
-                //catch(thrownError) {
-                //    error(thrownError);
-                //}
-
-                this.supr   = prev;
                 return ret;
             };
         },
 
-        process = function(what, o, parent) {
-            for (var k in o) {
-                if (o.hasOwnProperty(k)) {
-                    what[k] = isFunction(o[k]) && parent[proto] && isFunction(parent[proto][k]) ?
-                              wrap(parent, k, o[k]) :
-                              o[k];
+        process = function(prototype, cls, parent) {
+            for (var k in cls) {
+                if (cls.hasOwnProperty(k)) {
+
+                    prototype[k] = isFunction(cls[k]) &&
+                              (isFunction(parent[proto][k]) || !parent[proto][k]) ?
+                                    wrap(parent, k, cls[k]) :
+                                    cls[k];
+
+
                 }
             }
         },
@@ -359,10 +368,14 @@ var Class = function(ns){
             noop[proto]     = parent[proto];
             var prototype   = new noop;
 
+            if (constructorFn) {
+                cls[constr] = constructorFn;
+            }
+
             var fn          = function() {
                 var self = this;
-                if (constructorFn) {
-                    constructorFn.apply(self, arguments);
+                if (self.__construct) {
+                    self.__construct.apply(self, arguments);
                 }
                 if (self.initialize) {
                     self.initialize.apply(self, arguments);
@@ -371,14 +384,15 @@ var Class = function(ns){
 
             process(prototype, cls, parent);
             prototype.constructor = fn;
+
             fn[proto] = prototype;
-            //fn[proto].constructor = fn;
             fn[proto].getClass = function() {
                 return fn.__class;
             };
             fn[proto].getParentClass = function() {
                 return fn.__parentClass;
             };
+
             fn.__instantiate = function(fn) {
 
                 return function() {
@@ -545,6 +559,10 @@ var Class = function(ns){
     };
 
 
+    var extendClass = function(parentClass, constructorFn, cls, statics) {
+        return define(null, parentClass, constructorFn, cls, statics);
+    };
+
 
     /**
      * @function MetaphorJs.defineCache
@@ -628,6 +646,7 @@ var Class = function(ns){
     self.isInstanceOf = isInstanceOf;
     self.define = define;
     self.defineCache = defineCache;
+    self.extend = extendClass;
 
 };
 
@@ -637,7 +656,8 @@ Class.prototype = {
     isSubclassOf: null,
     isInstanceOf: null,
     define: null,
-    defineCache: null
+    defineCache: null,
+    extend: null
 
 };
 
@@ -680,12 +700,13 @@ var emptyFn = function(){};
 
 
 var isPlainObject = function(value) {
-    return varType(value) === 3;
+    // IE < 9 returns [object Object] from toString(htmlElement)
+    return typeof value == "object" && varType(value) === 3 && !value.nodeType;
 };
 
 
 var isBool = function(value) {
-    return varType(value) === 2;
+    return value === true || value === false;
 };
 var isNull = function(value) {
     return value === null;
@@ -700,61 +721,64 @@ var isNull = function(value) {
  * @param {boolean} deep = false
  * @returns {*}
  */
-var extend = function extend() {
+var extend = function(){
+
+    var extend = function extend() {
 
 
-    var override    = false,
-        deep        = false,
-        args        = slice.call(arguments),
-        dst         = args.shift(),
-        src,
-        k,
-        value;
+        var override    = false,
+            deep        = false,
+            args        = slice.call(arguments),
+            dst         = args.shift(),
+            src,
+            k,
+            value;
 
-    if (isBool(args[args.length - 1])) {
-        override    = args.pop();
-    }
-    if (isBool(args[args.length - 1])) {
-        deep        = override;
-        override    = args.pop();
-    }
+        if (isBool(args[args.length - 1])) {
+            override    = args.pop();
+        }
+        if (isBool(args[args.length - 1])) {
+            deep        = override;
+            override    = args.pop();
+        }
 
-    while (args.length) {
-        if (src = args.shift()) {
-            for (k in src) {
+        while (args.length) {
+            if (src = args.shift()) {
+                for (k in src) {
 
-                if (src.hasOwnProperty(k) && (value = src[k]) !== undf) {
+                    if (src.hasOwnProperty(k) && (value = src[k]) !== undf) {
 
-                    if (deep) {
-                        if (dst[k] && isPlainObject(dst[k]) && isPlainObject(value)) {
-                            extend(dst[k], value, override, deep);
-                        }
-                        else {
-                            if (override === true || dst[k] == undf) { // == checks for null and undefined
-                                if (isPlainObject(value)) {
-                                    dst[k] = {};
-                                    extend(dst[k], value, override, true);
-                                }
-                                else {
-                                    dst[k] = value;
+                        if (deep) {
+                            if (dst[k] && isPlainObject(dst[k]) && isPlainObject(value)) {
+                                extend(dst[k], value, override, deep);
+                            }
+                            else {
+                                if (override === true || dst[k] == undf) { // == checks for null and undefined
+                                    if (isPlainObject(value)) {
+                                        dst[k] = {};
+                                        extend(dst[k], value, override, true);
+                                    }
+                                    else {
+                                        dst[k] = value;
+                                    }
                                 }
                             }
                         }
-                    }
-                    else {
-                        if (override === true || dst[k] == undf) {
-                            dst[k] = value;
+                        else {
+                            if (override === true || dst[k] == undf) {
+                                dst[k] = value;
+                            }
                         }
                     }
                 }
             }
         }
-    }
 
-    return dst;
-};
+        return dst;
+    };
 
-
+    return extend;
+}();
 
 
 /**
@@ -983,7 +1007,7 @@ var select = function() {
         attrMods    = {
             /* W3C "an E element with a "attr" attribute" */
             '': function (child, attr) {
-                return !!child.getAttribute(attr);
+                return child.getAttribute(attr) !== null;
             },
             /*
              W3C "an E element whose "attr" attribute value is
@@ -1416,7 +1440,7 @@ var select = function() {
  * @returns {boolean}
  */
 var isArray = function(value) {
-    return varType(value) === 5;
+    return typeof value == "object" && varType(value) === 5;
 };
 var addListener = function(el, event, func) {
     if (el.attachEvent) {
@@ -2817,7 +2841,8 @@ var Promise = function(){
             return Promise.resolve(null);
         }
 
-        var promise = Promise.fcall(functions.shift()),
+        var first   = functions.shift(),
+            promise = isFunction(first) ? Promise.fcall(first) : Promise.resolve(fn),
             fn;
 
         while (fn = functions.shift()) {
@@ -2828,10 +2853,27 @@ var Promise = function(){
                     };
                 }(fn));
             }
-            else {
+            else if (isFunction(fn)) {
                 promise = promise.then(fn);
             }
+            else {
+                promise.resolve(fn);
+            }
         }
+
+        return promise;
+    };
+
+    Promise.counter = function(cnt) {
+
+        var promise     = new Promise;
+
+        promise.countdown = function() {
+            cnt--;
+            if (cnt == 0) {
+                promise.resolve();
+            }
+        };
 
         return promise;
     };
@@ -2840,6 +2882,12 @@ var Promise = function(){
 }();
 
 
+
+
+var isPrimitive = function(value) {
+    var vt = varType(value);
+    return vt < 3 && vt > -1;
+};
 
 
 
@@ -2862,14 +2910,12 @@ var ajax = function(){
 
         rgethead    = /^(?:GET|HEAD)$/i,
 
-        jsonpCb     = 0,
-
         buildParams     = function(data, params, name) {
 
             var i, len;
 
-            if (isString(data) && name) {
-                params.push(encodeURIComponent(name) + "=" + encodeURIComponent(data));
+            if (isPrimitive(data) && name) {
+                params.push(encodeURIComponent(name) + "=" + encodeURIComponent(""+data));
             }
             else if (isArray(data) && name) {
                 for (i = 0, len = data.length; i < len; i++) {
@@ -2907,7 +2953,9 @@ var ajax = function(){
             }
 
             if (opt.data && (!window.FormData || !(opt.data instanceof window.FormData))) {
+
                 opt.data = !isString(opt.data) ? prepareParams(opt.data) : opt.data;
+
                 if (rgethead.test(opt.method)) {
                     url += (rquery.test(url) ? "&" : "?") + opt.data;
                     opt.data = null;
@@ -3231,7 +3279,7 @@ var ajax = function(){
             var self        = this,
                 opt         = self._opt,
                 paramName   = opt.jsonpParam || "callback",
-                cbName      = opt.jsonpCallback || "jsonp_" + (++jsonpCb);
+                cbName      = opt.jsonpCallback || "jsonp_" + nextUid();
 
             opt.url += (rquery.test(opt.url) ? "&" : "?") + paramName + "=" + cbName;
 
@@ -3665,7 +3713,7 @@ var ajax = function(){
 
             var self    = this,
                 frame   = document.createElement("iframe"),
-                id      = "frame-" + (++jsonpCb),
+                id      = "frame-" + nextUid(),
                 form    = self._opt.form;
 
             frame.setAttribute("id", id);
@@ -3908,7 +3956,7 @@ var Model = function(){
             return this[prop] = value;
         },
 
-        _createAjaxCfg: function(what, type, id, data) {
+        _createAjaxCfg: function(what, type, id, data, extra) {
 
             var self        = this,
                 profile     = self[what],
@@ -3947,7 +3995,8 @@ var Model = function(){
                 self.extra,
                 profile.extra,
                 profile[type] ? profile[type].extra : {},
-                false,
+                extra,
+                true,
                 true
             );
 
@@ -4074,7 +4123,7 @@ var Model = function(){
          * @returns MetaphorJs.lib.Promise
          */
         loadStore: function(store, params) {
-            return ajax(extend(this._createAjaxCfg("store", "load"), params, true, true));
+            return ajax(this._createAjaxCfg("store", "load", null, null, params));
         },
 
         /**
@@ -4846,12 +4895,6 @@ var isNumber = function(value) {
 };
 
 
-var isPrimitive = function(value) {
-    var vt = varType(value);
-    return vt < 3 && vt > -1;
-};
-
-
 
 var filterArray = function(){
 
@@ -5582,8 +5625,12 @@ if (!aIndexOf) {
                 params      = extend({}, self.extraParams, params || {});
 
                 if (ps !== null && !params[sp] && !params[lp]) {
-                    params[sp]    = self.start;
-                    params[lp]    = ps;
+                    if (sp) {
+                        params[sp]    = self.start;
+                    }
+                    if (lp) {
+                        params[lp]    = ps;
+                    }
                 }
 
                 if (!options.silent && self.trigger("beforeload", self) === false) {
@@ -5866,11 +5913,26 @@ if (!aIndexOf) {
 
                 if (!self.local) {
                     self.start -= self.pageSize;
+                    if (self.start < 0) {
+                        self.start = 0;
+                    }
                     self.load(null, options);
                 }
             },
 
-
+            /**
+             * @method
+             */
+            loadPage: function(start, options) {
+                var self = this;
+                if (!self.local) {
+                    self.start = parseInt(start, 10);
+                    if (self.start < 0) {
+                        self.start = 0;
+                    }
+                    self.load(null, options);
+                }
+            },
 
 
             /**
@@ -6257,6 +6319,7 @@ if (!aIndexOf) {
              */
             reset: function() {
                 this._reset();
+                this.start = 0;
             },
 
             _reset: function(keepRecords) {
@@ -6273,7 +6336,6 @@ if (!aIndexOf) {
                     }
                 }
 
-                self.start          = 0;
                 self.length         = 0;
                 self.currentLength  = 0;
                 self.totalLength    = 0;

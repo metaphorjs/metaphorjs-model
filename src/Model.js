@@ -174,7 +174,7 @@ module.exports = function(){
             return this[prop] = value;
         },
 
-        _createAjaxCfg: function(what, type, id, data) {
+        _createAjaxCfg: function(what, type, id, data, extra) {
 
             var self        = this,
                 profile     = self[what],
@@ -213,7 +213,8 @@ module.exports = function(){
                 self.extra,
                 profile.extra,
                 profile[type] ? profile[type].extra : {},
-                false,
+                extra,
+                true,
                 true
             );
 
@@ -340,7 +341,7 @@ module.exports = function(){
          * @returns MetaphorJs.lib.Promise
          */
         loadStore: function(store, params) {
-            return ajax(extend(this._createAjaxCfg("store", "load"), params, true, true));
+            return ajax(this._createAjaxCfg("store", "load", null, null, params));
         },
 
         /**

@@ -86,7 +86,7 @@ var varType = function(){
         }
 
         if (num == 1 && isNaN(val)) {
-            num = 8;
+            return 8;
         }
 
         return num;
@@ -96,7 +96,7 @@ var varType = function(){
 
 
 var isString = function(value) {
-    return varType(value) === 0;
+    return typeof value == "string" || varType(value) === 0;
 };
 
 var emptyFn = function(){};
@@ -105,12 +105,13 @@ var slice = Array.prototype.slice;
 
 
 var isPlainObject = function(value) {
-    return varType(value) === 3;
+    // IE < 9 returns [object Object] from toString(htmlElement)
+    return typeof value == "object" && varType(value) === 3 && !value.nodeType;
 };
 
 
 var isBool = function(value) {
-    return varType(value) === 2;
+    return value === true || value === false;
 };
 var isNull = function(value) {
     return value === null;
@@ -125,61 +126,64 @@ var isNull = function(value) {
  * @param {boolean} deep = false
  * @returns {*}
  */
-var extend = function extend() {
+var extend = function(){
+
+    var extend = function extend() {
 
 
-    var override    = false,
-        deep        = false,
-        args        = slice.call(arguments),
-        dst         = args.shift(),
-        src,
-        k,
-        value;
+        var override    = false,
+            deep        = false,
+            args        = slice.call(arguments),
+            dst         = args.shift(),
+            src,
+            k,
+            value;
 
-    if (isBool(args[args.length - 1])) {
-        override    = args.pop();
-    }
-    if (isBool(args[args.length - 1])) {
-        deep        = override;
-        override    = args.pop();
-    }
+        if (isBool(args[args.length - 1])) {
+            override    = args.pop();
+        }
+        if (isBool(args[args.length - 1])) {
+            deep        = override;
+            override    = args.pop();
+        }
 
-    while (args.length) {
-        if (src = args.shift()) {
-            for (k in src) {
+        while (args.length) {
+            if (src = args.shift()) {
+                for (k in src) {
 
-                if (src.hasOwnProperty(k) && (value = src[k]) !== undf) {
+                    if (src.hasOwnProperty(k) && (value = src[k]) !== undf) {
 
-                    if (deep) {
-                        if (dst[k] && isPlainObject(dst[k]) && isPlainObject(value)) {
-                            extend(dst[k], value, override, deep);
-                        }
-                        else {
-                            if (override === true || dst[k] == undf) { // == checks for null and undefined
-                                if (isPlainObject(value)) {
-                                    dst[k] = {};
-                                    extend(dst[k], value, override, true);
-                                }
-                                else {
-                                    dst[k] = value;
+                        if (deep) {
+                            if (dst[k] && isPlainObject(dst[k]) && isPlainObject(value)) {
+                                extend(dst[k], value, override, deep);
+                            }
+                            else {
+                                if (override === true || dst[k] == undf) { // == checks for null and undefined
+                                    if (isPlainObject(value)) {
+                                        dst[k] = {};
+                                        extend(dst[k], value, override, true);
+                                    }
+                                    else {
+                                        dst[k] = value;
+                                    }
                                 }
                             }
                         }
-                    }
-                    else {
-                        if (override === true || dst[k] == undf) {
-                            dst[k] = value;
+                        else {
+                            if (override === true || dst[k] == undf) {
+                                dst[k] = value;
+                            }
                         }
                     }
                 }
             }
         }
-    }
 
-    return dst;
-};
+        return dst;
+    };
 
-
+    return extend;
+}();
 
 
 var factory = cs.factory;
@@ -352,7 +356,7 @@ var Model = function(){
             return this[prop] = value;
         },
 
-        _createAjaxCfg: function(what, type, id, data) {
+        _createAjaxCfg: function(what, type, id, data, extra) {
 
             var self        = this,
                 profile     = self[what],
@@ -391,7 +395,8 @@ var Model = function(){
                 self.extra,
                 profile.extra,
                 profile[type] ? profile[type].extra : {},
-                false,
+                extra,
+                true,
                 true
             );
 
@@ -518,7 +523,7 @@ var Model = function(){
          * @returns MetaphorJs.lib.Promise
          */
         loadStore: function(store, params) {
-            return ajax(extend(this._createAjaxCfg("store", "load"), params, true, true));
+            return ajax(this._createAjaxCfg("store", "load", null, null, params));
         },
 
         /**
@@ -1290,7 +1295,7 @@ var Record = defineClass("MetaphorJs.data.Record", "MetaphorJs.cmp.Base", {
  * @returns {boolean}
  */
 var isArray = function(value) {
-    return varType(value) === 5;
+    return typeof value == "object" && varType(value) === 5;
 };
 
 
@@ -2069,8 +2074,12 @@ if (!aIndexOf) {
                 params      = extend({}, self.extraParams, params || {});
 
                 if (ps !== null && !params[sp] && !params[lp]) {
-                    params[sp]    = self.start;
-                    params[lp]    = ps;
+                    if (sp) {
+                        params[sp]    = self.start;
+                    }
+                    if (lp) {
+                        params[lp]    = ps;
+                    }
                 }
 
                 if (!options.silent && self.trigger("beforeload", self) === false) {
@@ -2353,11 +2362,26 @@ if (!aIndexOf) {
 
                 if (!self.local) {
                     self.start -= self.pageSize;
+                    if (self.start < 0) {
+                        self.start = 0;
+                    }
                     self.load(null, options);
                 }
             },
 
-
+            /**
+             * @method
+             */
+            loadPage: function(start, options) {
+                var self = this;
+                if (!self.local) {
+                    self.start = parseInt(start, 10);
+                    if (self.start < 0) {
+                        self.start = 0;
+                    }
+                    self.load(null, options);
+                }
+            },
 
 
             /**
@@ -2744,6 +2768,7 @@ if (!aIndexOf) {
              */
             reset: function() {
                 this._reset();
+                this.start = 0;
             },
 
             _reset: function(keepRecords) {
@@ -2760,7 +2785,6 @@ if (!aIndexOf) {
                     }
                 }
 
-                self.start          = 0;
                 self.length         = 0;
                 self.currentLength  = 0;
                 self.totalLength    = 0;
