@@ -169,6 +169,9 @@ var extend = function(){
 
     return extend;
 }();
+var isFunction = function(value) {
+    return typeof value == 'function';
+};
 
 
 
@@ -338,12 +341,12 @@ var Model = function(){
             return this[prop] = value;
         },
 
-        _createAjaxCfg: function(what, type, id, data, extra) {
+        _makeRequest: function(what, type, id, data, extra) {
 
             var self        = this,
                 profile     = self[what],
                 cfg         = extend({},
-                                    isString(profile[type]) ?
+                                    isString(profile[type]) || isFunction(profile[type]) ?
                                         {url: profile[type]} :
                                         profile[type]
                                     ),
@@ -360,7 +363,7 @@ var Model = function(){
                     throw what + "." + type + " not defined";
                 }
             }
-            if (isString(cfg)) {
+            if (isString(cfg) || isFunction(cfg)) {
                 cfg         = {url: cfg};
             }
 
@@ -381,6 +384,22 @@ var Model = function(){
                 true,
                 true
             );
+
+            if (isFunction(cfg.url)) {
+                var df = cfg.url(cfg.data),
+                    promise = new Promise;
+
+                df.then(function(response){
+                    if (what == "record") {
+                        self._processRecordResponse(type, response, promise);
+                    }
+                    else if (what == "store") {
+                        self._processStoreResponse(type, response, promise);
+                    }
+                });
+
+                return promise;
+            }
 
             if (!cfg.method) {
                 cfg.method = type == "load" ? "GET" : "POST";
@@ -417,7 +436,7 @@ var Model = function(){
                 };
             }
 
-            return cfg;
+            return ajax(cfg);
         },
 
         _processRecordResponse: function(type, response, df) {
@@ -464,13 +483,14 @@ var Model = function(){
             }
         },
 
+
         /**
          * @access public
          * @param {string|number} id Record id
          * @returns MetaphorJs.lib.Promise
          */
         loadRecord: function(id) {
-            return ajax(this._createAjaxCfg("record", "load", id));
+            return this._makeRequest("record", "load", id);
         },
 
         /**
@@ -481,12 +501,12 @@ var Model = function(){
          * @returns MetaphorJs.lib.Promise
          */
         saveRecord: function(rec, keys, extra) {
-            return ajax(this._createAjaxCfg(
+            return this._makeRequest(
                 "record",
                 rec.getId() ? "save" : "create",
                 rec.getId(),
                 extend({}, rec.storeData(rec.getData(keys)), extra)
-            ));
+            );
         },
 
         /**
@@ -495,7 +515,7 @@ var Model = function(){
          * @returns MetaphorJs.lib.Promise
          */
         deleteRecord: function(rec) {
-            return ajax(this._createAjaxCfg("record", "delete", rec.getId()));
+            return this._makeRequest("record", "delete", rec.getId());
         },
 
         /**
@@ -505,7 +525,7 @@ var Model = function(){
          * @returns MetaphorJs.lib.Promise
          */
         loadStore: function(store, params) {
-            return ajax(this._createAjaxCfg("store", "load", null, null, params));
+            return this._makeRequest("store", "load", null, null, params);
         },
 
         /**
@@ -515,7 +535,7 @@ var Model = function(){
          * @returns MetaphorJs.lib.Promise
          */
         saveStore: function(store, recordData) {
-            return ajax(this._createAjaxCfg("store", "save", null, recordData));
+            return this._makeRequest("store", "save", null, recordData);
         },
 
         /**
@@ -525,7 +545,7 @@ var Model = function(){
          * @returns MetaphorJs.lib.Promise
          */
         deleteRecords: function(store, ids) {
-            return ajax(this._createAjaxCfg("store", "delete", ids));
+            return this._makeRequest("store", "delete", ids);
         },
 
 
@@ -1312,9 +1332,6 @@ var nextUid = function(){
     };
 }();
 
-var isFunction = function(value) {
-    return typeof value == 'function';
-};
 
 
 var isPrimitive = function(value) {
@@ -3149,24 +3166,6 @@ if (!aIndexOf) {
         },
 
         {
-            /**
-             * @static
-             * @param {DOMElement} selectObj
-             * @returns MetaphorJs.data.Store
-             */
-            createFromSelect: function(selectObj) {
-                var d = [], opts = selectObj.options;
-                for(var i = 0, len = opts.length;i < len; i++){
-                    var o = opts[i],
-                        value = (o.hasAttribute ? o.hasAttribute('value') : o.getAttributeNode('value').specified) ?
-                                    o.value : o.text;
-                    d.push([value, o.text]);
-                }
-                var s   = factory("MetaphorJs.data.Store", {server: {load: {id: 0}}});
-                s._loadArray(d);
-                return s;
-            },
-
             /**
              * @static
              * @param {string} id

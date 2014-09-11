@@ -6,6 +6,8 @@ var defineClass = require("../../../metaphorjs-class/src/func/defineClass.js"),
     ns = require("../../../metaphorjs-namespace/src/var/ns.js"),
     animate = require("../../../metaphorjs-animate/src/metaphorjs.animate.js"),
     bind = require("../../../metaphorjs/src/func/bind.js"),
+    attr = require("../../../metaphorjs/src/func/dom/attr.js"),
+    data = require("../../../metaphorjs/src/func/dom/data.js"),
     ListRenderer = require("../../../metaphorjs/src/view/ListRenderer.js");
 
 
@@ -20,8 +22,8 @@ module.exports = defineClass(
 
         self.parseExpr(expr);
 
-        node.removeAttribute("mjs-each-in-store");
-        node.removeAttribute("mjs-include");
+        attr(node, "mjs-each-in-store", null);
+        attr(node, "mjs-include", null);
 
         self.tpl        = node;
         self.renderers  = [];
@@ -32,17 +34,21 @@ module.exports = defineClass(
         self.scope      = scope;
         self.store      = store = createGetter(self.model)(scope);
 
-        self.animateMove    = node.getAttribute("mjs-animate-move") !== null && animate.cssAnimations;
-        node.removeAttribute("mjs-animate-move");
+        var cfg         = data(node, "config") || {};
+        self.animateMove= !cfg.buffered && cfg.animateMove && animate.cssAnimations;
+        self.animate    = !cfg.buffered && attr(node, "mjs-animate") !== null;
 
         self.parentEl.removeChild(node);
 
         self.trackByFn      = bind(store.getRecordId, store);
         self.griDelegate    = bind(store.indexOfId, store);
 
+        if (cfg.buffered) {
+            self.initBuffering(cfg);
+        }
+
         self.initWatcher();
         self.render(self.watcher.getValue());
-
         self.bindStore(store, "on");
     },
     {

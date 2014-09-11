@@ -1641,24 +1641,6 @@ module.exports = (function(){
         {
             /**
              * @static
-             * @param {DOMElement} selectObj
-             * @returns MetaphorJs.data.Store
-             */
-            createFromSelect: function(selectObj) {
-                var d = [], opts = selectObj.options;
-                for(var i = 0, len = opts.length;i < len; i++){
-                    var o = opts[i],
-                        value = (o.hasAttribute ? o.hasAttribute('value') : o.getAttributeNode('value').specified) ?
-                                    o.value : o.text;
-                    d.push([value, o.text]);
-                }
-                var s   = factory("MetaphorJs.data.Store", {server: {load: {id: 0}}});
-                s._loadArray(d);
-                return s;
-            },
-
-            /**
-             * @static
              * @param {string} id
              * @returns MetaphorJs.data.Store|null
              */

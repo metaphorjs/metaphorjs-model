@@ -5,6 +5,7 @@ var extend  = require("../../metaphorjs/src/func/extend.js"),
     factory = require("../../metaphorjs-class/src/func/factory.js"),
     Promise = require("../../metaphorjs-promise/src/metaphorjs.promise.js"),
     isString = require("../../metaphorjs/src/func/isString.js"),
+    isFunction = require("../../metaphorjs/src/func/isFunction.js"),
     undf = require("../../metaphorjs/src/var/undf.js");
 
 
@@ -174,12 +175,12 @@ module.exports = function(){
             return this[prop] = value;
         },
 
-        _createAjaxCfg: function(what, type, id, data, extra) {
+        _makeRequest: function(what, type, id, data, extra) {
 
             var self        = this,
                 profile     = self[what],
                 cfg         = extend({},
-                                    isString(profile[type]) ?
+                                    isString(profile[type]) || isFunction(profile[type]) ?
                                         {url: profile[type]} :
                                         profile[type]
                                     ),
@@ -196,7 +197,7 @@ module.exports = function(){
                     throw what + "." + type + " not defined";
                 }
             }
-            if (isString(cfg)) {
+            if (isString(cfg) || isFunction(cfg)) {
                 cfg         = {url: cfg};
             }
 
@@ -217,6 +218,22 @@ module.exports = function(){
                 true,
                 true
             );
+
+            if (isFunction(cfg.url)) {
+                var df = cfg.url(cfg.data),
+                    promise = new Promise;
+
+                df.then(function(response){
+                    if (what == "record") {
+                        self._processRecordResponse(type, response, promise);
+                    }
+                    else if (what == "store") {
+                        self._processStoreResponse(type, response, promise);
+                    }
+                });
+
+                return promise;
+            }
 
             if (!cfg.method) {
                 cfg.method = type == "load" ? "GET" : "POST";
@@ -253,7 +270,7 @@ module.exports = function(){
                 };
             }
 
-            return cfg;
+            return ajax(cfg);
         },
 
         _processRecordResponse: function(type, response, df) {
@@ -300,13 +317,14 @@ module.exports = function(){
             }
         },
 
+
         /**
          * @access public
          * @param {string|number} id Record id
          * @returns MetaphorJs.lib.Promise
          */
         loadRecord: function(id) {
-            return ajax(this._createAjaxCfg("record", "load", id));
+            return this._makeRequest("record", "load", id);
         },
 
         /**
@@ -317,12 +335,12 @@ module.exports = function(){
          * @returns MetaphorJs.lib.Promise
          */
         saveRecord: function(rec, keys, extra) {
-            return ajax(this._createAjaxCfg(
+            return this._makeRequest(
                 "record",
                 rec.getId() ? "save" : "create",
                 rec.getId(),
                 extend({}, rec.storeData(rec.getData(keys)), extra)
-            ));
+            );
         },
 
         /**
@@ -331,7 +349,7 @@ module.exports = function(){
          * @returns MetaphorJs.lib.Promise
          */
         deleteRecord: function(rec) {
-            return ajax(this._createAjaxCfg("record", "delete", rec.getId()));
+            return this._makeRequest("record", "delete", rec.getId());
         },
 
         /**
@@ -341,7 +359,7 @@ module.exports = function(){
          * @returns MetaphorJs.lib.Promise
          */
         loadStore: function(store, params) {
-            return ajax(this._createAjaxCfg("store", "load", null, null, params));
+            return this._makeRequest("store", "load", null, null, params);
         },
 
         /**
@@ -351,7 +369,7 @@ module.exports = function(){
          * @returns MetaphorJs.lib.Promise
          */
         saveStore: function(store, recordData) {
-            return ajax(this._createAjaxCfg("store", "save", null, recordData));
+            return this._makeRequest("store", "save", null, recordData);
         },
 
         /**
@@ -361,7 +379,7 @@ module.exports = function(){
          * @returns MetaphorJs.lib.Promise
          */
         deleteRecords: function(store, ids) {
-            return ajax(this._createAjaxCfg("store", "delete", ids));
+            return this._makeRequest("store", "delete", ids);
         },
 
 

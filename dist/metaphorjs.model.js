@@ -854,6 +854,22 @@ var toArray = function(list) {
 };
 
 
+var attr = function(el, name, value) {
+    if (!el || !el.getAttribute) {
+        return null;
+    }
+    if (value === undf) {
+        return el.getAttribute(name);
+    }
+    else if (value === null) {
+        return el.removeAttribute(name);
+    }
+    else {
+        return el.setAttribute(name, value);
+    }
+};
+
+
 /**
  * Modified version of YASS (http://yass.webo.in)
  */
@@ -1006,56 +1022,65 @@ var select = function() {
 
         attrMods    = {
             /* W3C "an E element with a "attr" attribute" */
-            '': function (child, attr) {
-                return child.getAttribute(attr) !== null;
+            '': function (child, name) {
+                return attr(child, name) !== null;
             },
             /*
              W3C "an E element whose "attr" attribute value is
              exactly equal to "value"
              */
-            '=': function (child, attr, value) {
-                return (attr = child.getAttribute(attr)) && attr === value;
+            '=': function (child, name, value) {
+                var attrValue;
+                return (attrValue = attr(child, name)) && attrValue === value;
             },
             /*
              from w3.prg "an E element whose "attr" attribute value is
              a list of space-separated values, one of which is exactly
              equal to "value"
              */
-            '&=': function (child, attr, value) {
-                return (attr = child.getAttribute(attr)) && getAttrReg(value).test(attr);
+            '&=': function (child, name, value) {
+                var attrValue;
+                return (attrValue = attr(child, name)) && getAttrReg(value).test(attrValue);
             },
             /*
              from w3.prg "an E element whose "attr" attribute value
              begins exactly with the string "value"
              */
-            '^=': function (child, attr, value) {
-                return (attr = child.getAttribute(attr) + '') && !attr.indexOf(value);
+            '^=': function (child, name, value) {
+                var attrValue;
+                return (attrValue = attr(child, name) + '') && !attrValue.indexOf(value);
             },
             /*
              W3C "an E element whose "attr" attribute value
              ends exactly with the string "value"
              */
-            '$=': function (child, attr, value) {
-                return (attr = child.getAttribute(attr) + '') && attr.indexOf(value) == attr.length - value.length;
+            '$=': function (child, name, value) {
+                var attrValue;
+                return (attrValue = attr(child, name) + '') &&
+                       attrValue.indexOf(value) == attrValue.length - value.length;
             },
             /*
              W3C "an E element whose "attr" attribute value
              contains the substring "value"
              */
-            '*=': function (child, attr, value) {
-                return (attr = child.getAttribute(attr) + '') && attr.indexOf(value) != -1;
+            '*=': function (child, name, value) {
+                var attrValue;
+                return (attrValue = attr(child, name) + '') && attrValue.indexOf(value) != -1;
             },
             /*
              W3C "an E element whose "attr" attribute has
              a hyphen-separated list of values beginning (from the
              left) with "value"
              */
-            '|=': function (child, attr, value) {
-                return (attr = child.getAttribute(attr) + '') && (attr === value || !!attr.indexOf(value + '-'));
+            '|=': function (child, name, value) {
+                var attrValue;
+                return (attrValue = attr(child, name) + '') &&
+                       (attrValue === value || !!attrValue.indexOf(value + '-'));
             },
             /* attr doesn't contain given value */
-            '!=': function (child, attr, value) {
-                return !(attr = child.getAttribute(attr)) || !getAttrReg(value).test(attr);
+            '!=': function (child, name, value) {
+                var attrValue;
+                return !(attrValue = attr(child, name)) || !getAttrReg(value).test(attrValue);
             }
         };
 
@@ -1070,7 +1095,7 @@ var select = function() {
             qsaErr  = null,
             idx, cls, nodes,
             i, node, ind, mod,
-            attrs, attr, eql, value;
+            attrs, attrName, eql, value;
 
         if (qsa) {
             /* replace not quoted args with quoted one -- Safari doesn't understand either */
@@ -1158,14 +1183,14 @@ var select = function() {
                         nodes   = root.getElementsByTagName('*');
                         i       = 0;
                         attrs   = rGetSquare.exec(selector);
-                        attr    = attrs[1];
+                        attrName    = attrs[1];
                         eql     = attrs[2] || '';
                         value   = attrs[3];
 
                         while (node = nodes[i++]) {
                             /* check either attr is defined for given node or it's equal to given value */
-                            if (attrMods[eql] && (attrMods[eql](node, attr, value) ||
-                                                  (attr === 'class' && attrMods[eql](node, 'className', value)))) {
+                            if (attrMods[eql] && (attrMods[eql](node, attrName, value) ||
+                                                  (attrName === 'class' && attrMods[eql](node, 'className', value)))) {
                                 sets[idx++] = node;
                             }
                         }
@@ -1232,7 +1257,7 @@ var select = function() {
                             tag     = single[1] || '*';
                             id      = single[2];
                             klass   = single[3] ? ' ' + single[3] + ' ' : '';
-                            attr    = single[4];
+                            attrName    = single[4];
                             eql     = single[5] || '';
                             mod     = single[7];
 
@@ -1283,9 +1308,9 @@ var select = function() {
                                              */
                                             if ((!id || item.id === id) &&
                                                 (!klass || (' ' + item.className + ' ').indexOf(klass) != -1) &&
-                                                (!attr || (attrMods[eql] &&
-                                                           (attrMods[eql](item, attr, single[6]) ||
-                                                            (attr === 'class' &&
+                                                (!attrName || (attrMods[eql] &&
+                                                           (attrMods[eql](item, attrName, single[6]) ||
+                                                            (attrName === 'class' &&
                                                              attrMods[eql](item, 'className', single[6]))))) &&
                                                 !item.yeasss && !(mods[mod] ? mods[mod](item, ind) : mod)) {
 
@@ -1311,9 +1336,9 @@ var select = function() {
                                                 (tag === '*' || child.nodeName.toLowerCase() === tag) &&
                                                 (!id || child.id === id) &&
                                                 (!klass || (' ' + child.className + ' ').indexOf(klass) != -1) &&
-                                                (!attr || (attrMods[eql] &&
-                                                           (attrMods[eql](item, attr, single[6]) ||
-                                                            (attr === 'class' &&
+                                                (!attrName || (attrMods[eql] &&
+                                                           (attrMods[eql](item, attrName, single[6]) ||
+                                                            (attrName === 'class' &&
                                                              attrMods[eql](item, 'className', single[6]))))) &&
                                                 !child.yeasss &&
                                                 !(mods[mod] ? mods[mod](child, ind) : mod)) {
@@ -1333,9 +1358,9 @@ var select = function() {
                                             (child.nodeName.toLowerCase() === tag.toLowerCase() || tag === '*') &&
                                             (!id || child.id === id) &&
                                             (!klass || (' ' + item.className + ' ').indexOf(klass) != -1) &&
-                                            (!attr ||
-                                             (attrMods[eql] && (attrMods[eql](item, attr, single[6]) ||
-                                                                (attr === 'class' &&
+                                            (!attrName ||
+                                             (attrMods[eql] && (attrMods[eql](item, attrName, single[6]) ||
+                                                                (attrName === 'class' &&
                                                                  attrMods[eql](item, 'className', single[6]))))) &&
                                             !child.yeasss && !(mods[mod] ? mods[mod](child, ind) : mod)) {
 
@@ -1354,9 +1379,9 @@ var select = function() {
                                             if (item.parentNode === child &&
                                                 (!id || item.id === id) &&
                                                 (!klass || (' ' + item.className + ' ').indexOf(klass) != -1) &&
-                                                (!attr || (attrMods[eql] &&
-                                                           (attrMods[eql](item, attr, single[6]) ||
-                                                            (attr === 'class' &&
+                                                (!attrName || (attrMods[eql] &&
+                                                           (attrMods[eql](item, attrName, single[6]) ||
+                                                            (attrName === 'class' &&
                                                              attrMods[eql](item, 'className', single[6]))))) &&
                                                 !item.yeasss &&
                                                 !(mods[mod] ? mods[mod](item, ind) : mod)) {
@@ -3039,9 +3064,9 @@ var ajax = function(){
 
             if (!isObject(data) && !isFunction(data) && name) {
                 input   = document.createElement("input");
-                input.setAttribute("type", "hidden");
-                input.setAttribute("name", name);
-                input.setAttribute("value", data);
+                attr(input, "type", "hidden");
+                attr(input, "name", name);
+                attr(input, "value", data);
                 form.appendChild(input);
             }
             else if (isArray(data) && name) {
@@ -3067,12 +3092,12 @@ var ajax = function(){
 
                 oField = form.elements[nItem];
 
-                if (!oField.hasAttribute("name")) {
+                if (attr(oField, "name") === null) {
                     continue;
                 }
 
                 sFieldType = oField.nodeName.toUpperCase() === "INPUT" ?
-                             oField.getAttribute("type").toUpperCase() : "TEXT";
+                             attr(oField, "type").toUpperCase() : "TEXT";
 
                 if (sFieldType === "FILE") {
                     for (nFile = 0;
@@ -3264,7 +3289,7 @@ var ajax = function(){
                 form    = document.createElement("form");
 
             form.style.display = "none";
-            form.setAttribute("method", self._opt.method);
+            attr(form, "method", self._opt.method);
 
             data2form(self._opt.data, form, null);
 
@@ -3417,7 +3442,7 @@ var ajax = function(){
 
         if (!opt.url) {
             if (opt.form) {
-                opt.url = opt.form.getAttribute("action");
+                opt.url = attr(opt.form, "action");
             }
             if (!opt.url) {
                 throw "Must provide url";
@@ -3429,7 +3454,7 @@ var ajax = function(){
 
         if (!opt.method) {
             if (opt.form) {
-                opt.method = opt.form.getAttribute("method").toUpperCase() || "GET";
+                opt.method = attr(opt.form, "method").toUpperCase() || "GET";
             }
             else {
                 opt.method = "GET";
@@ -3645,9 +3670,9 @@ var ajax = function(){
             var self    = this,
                 script  = document.createElement("script");
 
-            script.setAttribute("async", "async");
-            script.setAttribute("charset", "utf-8");
-            script.setAttribute("src", self._opt.url);
+            attr(script, "async", "async");
+            attr(script, "charset", "utf-8");
+            attr(script, "src", self._opt.url);
 
             addListener(script, "load", bind(self.onLoad, self));
             addListener(script, "error", bind(self.onError, self));
@@ -3716,13 +3741,13 @@ var ajax = function(){
                 id      = "frame-" + nextUid(),
                 form    = self._opt.form;
 
-            frame.setAttribute("id", id);
-            frame.setAttribute("name", id);
+            attr(frame, "id", id);
+            attr(frame, "name", id);
             frame.style.display = "none";
             document.body.appendChild(frame);
 
-            form.setAttribute("action", self._opt.url);
-            form.setAttribute("target", id);
+            attr(form, "action", self._opt.url);
+            attr(form, "target", id);
 
             addListener(frame, "load", bind(self.onLoad, self));
             addListener(frame, "error", bind(self.onError, self));
@@ -3956,12 +3981,12 @@ var Model = function(){
             return this[prop] = value;
         },
 
-        _createAjaxCfg: function(what, type, id, data, extra) {
+        _makeRequest: function(what, type, id, data, extra) {
 
             var self        = this,
                 profile     = self[what],
                 cfg         = extend({},
-                                    isString(profile[type]) ?
+                                    isString(profile[type]) || isFunction(profile[type]) ?
                                         {url: profile[type]} :
                                         profile[type]
                                     ),
@@ -3978,7 +4003,7 @@ var Model = function(){
                     throw what + "." + type + " not defined";
                 }
             }
-            if (isString(cfg)) {
+            if (isString(cfg) || isFunction(cfg)) {
                 cfg         = {url: cfg};
             }
 
@@ -3999,6 +4024,22 @@ var Model = function(){
                 true,
                 true
             );
+
+            if (isFunction(cfg.url)) {
+                var df = cfg.url(cfg.data),
+                    promise = new Promise;
+
+                df.then(function(response){
+                    if (what == "record") {
+                        self._processRecordResponse(type, response, promise);
+                    }
+                    else if (what == "store") {
+                        self._processStoreResponse(type, response, promise);
+                    }
+                });
+
+                return promise;
+            }
 
             if (!cfg.method) {
                 cfg.method = type == "load" ? "GET" : "POST";
@@ -4035,7 +4076,7 @@ var Model = function(){
                 };
             }
 
-            return cfg;
+            return ajax(cfg);
         },
 
         _processRecordResponse: function(type, response, df) {
@@ -4082,13 +4123,14 @@ var Model = function(){
             }
         },
 
+
         /**
          * @access public
          * @param {string|number} id Record id
          * @returns MetaphorJs.lib.Promise
          */
         loadRecord: function(id) {
-            return ajax(this._createAjaxCfg("record", "load", id));
+            return this._makeRequest("record", "load", id);
         },
 
         /**
@@ -4099,12 +4141,12 @@ var Model = function(){
          * @returns MetaphorJs.lib.Promise
          */
         saveRecord: function(rec, keys, extra) {
-            return ajax(this._createAjaxCfg(
+            return this._makeRequest(
                 "record",
                 rec.getId() ? "save" : "create",
                 rec.getId(),
                 extend({}, rec.storeData(rec.getData(keys)), extra)
-            ));
+            );
         },
 
         /**
@@ -4113,7 +4155,7 @@ var Model = function(){
          * @returns MetaphorJs.lib.Promise
          */
         deleteRecord: function(rec) {
-            return ajax(this._createAjaxCfg("record", "delete", rec.getId()));
+            return this._makeRequest("record", "delete", rec.getId());
         },
 
         /**
@@ -4123,7 +4165,7 @@ var Model = function(){
          * @returns MetaphorJs.lib.Promise
          */
         loadStore: function(store, params) {
-            return ajax(this._createAjaxCfg("store", "load", null, null, params));
+            return this._makeRequest("store", "load", null, null, params);
         },
 
         /**
@@ -4133,7 +4175,7 @@ var Model = function(){
          * @returns MetaphorJs.lib.Promise
          */
         saveStore: function(store, recordData) {
-            return ajax(this._createAjaxCfg("store", "save", null, recordData));
+            return this._makeRequest("store", "save", null, recordData);
         },
 
         /**
@@ -4143,7 +4185,7 @@ var Model = function(){
          * @returns MetaphorJs.lib.Promise
          */
         deleteRecords: function(store, ids) {
-            return ajax(this._createAjaxCfg("store", "delete", ids));
+            return this._makeRequest("store", "delete", ids);
         },
 
 
@@ -6721,24 +6763,6 @@ if (!aIndexOf) {
         },
 
         {
-            /**
-             * @static
-             * @param {DOMElement} selectObj
-             * @returns MetaphorJs.data.Store
-             */
-            createFromSelect: function(selectObj) {
-                var d = [], opts = selectObj.options;
-                for(var i = 0, len = opts.length;i < len; i++){
-                    var o = opts[i],
-                        value = (o.hasAttribute ? o.hasAttribute('value') : o.getAttributeNode('value').specified) ?
-                                    o.value : o.text;
-                    d.push([value, o.text]);
-                }
-                var s   = factory("MetaphorJs.data.Store", {server: {load: {id: 0}}});
-                s._loadArray(d);
-                return s;
-            },
-
             /**
              * @static
              * @param {string} id
