@@ -65,7 +65,8 @@ var varType = function(){
 
 
 var isString = function(value) {
-    return typeof value == "string" || varType(value) === 0;
+    return typeof value == "string" || value === ""+value;
+    //return typeof value == "string" || varType(value) === 0;
 };
 
 
@@ -280,11 +281,12 @@ var slice = Array.prototype.slice;/**
  * @param {Function} fn
  * @param {Object} context
  * @param {[]} args
+ * @param {number} timeout
  */
-var async = function(fn, context, args) {
+var async = function(fn, context, args, timeout) {
     setTimeout(function(){
         fn.apply(context, args || []);
-    }, 0);
+    }, timeout || 0);
 };
 
 
@@ -305,6 +307,9 @@ var error = function(e) {
     }
 };
 
+var emptyFn = function(){};
+
+
 /*!
  * inspired by and based on klass
  */
@@ -324,6 +329,13 @@ var Class = function(ns){
 
         constr  = "__construct",
 
+        emptyConstructor    = function() {
+            var self = this;
+            if (self.supr && self.supr !== emptyFn) {
+                self.supr.apply(self, arguments);
+            }
+        },
+
         create  = function(cls, constructor) {
             return extend(function(){}, cls, constructor);
         },
@@ -335,12 +347,7 @@ var Class = function(ns){
                     self    = this,
                     prev    = self.supr;
 
-                if (k == constr) {
-                    self.supr   = parent[proto][k] || parent[proto].constructor;
-                }
-                else {
-                    self.supr   = parent[proto][k] || function(){};
-                }
+                self.supr   = parent[proto][k] || (k == constr ? parent : emptyFn) || emptyFn;
                 ret         = fn.apply(self, arguments);
                 self.supr   = prev;
 
@@ -368,15 +375,11 @@ var Class = function(ns){
             noop[proto]     = parent[proto];
             var prototype   = new noop;
 
-            if (constructorFn) {
-                cls[constr] = constructorFn;
-            }
+            cls[constr]     = constructorFn || emptyConstructor;
 
             var fn          = function() {
                 var self = this;
-                if (self.__construct) {
-                    self.__construct.apply(self, arguments);
-                }
+                self[constr].apply(self, arguments);
                 if (self.initialize) {
                     self.initialize.apply(self, arguments);
                 }
@@ -696,8 +699,6 @@ var bind = Function.prototype.bind ?
 
 
 
-var emptyFn = function(){};
-
 
 var isPlainObject = function(value) {
     // IE < 9 returns [object Object] from toString(htmlElement)
@@ -841,7 +842,7 @@ var parseXML = function(data, type) {
  * @returns {[]}
  */
 var toArray = function(list) {
-    if (list && !list.length != undf && !isString(list)) {
+    if (list && !list.length != undf && list !== ""+list) {
         for(var a = [], i =- 1, l = list.length>>>0; ++i !== l; a[i] = list[i]){}
         return a;
     }
@@ -852,21 +853,8 @@ var toArray = function(list) {
         return [];
     }
 };
-
-
-var attr = function(el, name, value) {
-    if (!el || !el.getAttribute) {
-        return null;
-    }
-    if (value === undf) {
-        return el.getAttribute(name);
-    }
-    else if (value === null) {
-        return el.removeAttribute(name);
-    }
-    else {
-        return el.setAttribute(name, value);
-    }
+var getAttr = function(el, name) {
+    return el.getAttribute(name);
 };
 
 
@@ -1023,7 +1011,7 @@ var select = function() {
         attrMods    = {
             /* W3C "an E element with a "attr" attribute" */
             '': function (child, name) {
-                return attr(child, name) !== null;
+                return getAttr(child, name) !== null;
             },
             /*
              W3C "an E element whose "attr" attribute value is
@@ -1031,7 +1019,7 @@ var select = function() {
              */
             '=': function (child, name, value) {
                 var attrValue;
-                return (attrValue = attr(child, name)) && attrValue === value;
+                return (attrValue = getAttr(child, name)) && attrValue === value;
             },
             /*
              from w3.prg "an E element whose "attr" attribute value is
@@ -1040,7 +1028,7 @@ var select = function() {
              */
             '&=': function (child, name, value) {
                 var attrValue;
-                return (attrValue = attr(child, name)) && getAttrReg(value).test(attrValue);
+                return (attrValue = getAttr(child, name)) && getAttrReg(value).test(attrValue);
             },
             /*
              from w3.prg "an E element whose "attr" attribute value
@@ -1048,7 +1036,7 @@ var select = function() {
              */
             '^=': function (child, name, value) {
                 var attrValue;
-                return (attrValue = attr(child, name) + '') && !attrValue.indexOf(value);
+                return (attrValue = getAttr(child, name) + '') && !attrValue.indexOf(value);
             },
             /*
              W3C "an E element whose "attr" attribute value
@@ -1056,7 +1044,7 @@ var select = function() {
              */
             '$=': function (child, name, value) {
                 var attrValue;
-                return (attrValue = attr(child, name) + '') &&
+                return (attrValue = getAttr(child, name) + '') &&
                        attrValue.indexOf(value) == attrValue.length - value.length;
             },
             /*
@@ -1065,7 +1053,7 @@ var select = function() {
              */
             '*=': function (child, name, value) {
                 var attrValue;
-                return (attrValue = attr(child, name) + '') && attrValue.indexOf(value) != -1;
+                return (attrValue = getAttr(child, name) + '') && attrValue.indexOf(value) != -1;
             },
             /*
              W3C "an E element whose "attr" attribute has
@@ -1074,13 +1062,13 @@ var select = function() {
              */
             '|=': function (child, name, value) {
                 var attrValue;
-                return (attrValue = attr(child, name) + '') &&
+                return (attrValue = getAttr(child, name) + '') &&
                        (attrValue === value || !!attrValue.indexOf(value + '-'));
             },
             /* attr doesn't contain given value */
             '!=': function (child, name, value) {
                 var attrValue;
-                return !(attrValue = attr(child, name)) || !getAttrReg(value).test(attrValue);
+                return !(attrValue = getAttr(child, name)) || !getAttrReg(value).test(attrValue);
             }
         };
 
@@ -2191,8 +2179,12 @@ Event.prototype = {
  * @returns {Function|boolean}
  */
 var isThenable = function(any) {
-    var then;
-    if (!any || (!isObject(any) && !isFunction(any))) {
+    if (!any || !any.then) {
+        return false;
+    }
+    var then, t;
+    //if (!any || (!isObject(any) && !isFunction(any))) {
+    if (((t = typeof any) != "object" && t != "function")) {
         return false;
     }
     return isFunction((then = any.then)) ?
@@ -2589,7 +2581,12 @@ var Promise = function(){
                 state   = self._state;
 
             if (state == FULFILLED && self._wait == 0) {
-                fn.call(fnScope || null, self._value);
+                try {
+                    fn.call(fnScope || null, self._value);
+                }
+                catch (thrown) {
+                    error(thrown);
+                }
             }
             else if (state == PENDING) {
                 self._dones.push([fn, fnScope]);
@@ -2625,7 +2622,12 @@ var Promise = function(){
                 state   = self._state;
 
             if (state == REJECTED && self._wait == 0) {
-                fn.call(fnScope || null, self._reason);
+                try {
+                    fn.call(fnScope || null, self._reason);
+                }
+                catch (thrown) {
+                    error(thrown);
+                }
             }
             else if (state == PENDING) {
                 self._fails.push([fn, fnScope]);
@@ -2913,6 +2915,9 @@ var isPrimitive = function(value) {
     var vt = varType(value);
     return vt < 3 && vt > -1;
 };
+var setAttr = function(el, name, value) {
+    return el.setAttribute(name, value);
+};
 
 
 
@@ -3064,9 +3069,9 @@ var ajax = function(){
 
             if (!isObject(data) && !isFunction(data) && name) {
                 input   = document.createElement("input");
-                attr(input, "type", "hidden");
-                attr(input, "name", name);
-                attr(input, "value", data);
+                setAttr(input, "type", "hidden");
+                setAttr(input, "name", name);
+                setAttr(input, "value", data);
                 form.appendChild(input);
             }
             else if (isArray(data) && name) {
@@ -3092,12 +3097,12 @@ var ajax = function(){
 
                 oField = form.elements[nItem];
 
-                if (attr(oField, "name") === null) {
+                if (getAttr(oField, "name") === null) {
                     continue;
                 }
 
                 sFieldType = oField.nodeName.toUpperCase() === "INPUT" ?
-                             attr(oField, "type").toUpperCase() : "TEXT";
+                             getAttr(oField, "type").toUpperCase() : "TEXT";
 
                 if (sFieldType === "FILE") {
                     for (nFile = 0;
@@ -3289,7 +3294,7 @@ var ajax = function(){
                 form    = document.createElement("form");
 
             form.style.display = "none";
-            attr(form, "method", self._opt.method);
+            setAttr(form, "method", self._opt.method);
 
             data2form(self._opt.data, form, null);
 
@@ -3442,7 +3447,7 @@ var ajax = function(){
 
         if (!opt.url) {
             if (opt.form) {
-                opt.url = attr(opt.form, "action");
+                opt.url = getAttr(opt.form, "action");
             }
             if (!opt.url) {
                 throw "Must provide url";
@@ -3454,7 +3459,7 @@ var ajax = function(){
 
         if (!opt.method) {
             if (opt.form) {
-                opt.method = attr(opt.form, "method").toUpperCase() || "GET";
+                opt.method = getAttr(opt.form, "method").toUpperCase() || "GET";
             }
             else {
                 opt.method = "GET";
@@ -3670,9 +3675,9 @@ var ajax = function(){
             var self    = this,
                 script  = document.createElement("script");
 
-            attr(script, "async", "async");
-            attr(script, "charset", "utf-8");
-            attr(script, "src", self._opt.url);
+            setAttr(script, "async", "async");
+            setAttr(script, "charset", "utf-8");
+            setAttr(script, "src", self._opt.url);
 
             addListener(script, "load", bind(self.onLoad, self));
             addListener(script, "error", bind(self.onError, self));
@@ -3741,13 +3746,13 @@ var ajax = function(){
                 id      = "frame-" + nextUid(),
                 form    = self._opt.form;
 
-            attr(frame, "id", id);
-            attr(frame, "name", id);
+            setAttr(frame, "id", id);
+            setAttr(frame, "name", id);
             frame.style.display = "none";
             document.body.appendChild(frame);
 
-            attr(form, "action", self._opt.url);
-            attr(form, "target", id);
+            setAttr(form, "action", self._opt.url);
+            setAttr(form, "target", id);
 
             addListener(frame, "load", bind(self.onLoad, self));
             addListener(frame, "error", bind(self.onError, self));
@@ -5635,6 +5640,7 @@ if (!aIndexOf) {
                 self.loaded     = true;
                 self.loading    = false;
 
+                self.trigger("loadingend", self);
                 self.onLoad();
 
                 if (!options.skipUpdate) {
@@ -5681,6 +5687,8 @@ if (!aIndexOf) {
 
                 self.loading = true;
 
+                self.trigger("loadingstart", self);
+
                 return self.model.loadStore(self, params)
                     .done(function(response){
                         self.ajaxData = self.model.lastAjaxResponse;
@@ -5695,8 +5703,14 @@ if (!aIndexOf) {
             _onModelLoadSuccess: function(response, options) {
 
                 var self = this;
-                if (self.clearOnLoad && self.length > 0) {
-                    self.clear();
+                options = options || {};
+
+                if (options.noopOnEmpty && !response.data.length) {
+                    return;
+                }
+
+                if ((!options.prepend && !options.append) && self.clearOnLoad && self.length > 0) {
+                    self.clear(true);
                 }
 
                 self.totalLength = parseInt(response.total);
@@ -5918,6 +5932,17 @@ if (!aIndexOf) {
                 }
             },
 
+            addPrevPage: function(options) {
+                var self    = this;
+
+                options = options || {};
+                options.append = false;
+                options.prepend = true;
+                options.noopOnEmpty = true;
+
+                return self.loadPrevPage(options);
+            },
+
             /**
              * @method
              */
@@ -5925,8 +5950,13 @@ if (!aIndexOf) {
 
                 var self    = this;
 
-                if (!self.local && self.length < self.totalLength) {
-                    self.load({
+                options = options || {};
+                options.append = true;
+                options.prepend = false;
+                options.noopOnEmpty = true;
+
+                if (!self.local && (!self.totalLength || self.length < self.totalLength)) {
+                    return self.load({
                         start:      self.length,
                         limit:      self.pageSize
                     }, options);
@@ -5940,9 +5970,9 @@ if (!aIndexOf) {
 
                 var self    = this;
 
-                if (!self.local) {
+                if (!self.local && (!self.totalLength || self.length < self.totalLength)) {
                     self.start += self.pageSize;
-                    self.load(null, options);
+                    return self.load(null, options);
                 }
             },
 
@@ -5953,12 +5983,12 @@ if (!aIndexOf) {
 
                 var self    = this;
 
-                if (!self.local) {
+                if (!self.local && self.start > 0) {
                     self.start -= self.pageSize;
                     if (self.start < 0) {
                         self.start = 0;
                     }
-                    self.load(null, options);
+                    return self.load(null, options);
                 }
             },
 
@@ -5972,7 +6002,7 @@ if (!aIndexOf) {
                     if (self.start < 0) {
                         self.start = 0;
                     }
-                    self.load(null, options);
+                    return self.load(null, options);
                 }
             },
 
@@ -6344,14 +6374,17 @@ if (!aIndexOf) {
             /**
              * @method
              */
-            clear: function() {
+            clear: function(silent) {
 
                 var self    = this,
                     recs    = self.getRange();
 
                 self._reset();
                 self.onClear();
-                self.trigger('clear', recs);
+
+                if (!silent) {
+                    self.trigger('clear', recs);
+                }
             },
 
             onClear: emptyFn,

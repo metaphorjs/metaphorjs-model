@@ -6,74 +6,44 @@ var defineClass = require("../../../metaphorjs-class/src/func/defineClass.js"),
     ns = require("../../../metaphorjs-namespace/src/var/ns.js"),
     animate = require("../../../metaphorjs-animate/src/metaphorjs.animate.js"),
     bind = require("../../../metaphorjs/src/func/bind.js"),
-    attr = require("../../../metaphorjs/src/func/dom/attr.js"),
     data = require("../../../metaphorjs/src/func/dom/data.js"),
-    ListRenderer = require("../../../metaphorjs/src/view/ListRenderer.js");
+    ListRenderer = require("../../../metaphorjs/src/view/ListRenderer.js"),
+    addListener = require("../../../metaphorjs/src/func/event/addListener.js"),
+    removeListener = require("../../../metaphorjs/src/func/event/removeListener.js"),
+    removeAttr = require("../../../metaphorjs/src/func/dom/removeAttr.js");
 
 
-module.exports = defineClass(
+var StoreRenderer = defineClass(
     null,
     ListRenderer,
     function(scope, node, expr) {
-
-
-        var self    = this,
-            store;
-
-        self.parseExpr(expr);
-
-        attr(node, "mjs-each-in-store", null);
-        attr(node, "mjs-include", null);
-
-        self.tpl        = node;
-        self.renderers  = [];
-        self.prevEl     = node.previousSibling;
-        self.nextEl     = node.nextSibling;
-        self.parentEl   = node.parentNode;
-        self.node       = node;
-        self.scope      = scope;
-        self.store      = store = createGetter(self.model)(scope);
-
-        var cfg         = data(node, "config") || {};
-        self.animateMove= !cfg.buffered && cfg.animateMove && animate.cssAnimations;
-        self.animate    = !cfg.buffered && attr(node, "mjs-animate") !== null;
-
-        self.parentEl.removeChild(node);
-
-        self.trackByFn      = bind(store.getRecordId, store);
-        self.griDelegate    = bind(store.indexOfId, store);
-
-        if (cfg.buffered) {
-            self.initBuffering(cfg);
+        if (!(this instanceof StoreRenderer)) {
+            return new StoreRenderer(scope, node, expr);
         }
-
-        self.initWatcher();
-        self.render(self.watcher.getValue());
-        self.bindStore(store, "on");
+        this.supr(scope, node, expr);
     },
     {
 
         store: null,
+        pullNext: false,
+        pullNextDelegate: null,
 
-        onScopeDestroy: function() {
+        init: function(scope, node, expr) {
+            var self            = this,
+                store;
 
-            var self    = this;
+            self.store          = store = createGetter(self.model)(scope);
+            self.watcher        = createWatchable(store, ".current", self.onChange, self, null, ns);
+            self.trackByFn      = bind(store.getRecordId, store);
+            self.griDelegate    = bind(store.indexOfId, store);
+            self.bindStore(store, "on");
 
-            self.bindStore(self.store, "un");
-            delete self.store;
-
-            self.supr();
+            var cfg = data(node, "config") || {};
+            if (!cfg.buffered && cfg.pullNext) {
+                self.initPullNext(cfg);
+            }
         },
 
-        initWatcher: function() {
-            var self        = this;
-            self.watcher    = createWatchable(self.store, ".current", self.onChange, self, null, ns);
-        },
-
-        resetWatcher: function() {
-            var self        = this;
-            self.watcher.setValue(self.store.items);
-        },
 
         bindStore: function(store, fn) {
 
@@ -97,13 +67,81 @@ module.exports = defineClass(
             self.onStoreUpdate();
             self.watcher.unsubscribeAndDestroy(self.onChange, self);
             delete self.watcher;
+        },
+
+
+        initBuffering: function(cfg) {
+            var self = this;
+            self.supr(cfg);
+
+            self.pullNext = cfg.pullNext || false;
+        },
+
+        initPullNext: function(cfg) {
+            var self = this;
+            self.pullNext = true;
+            self.itemSize = cfg.itemSize;
+            self.initScrollParent();
+            self.getScrollOffset();
+            self.pullNextDelegate = bind(self.pullNextEvent, self);
+            addListener(self.scrollEl, "scroll", self.pullNextDelegate);
+            addListener(window, "resize", self.pullNextDelegate);
+        },
+
+        pullNextEvent: function() {
+            var self = this;
+            self.queue.append(self.updateStoreOnScroll, self);
+        },
+
+        updateStoreOnScroll: function() {
+            var self    = this,
+                prev    = self.bufferState,
+                bs      = self.getBufferState(),
+                cnt     = self.store.getLength();
+
+            if (!prev || bs.first != prev.first || bs.last != prev.last) {
+                self.triggerIf("bufferchange", self, bs, prev);
+            }
+
+            if (cnt - bs.last < (bs.last - bs.first) / 3 && !self.store.loading) {
+                self.store.addNextPage();
+                self.triggerIf("pull", self);
+            }
+        },
+
+        onBufferStateChange: function(bs, prev) {
+
+            var self = this,
+                cnt = self.store.getLength();
+
+            self.supr(bs, prev);
+
+            if (self.pullNext && cnt - bs.last < (bs.last - bs.first) / 3 && !self.store.loading) {
+                self.store.addNextPage();
+                self.triggerIf("pull", self);
+            }
+        },
+
+
+        destroy: function() {
+            var self = this;
+            self.bindStore(self.store, "un");
+            delete self.store;
+
+            if (self.pullNext && !self.buffered) {
+                removeListener(self.scrollEl, "scroll", self.pullNextDelegate);
+                removeListener(window, "resize", self.pullNextDelegate);
+            }
+
+            self.supr();
         }
 
     },
     {
-        $stopRenderer: true
+        $stopRenderer: true,
+        $registerBy: "id"
     }
 );
 
 
-
+module.exports = StoreRenderer;

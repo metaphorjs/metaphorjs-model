@@ -81,7 +81,8 @@ var varType = function(){
 
 
 var isString = function(value) {
-    return typeof value == "string" || varType(value) === 0;
+    return typeof value == "string" || value === ""+value;
+    //return typeof value == "string" || varType(value) === 0;
 };
 
 var emptyFn = function(){};
@@ -2038,6 +2039,7 @@ if (!aIndexOf) {
                 self.loaded     = true;
                 self.loading    = false;
 
+                self.trigger("loadingend", self);
                 self.onLoad();
 
                 if (!options.skipUpdate) {
@@ -2084,6 +2086,8 @@ if (!aIndexOf) {
 
                 self.loading = true;
 
+                self.trigger("loadingstart", self);
+
                 return self.model.loadStore(self, params)
                     .done(function(response){
                         self.ajaxData = self.model.lastAjaxResponse;
@@ -2098,8 +2102,14 @@ if (!aIndexOf) {
             _onModelLoadSuccess: function(response, options) {
 
                 var self = this;
-                if (self.clearOnLoad && self.length > 0) {
-                    self.clear();
+                options = options || {};
+
+                if (options.noopOnEmpty && !response.data.length) {
+                    return;
+                }
+
+                if ((!options.prepend && !options.append) && self.clearOnLoad && self.length > 0) {
+                    self.clear(true);
                 }
 
                 self.totalLength = parseInt(response.total);
@@ -2321,6 +2331,17 @@ if (!aIndexOf) {
                 }
             },
 
+            addPrevPage: function(options) {
+                var self    = this;
+
+                options = options || {};
+                options.append = false;
+                options.prepend = true;
+                options.noopOnEmpty = true;
+
+                return self.loadPrevPage(options);
+            },
+
             /**
              * @method
              */
@@ -2328,8 +2349,13 @@ if (!aIndexOf) {
 
                 var self    = this;
 
-                if (!self.local && self.length < self.totalLength) {
-                    self.load({
+                options = options || {};
+                options.append = true;
+                options.prepend = false;
+                options.noopOnEmpty = true;
+
+                if (!self.local && (!self.totalLength || self.length < self.totalLength)) {
+                    return self.load({
                         start:      self.length,
                         limit:      self.pageSize
                     }, options);
@@ -2343,9 +2369,9 @@ if (!aIndexOf) {
 
                 var self    = this;
 
-                if (!self.local) {
+                if (!self.local && (!self.totalLength || self.length < self.totalLength)) {
                     self.start += self.pageSize;
-                    self.load(null, options);
+                    return self.load(null, options);
                 }
             },
 
@@ -2356,12 +2382,12 @@ if (!aIndexOf) {
 
                 var self    = this;
 
-                if (!self.local) {
+                if (!self.local && self.start > 0) {
                     self.start -= self.pageSize;
                     if (self.start < 0) {
                         self.start = 0;
                     }
-                    self.load(null, options);
+                    return self.load(null, options);
                 }
             },
 
@@ -2375,7 +2401,7 @@ if (!aIndexOf) {
                     if (self.start < 0) {
                         self.start = 0;
                     }
-                    self.load(null, options);
+                    return self.load(null, options);
                 }
             },
 
@@ -2747,14 +2773,17 @@ if (!aIndexOf) {
             /**
              * @method
              */
-            clear: function() {
+            clear: function(silent) {
 
                 var self    = this,
                     recs    = self.getRange();
 
                 self._reset();
                 self.onClear();
-                self.trigger('clear', recs);
+
+                if (!silent) {
+                    self.trigger('clear', recs);
+                }
             },
 
             onClear: emptyFn,

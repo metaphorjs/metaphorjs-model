@@ -511,6 +511,7 @@ module.exports = (function(){
                 self.loaded     = true;
                 self.loading    = false;
 
+                self.trigger("loadingend", self);
                 self.onLoad();
 
                 if (!options.skipUpdate) {
@@ -557,6 +558,8 @@ module.exports = (function(){
 
                 self.loading = true;
 
+                self.trigger("loadingstart", self);
+
                 return self.model.loadStore(self, params)
                     .done(function(response){
                         self.ajaxData = self.model.lastAjaxResponse;
@@ -571,8 +574,14 @@ module.exports = (function(){
             _onModelLoadSuccess: function(response, options) {
 
                 var self = this;
-                if (self.clearOnLoad && self.length > 0) {
-                    self.clear();
+                options = options || {};
+
+                if (options.noopOnEmpty && !response.data.length) {
+                    return;
+                }
+
+                if ((!options.prepend && !options.append) && self.clearOnLoad && self.length > 0) {
+                    self.clear(true);
                 }
 
                 self.totalLength = parseInt(response.total);
@@ -794,6 +803,17 @@ module.exports = (function(){
                 }
             },
 
+            addPrevPage: function(options) {
+                var self    = this;
+
+                options = options || {};
+                options.append = false;
+                options.prepend = true;
+                options.noopOnEmpty = true;
+
+                return self.loadPrevPage(options);
+            },
+
             /**
              * @method
              */
@@ -801,8 +821,13 @@ module.exports = (function(){
 
                 var self    = this;
 
-                if (!self.local && self.length < self.totalLength) {
-                    self.load({
+                options = options || {};
+                options.append = true;
+                options.prepend = false;
+                options.noopOnEmpty = true;
+
+                if (!self.local && (!self.totalLength || self.length < self.totalLength)) {
+                    return self.load({
                         start:      self.length,
                         limit:      self.pageSize
                     }, options);
@@ -816,9 +841,9 @@ module.exports = (function(){
 
                 var self    = this;
 
-                if (!self.local) {
+                if (!self.local && (!self.totalLength || self.length < self.totalLength)) {
                     self.start += self.pageSize;
-                    self.load(null, options);
+                    return self.load(null, options);
                 }
             },
 
@@ -829,12 +854,12 @@ module.exports = (function(){
 
                 var self    = this;
 
-                if (!self.local) {
+                if (!self.local && self.start > 0) {
                     self.start -= self.pageSize;
                     if (self.start < 0) {
                         self.start = 0;
                     }
-                    self.load(null, options);
+                    return self.load(null, options);
                 }
             },
 
@@ -848,7 +873,7 @@ module.exports = (function(){
                     if (self.start < 0) {
                         self.start = 0;
                     }
-                    self.load(null, options);
+                    return self.load(null, options);
                 }
             },
 
@@ -1220,14 +1245,17 @@ module.exports = (function(){
             /**
              * @method
              */
-            clear: function() {
+            clear: function(silent) {
 
                 var self    = this,
                     recs    = self.getRange();
 
                 self._reset();
                 self.onClear();
-                self.trigger('clear', recs);
+
+                if (!silent) {
+                    self.trigger('clear', recs);
+                }
             },
 
             onClear: emptyFn,
