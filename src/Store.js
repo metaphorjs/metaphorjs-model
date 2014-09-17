@@ -524,7 +524,8 @@ module.exports = (function(){
             },
 
             /**
-             * @param {object} params
+             * @param {object} params optional
+             * @param {object} options optional
              * @returns MetaphorJs.lib.Promise
              */
             load: function(params, options) {
@@ -535,7 +536,7 @@ module.exports = (function(){
                     lp      = ms.limit,
                     ps      = self.pageSize;
 
-                options = options || {};
+                options     = options || {};
 
                 if (self.local) {
                     return null;

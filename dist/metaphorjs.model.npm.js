@@ -821,8 +821,8 @@ var isInstanceOf = cs.isInstanceOf;
         var self    = this;
         cfg         = cfg || {};
 
-        self._observable    = new Observable;
-        extend(self, self._observable.getApi(), true, false);
+        self.$$observable    = new Observable;
+        extend(self, self.$$observable.getApi(), true, false);
 
         if (cfg.callback) {
 
@@ -862,8 +862,8 @@ var isInstanceOf = cs.isInstanceOf;
 
         self.trigger('destroy', self);
 
-        self._observable.destroy();
-        delete this._observable;
+        self.$$observable.destroy();
+        delete this.$$observable;
 
     },
 
@@ -2073,7 +2073,8 @@ if (!aIndexOf) {
             },
 
             /**
-             * @param {object} params
+             * @param {object} params optional
+             * @param {object} options optional
              * @returns MetaphorJs.lib.Promise
              */
             load: function(params, options) {
@@ -2084,7 +2085,7 @@ if (!aIndexOf) {
                     lp      = ms.limit,
                     ps      = self.pageSize;
 
-                options = options || {};
+                options     = options || {};
 
                 if (self.local) {
                     return null;

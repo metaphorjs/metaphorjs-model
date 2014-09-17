@@ -10,7 +10,8 @@ var defineClass = require("../../../metaphorjs-class/src/func/defineClass.js"),
     ListRenderer = require("../../../metaphorjs/src/view/ListRenderer.js"),
     addListener = require("../../../metaphorjs/src/func/event/addListener.js"),
     removeListener = require("../../../metaphorjs/src/func/event/removeListener.js"),
-    removeAttr = require("../../../metaphorjs/src/func/dom/removeAttr.js");
+    removeAttr = require("../../../metaphorjs/src/func/dom/removeAttr.js"),
+    getNodeConfig = require("../../../metaphorjs/src/func/dom/getNodeConfig.js");
 
 
 var StoreRenderer = defineClass(
@@ -38,7 +39,7 @@ var StoreRenderer = defineClass(
             self.griDelegate    = bind(store.indexOfId, store);
             self.bindStore(store, "on");
 
-            var cfg = data(node, "config") || {};
+            var cfg = getNodeConfig(node, scope);
             if (!cfg.buffered && cfg.pullNext) {
                 self.initPullNext(cfg);
             }
