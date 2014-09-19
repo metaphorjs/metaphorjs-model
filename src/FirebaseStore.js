@@ -13,7 +13,7 @@ defineClass({
 
     firebase: null,
 
-    initialize: function(ref) {
+    $init: function(ref) {
 
         var self    = this;
 

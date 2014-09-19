@@ -77,7 +77,7 @@ module.exports = function(){
          *      @md-apply model-atom
          * }
          */
-        initialize: function(cfg) {
+        $init: function(cfg) {
 
             var self        = this,
                 defaults    = {

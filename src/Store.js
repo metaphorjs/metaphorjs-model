@@ -207,7 +207,7 @@ module.exports = (function(){
              * @param {object} options
              * @param {[]} initialData
              */
-            initialize:     function(url, options, initialData) {
+            $init:     function(url, options, initialData) {
 
                 var self        = this;
 

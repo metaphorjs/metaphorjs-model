@@ -266,7 +266,7 @@ var Model = function(){
          *      @md-apply model-atom
          * }
          */
-        initialize: function(cfg) {
+        $init: function(cfg) {
 
             var self        = this,
                 defaults    = {
@@ -824,7 +824,7 @@ defineClass({
     /**
      * @param {object} cfg
      */
-    initialize: function(cfg) {
+    $init: function(cfg) {
 
         var self    = this;
         cfg         = cfg || {};
@@ -979,7 +979,7 @@ var Record = defineClass({
      * @param {object} data
      * @param {object} cfg
      */
-    initialize: function(id, data, cfg) {
+    $init: function(id, data, cfg) {
 
         var self    = this,
             args    = arguments.length;
@@ -1769,7 +1769,7 @@ if (!aIndexOf) {
              * @param {object} options
              * @param {[]} initialData
              */
-            initialize:     function(url, options, initialData) {
+            $init:     function(url, options, initialData) {
 
                 var self        = this;
 
@@ -3269,7 +3269,7 @@ defineClass({
 
     firebase: null,
 
-    initialize: function(ref) {
+    $init: function(ref) {
 
         var self    = this;
 

@@ -97,7 +97,7 @@ module.exports = defineClass({
      * @param {object} data
      * @param {object} cfg
      */
-    initialize: function(id, data, cfg) {
+    $init: function(id, data, cfg) {
 
         var self    = this,
             args    = arguments.length;
