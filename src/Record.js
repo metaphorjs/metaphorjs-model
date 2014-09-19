@@ -10,10 +10,13 @@ require("../../metaphorjs/src/cmp/Base.js");
 
 /**
  * @namespace MetaphorJs
- * @class MetaphorJs.data.Record
+ * @class MetaphorJs.model.Record
  * @extends MetaphorJs.cmp.Observable
  */
-module.exports = defineClass("MetaphorJs.data.Record", "MetaphorJs.cmp.Base", {
+module.exports = defineClass({
+
+    $class:         "MetaphorJs.model.Record",
+    $extends:       "MetaphorJs.cmp.Base",
 
     /**
      * @var mixed
@@ -58,7 +61,7 @@ module.exports = defineClass("MetaphorJs.data.Record", "MetaphorJs.cmp.Base", {
     destroyed:      false,
 
     /**
-     * @var MetaphorJs.data.Model
+     * @var MetaphorJs.model.Model
      * @access protected
      */
     model:          null,
@@ -119,8 +122,8 @@ module.exports = defineClass("MetaphorJs.data.Record", "MetaphorJs.cmp.Base", {
         if (isString(self.model)) {
             self.model  = factory(self.model);
         }
-        else if (!isInstanceOf(self.model, "MetaphorJs.data.Model")) {
-            self.model  = factory("MetaphorJs.data.Model", self.model);
+        else if (!isInstanceOf(self.model, "MetaphorJs.model.Model")) {
+            self.model  = factory("MetaphorJs.model.Model", self.model);
         }
 
         self.id     = id;
@@ -132,7 +135,7 @@ module.exports = defineClass("MetaphorJs.data.Record", "MetaphorJs.cmp.Base", {
             self.load();
         }
 
-        if (self.getClass() != "MetaphorJs.data.Record") {
+        if (self.$getClass() != "MetaphorJs.model.Record") {
             Model.addToCache(self);
         }
     },
@@ -159,14 +162,14 @@ module.exports = defineClass("MetaphorJs.data.Record", "MetaphorJs.cmp.Base", {
     },
 
     /**
-     * @returns {MetaphorJs.data.Model}
+     * @returns {MetaphorJs.model.Model}
      */
     getModel: function() {
         return this.model;
     },
 
     /**
-     * @param {MetaphorJs.data.Store} store
+     * @param {MetaphorJs.model.Store} store
      */
     attachStore: function(store) {
         var self    = this,
@@ -178,7 +181,7 @@ module.exports = defineClass("MetaphorJs.data.Record", "MetaphorJs.cmp.Base", {
     },
 
     /**
-     * @param {MetaphorJs.data.Store} store
+     * @param {MetaphorJs.model.Store} store
      */
     detachStore: function(store) {
         var self    = this,
@@ -429,7 +432,7 @@ module.exports = defineClass("MetaphorJs.data.Record", "MetaphorJs.cmp.Base", {
         self.model      = null;
         self.stores     = null;
 
-        Model.removeFromCache(self.getClass(), self.id);
+        Model.removeFromCache(self.$getClass(), self.id);
 
         self.supr();
     }

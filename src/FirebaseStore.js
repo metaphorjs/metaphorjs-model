@@ -6,7 +6,10 @@ var defineClass = require("../../metaphorjs-class/src/func/defineClass.js"),
 
 require("./Store.js");
 
-defineClass("MetaphorJs.data.FirebaseStore", "MetaphorJs.data.Store", {
+defineClass({
+
+    $class: "MetaphorJs.model.FirebaseStore",
+    $extends: "MetaphorJs.model.Store",
 
     firebase: null,
 
@@ -40,6 +43,7 @@ defineClass("MetaphorJs.data.FirebaseStore", "MetaphorJs.data.Store", {
     },
 
     onSnapshotLoaded: function(recordsSnapshot) {
+
 
         var self = this;
 

@@ -1,7 +1,7 @@
 (function(){
 "use strict";
 
-var isFunction = function(value) {
+function isFunction(value) {
     return typeof value == 'function';
 };
 var toString = Object.prototype.toString;
@@ -37,7 +37,7 @@ var varType = function(){
         'date': 10
     */
 
-    return function(val) {
+    return function varType(val) {
 
         if (!val) {
             if (val === null) {
@@ -64,13 +64,13 @@ var varType = function(){
 }();
 
 
-var isString = function(value) {
+function isString(value) {
     return typeof value == "string" || value === ""+value;
     //return typeof value == "string" || varType(value) === 0;
 };
 
 
-var isObject = function(value) {
+function isObject(value) {
     if (value === null || typeof value != "object") {
         return false;
     }
@@ -273,14 +273,12 @@ var Namespace   = function(root, rootName) {
     self.normalize  = normalize;
 };
 
-Namespace.prototype = {
-    register: null,
-    exists: null,
-    get: null,
-    add: null,
-    remove: null,
-    normalize: null
-};
+Namespace.prototype.register = null;
+Namespace.prototype.exists = null;
+Namespace.prototype.get = null;
+Namespace.prototype.add = null;
+Namespace.prototype.remove = null;
+Namespace.prototype.normalize = null;
 
 
 
@@ -292,14 +290,14 @@ var slice = Array.prototype.slice;/**
  * @param {[]} args
  * @param {number} timeout
  */
-var async = function(fn, context, args, timeout) {
+function async(fn, context, args, timeout) {
     setTimeout(function(){
         fn.apply(context, args || []);
     }, timeout || 0);
 };
 
 
-var error = function(e) {
+function error(e) {
 
     var stack = e.stack || (new Error).stack;
 
@@ -316,47 +314,55 @@ var error = function(e) {
     }
 };
 
-var emptyFn = function(){};
+function emptyFn(){};
+
+
+var instantiate = function(fn, args) {
+
+    var Temp = function(){},
+        inst, ret;
+
+    Temp.prototype  = fn.prototype;
+    inst            = new Temp;
+    ret             = fn.apply(inst, args);
+
+    // If an object has been returned then return it otherwise
+    // return the original instance.
+    // (consistent with behaviour of the new operator)
+    return isObject(ret) || ret === false ? ret : inst;
+
+};
 
 
 /*!
  * inspired by and based on klass
  */
 
-var Class = function(ns){
 
-    if (!ns) {
-        ns = new Namespace;
-    }
+var Class = function(){
 
-
-    /**
-     * @namespace MetaphorJs
-     */
 
     var proto   = "prototype",
 
-        constr  = "__construct",
+        constr  = "$construct",
 
-        emptyConstructor    = function() {
+        $constr = function $constr() {
             var self = this;
             if (self.supr && self.supr !== emptyFn) {
                 self.supr.apply(self, arguments);
             }
         },
 
-        create  = function(cls, constructor) {
-            return extend(function(){}, cls, constructor);
-        },
+        wrapPrototypeMethod = function wrapPrototypeMethod(parent, k, fn) {
 
-        wrap    = function(parent, k, fn) {
+            var supr = parent[proto][k] || (k == constr ? parent : emptyFn) || emptyFn;
 
             return function() {
                 var ret,
                     self    = this,
                     prev    = self.supr;
 
-                self.supr   = parent[proto][k] || (k == constr ? parent : emptyFn) || emptyFn;
+                self.supr   = supr;
                 ret         = fn.apply(self, arguments);
                 self.supr   = prev;
 
@@ -364,326 +370,329 @@ var Class = function(ns){
             };
         },
 
-        process = function(prototype, cls, parent) {
+        preparePrototype = function preparePrototype(prototype, cls, parent) {
             for (var k in cls) {
                 if (cls.hasOwnProperty(k)) {
 
                     prototype[k] = isFunction(cls[k]) &&
-                              (isFunction(parent[proto][k]) || !parent[proto][k]) ?
-                                    wrap(parent, k, cls[k]) :
-                                    cls[k];
+                                   (isFunction(parent[proto][k]) || !parent[proto][k]) ?
+                                   wrapPrototypeMethod(parent, k, cls[k]) :
+                                   cls[k];
 
 
                 }
             }
         },
 
-        extend  = function(parent, cls, constructorFn) {
 
-            var noop        = function(){};
-            noop[proto]     = parent[proto];
-            var prototype   = new noop;
+        createConstructor = function() {
 
-            cls[constr]     = constructorFn || emptyConstructor;
+            return function() {
 
-            var fn          = function() {
-                var self = this;
+                var self    = this,
+                    cls     = self ? self.$self : null;
 
-                if (!(self instanceof fn)) {
-                    return fn.instantiate.apply(null, arguments);
+                if (!self) {
+                    throw "Must instantiate via new";
                 }
 
                 self[constr].apply(self, arguments);
+
                 if (self.initialize) {
                     self.initialize.apply(self, arguments);
                 }
             };
-
-            process(prototype, cls, parent);
-            prototype.constructor = fn;
-
-            fn[proto] = prototype;
-            fn[proto].getClass = function() {
-                return fn.className;
-            };
-            fn[proto].getParentClass = function() {
-                return fn.parentClass;
-            };
-
-            fn.instantiate = function() {
-                var Temp = function(){},
-                    inst, ret;
-
-                Temp.prototype  = fn.prototype;
-                inst            = new Temp;
-                ret             = fn.prototype.constructor.apply(inst, arguments);
-
-                // If an object has been returned then return it otherwise
-                // return the original instance.
-                // (consistent with behaviour of the new operator)
-                return isObject(ret) ? ret : inst;
-            };
-
-            fn.extend = function(name, constructor, definition, statics) {
-                return define(name, fn, constructor, definition, statics);
-            };
-
-
-            return fn;
         };
 
 
-    /**
-     * Define class
-     * @function MetaphorJs.define
-     * @param {string} name
-     * @param {function} constructor
-     * @param {object} definition (optional)
-     * @param {object} statics (optional)
-     * @param {bool} cacheOnly (optional)
-     * @return function New class constructor
-     * @alias MetaphorJs.d
-     */
 
-    /**
-     * Define class
-     * @function MetaphorJs.define
-     * @param {function} constructor
-     * @param {object} definition (optional)
-     * @param {object} statics (optional)
-     * @param {bool} cacheOnly (optional)
-     * @return function New class constructor
-     * @alias MetaphorJs.d
-     */
 
-    /**
-     * Define class
-     * @function MetaphorJs.define
-     * @param {string} name
-     * @param {object} definition
-     * @param {object} statics (optional)
-     * @param {bool} cacheOnly (optional)
-     * @return function New class constructor
-     * @alias MetaphorJs.d
-     */
+    var Class = function(ns){
 
-    /**
-     * Define class
-     * @function MetaphorJs.define
-     * @param {object} definition
-     * @param {object} statics (optional)
-     * @param {bool} cacheOnly (optional)
-     * @return function New class constructor
-     * @alias MetaphorJs.d
-     */
-
-    /**
-     * Define class
-     * @function MetaphorJs.define
-     * @param {string} name
-     * @param {string} parentClass
-     * @param {function} constructor
-     * @param {object} definition (optional)
-     * @param {object} statics (optional)
-     * @param {bool} cacheOnly (optional)
-     * @return function New class constructor
-     * @alias MetaphorJs.d
-     */
-    var define = function(name, parentClass, constructor, definition, statics, cacheOnly) {
-
-        if (name === null) {
-            name = "";
+        if (!ns) {
+            ns = new Namespace;
         }
 
-        // constructor as first argument
-        if (isFunction(name)) {
 
-            statics         = constructor;
 
-            if (isString(parentClass)) {
-                statics     = definition;
-                definition  = constructor;
-            }
-            else {
-                definition      = parentClass;
-                constructor     = name;
-                parentClass     = null;
-            }
+        var BaseClass = function() {
 
-            name              = null;
-        }
+        };
 
-        // definition as first argument
-        else if (!isString(name)) {
-            statics         = parentClass;
-            definition      = name;
-            parentClass     = null;
-            constructor     = null;
-            name            = null;
-        }
+        BaseClass.prototype = {
 
-        // if object is second parameter (leads to next check)
-        if (!isString(parentClass) && !isFunction(parentClass)) {
-            statics         = definition;
-            definition      = constructor;
-            constructor     = parentClass;
-            parentClass     = null;
-        }
+            $class: null,
+            $extends: null,
 
-        // if third parameter is not a function (definition instead of constructor)
-        if (!isFunction(constructor)) {
-            statics         = definition;
-            definition      = constructor;
-            constructor     = null;
-        }
+            $construct: function(){},
 
-        definition          = definition || {};
-        var pConstructor    = parentClass && isString(parentClass) ?
-                                ns.get(parentClass) :
-                                parentClass;
+            $getClass: function() {
+                return this.$class;
+            },
 
-        if (parentClass && !pConstructor) {
-            throw new Error(parentClass + " not found");
-        }
+            $getParentClass: function() {
+                return this.$extends;
+            },
 
-        var c   = pConstructor ? extend(pConstructor, definition, constructor) : create(definition, constructor);
+            $override: function() {},
 
-        c.isMetaphorClass = true;
-        c.parent          = pConstructor;
-        c.parentClass     = pConstructor ? pConstructor.className : null;
-        c.className       = ns.normalize(name);
+            destroy: function() {
 
-        if (statics) {
-            for (var k in statics) {
-                if (statics.hasOwnProperty(k)) {
-                    c[k] = statics[k];
+                var self = this,
+                    i;
+
+                for (i in self) {
+                    if (self.hasOwnProperty(i)) {
+                        self[i] = null;
+                    }
                 }
             }
-        }
+        };
 
-        if (name) {
-            if (!cacheOnly) {
-                ns.register(name, c);
+        BaseClass.$self = BaseClass;
+
+        BaseClass.$instantiate = function() {
+
+            var cls = this,
+                args = arguments,
+                cnt = args.length;
+
+            // lets make it ugly, but without creating temprorary classes and leaks.
+            // and fallback to normal instantiation.
+
+            switch (cnt) {
+                case 0:
+                    return new cls;
+                case 1:
+                    return new cls(args[0]);
+                case 2:
+                    return new cls(args[0], args[1]);
+                case 3:
+                    return new cls(args[0], args[1], args[2]);
+                case 4:
+                    return new cls(args[0], args[1], args[2], args[3]);
+                default:
+                    return instantiate(cls, args);
+            }
+        };
+
+
+        BaseClass.$extend = function(constructor, definition, statics) {
+            return define(constructor, definition, statics, this);
+        };
+
+
+        /**
+         * @namespace MetaphorJs
+         */
+
+
+
+        /**
+         * Define class
+         * @function MetaphorJs.define
+         * @param {function} constructor
+         * @param {object} definition (optional)
+         * @param {object} statics (optional)
+         * @return function New class constructor
+         * @alias MetaphorJs.d
+         */
+
+        /**
+         * Define class
+         * @function MetaphorJs.define
+         * @param {object} definition
+         * @param {object} statics (optional)
+         * @return function New class constructor
+         * @alias MetaphorJs.d
+         */
+
+        /**
+         * Define class
+         * @function MetaphorJs.define
+         * @param {function} constructor
+         * @param {object} definition (optional)
+         * @param {object} statics (optional)
+         * @return function New class constructor
+         * @alias MetaphorJs.d
+         */
+        var define = function(constructor, definition, statics, $extends) {
+
+            // if third parameter is not a function (definition instead of constructor)
+            if (!isFunction(constructor)) {
+                statics         = definition;
+                definition      = constructor;
+                constructor     = null;
+            }
+
+            definition          = definition || {};
+            var name            = definition.$class,
+                parentClass     = $extends || definition.$extends,
+                pConstructor,
+                k, noop, prototype, c;
+
+            pConstructor = parentClass && isString(parentClass) ? ns.get(parentClass) : BaseClass;
+
+            if (parentClass) {
+                if (isString(parentClass)) {
+                    pConstructor = ns.get(parentClass);
+                }
+                else {
+                    pConstructor = parentClass;
+                    parentClass = pConstructor.$class || "";
+                }
             }
             else {
-                ns.add(name, c);
-            }
-        }
-
-        if (statics && statics.alias) {
-            ns.add(statics.alias, c);
-        }
-
-        return c;
-    };
-
-
-    var extendClass = function(parentClass, constructorFn, cls, statics) {
-        return define(null, parentClass, constructorFn, cls, statics);
-    };
-
-
-    /**
-     * @function MetaphorJs.defineCache
-     * Same as define() but this one only puts object to cache without registering namespace
-     */
-    var defineCache = function(name, parentClass, constructor, definition, statics) {
-        return define(name, parentClass, constructor, definition, statics, true);
-    };
-
-
-
-    /**
-     * Instantiate class
-     * @function MetaphorJs.create
-     * @param {string} name Full name of the class
-     */
-    var instantiate = function(name) {
-
-        var cls     = ns.get(name),
-            args    = slice.call(arguments, 1);
-
-        if (!cls) {
-            throw new Error(name + " not found");
-        }
-
-        return cls.instantiate.apply(this, args);
-    };
-
-
-
-    /**
-     * Is cmp instance of cls
-     * @function MetaphorJs.is
-     * @param {object} cmp
-     * @param {string|object} cls
-     * @returns boolean
-     */
-    var isInstanceOf = function(cmp, cls) {
-        var _cls    = isString(cls) ? ns.get(cls) : cls;
-        return _cls ? cmp instanceof _cls : false;
-    };
-
-
-
-    /**
-     * Is one class subclass of another class
-     * @function MetaphorJs.isSubclass
-     * @param {string|object} childClass
-     * @param {string|object} parentClass
-     * @return bool
-     * @alias MetaphorJs.iss
-     */
-    var isSubclassOf = function(childClass, parentClass) {
-
-        var p   = childClass,
-            g   = ns.get;
-
-        if (!isString(parentClass)) {
-            parentClass  = parentClass.getClass ? parentClass.getClass() : parentClass.className;
-        }
-        else {
-            parentClass = ns.normalize(parentClass);
-        }
-        if (isString(childClass)) {
-            p   = g(ns.normalize(childClass));
-        }
-
-        while (p) {
-
-            if (p.className == parentClass) {
-                return true;
+                pConstructor = BaseClass;
+                parentClass = "";
             }
 
-            p = p.getParentClass ? g(p.getParentClass()) : p.parent;
-        }
+            if (parentClass && !pConstructor) {
+                throw new Error(parentClass + " not found");
+            }
 
-        return false;
+            if (name) {
+                name = ns.normalize(name);
+            }
+
+            definition.$class   = name;
+            definition.$extends = parentClass;
+
+
+            noop                = function(){};
+            noop[proto]         = pConstructor[proto];
+            prototype           = new noop;
+            noop                = null;
+            definition[constr]  = constructor || $constr;
+
+            preparePrototype(prototype, definition, pConstructor);
+
+            c = createConstructor();
+            prototype.constructor = c;
+            c[proto] = prototype;
+
+            for (k in BaseClass) {
+                if (k != proto && BaseClass.hasOwnProperty(k)) {
+                    c[k] = BaseClass[k];
+                }
+            }
+
+            for (k in pConstructor) {
+                if (k != proto && pConstructor.hasOwnProperty(k)) {
+                    c[k] = pConstructor[k];
+                }
+            }
+
+            if (statics) {
+                for (k in statics) {
+                    if (k != proto && statics.hasOwnProperty(k)) {
+                        c[k] = statics[k];
+                    }
+                }
+            }
+
+            c.$parent   = pConstructor;
+            c.$self     = c;
+
+            if (name) {
+                ns.register(name, c);
+            }
+
+            return c;
+        };
+
+
+
+
+        /**
+         * Instantiate class
+         * @function MetaphorJs.create
+         * @param {string} name Full name of the class
+         */
+        var instantiate = function(name) {
+
+            var cls     = ns.get(name),
+                args    = slice.call(arguments, 1);
+
+            if (!cls) {
+                throw new Error(name + " not found");
+            }
+
+            return cls.$instantiate.apply(cls, args);
+        };
+
+
+
+        /**
+         * Is cmp instance of cls
+         * @function MetaphorJs.is
+         * @param {object} cmp
+         * @param {string|object} cls
+         * @returns boolean
+         */
+        var isInstanceOf = function(cmp, cls) {
+            var _cls    = isString(cls) ? ns.get(cls) : cls;
+            return _cls ? cmp instanceof _cls : false;
+        };
+
+
+
+        /**
+         * Is one class subclass of another class
+         * @function MetaphorJs.isSubclass
+         * @param {string|object} childClass
+         * @param {string|object} parentClass
+         * @return bool
+         * @alias MetaphorJs.iss
+         */
+        var isSubclassOf = function(childClass, parentClass) {
+
+            var p   = childClass,
+                g   = ns.get;
+
+            if (!isString(parentClass)) {
+                parentClass  = parentClass.prototype.$class;
+            }
+            else {
+                parentClass = ns.normalize(parentClass);
+            }
+            if (isString(childClass)) {
+                p   = g(ns.normalize(childClass));
+            }
+
+            while (p && p.prototype) {
+
+                if (p.prototype.$class == parentClass) {
+                    return true;
+                }
+
+                p = p.$parent;
+            }
+
+            return false;
+        };
+
+        var self    = this;
+
+        self.factory = instantiate;
+        self.isSubclassOf = isSubclassOf;
+        self.isInstanceOf = isInstanceOf;
+        self.define = define;
+        self.BaseClass = BaseClass;
+
     };
 
-    var self    = this;
+    Class.prototype = {
 
-    self.factory = instantiate;
-    self.isSubclassOf = isSubclassOf;
-    self.isInstanceOf = isInstanceOf;
-    self.define = define;
-    self.defineCache = defineCache;
-    self.extend = extendClass;
+        factory: null,
+        isSubclassOf: null,
+        isInstanceOf: null,
+        define: null
+    };
 
-};
+    return Class;
 
-Class.prototype = {
-
-    factory: null,
-    isSubclassOf: null,
-    isInstanceOf: null,
-    define: null,
-    defineCache: null,
-    extend: null
-
-};
-
-
+}();
 
 var MetaphorJs = {
     lib: {},
@@ -719,16 +728,20 @@ var bind = Function.prototype.bind ?
 
 
 
-var isPlainObject = function(value) {
+function isPlainObject(value) {
     // IE < 9 returns [object Object] from toString(htmlElement)
-    return typeof value == "object" && varType(value) === 3 && !value.nodeType;
+    return typeof value == "object" &&
+           varType(value) === 3 &&
+            !value.nodeType &&
+            value.constructor === Object;
+
 };
 
 
-var isBool = function(value) {
+function isBool(value) {
     return value === true || value === false;
 };
-var isNull = function(value) {
+function isNull(value) {
     return value === null;
 };
 
@@ -832,7 +845,7 @@ var parseJSON = function() {
 
 
 
-var parseXML = function(data, type) {
+function parseXML(data, type) {
 
     var xml, tmp;
 
@@ -860,7 +873,7 @@ var parseXML = function(data, type) {
  * @param {*} list
  * @returns {[]}
  */
-var toArray = function(list) {
+function toArray(list) {
     if (list && !list.length != undf && list !== ""+list) {
         for(var a = [], i =- 1, l = list.length>>>0; ++i !== l; a[i] = list[i]){}
         return a;
@@ -872,7 +885,7 @@ var toArray = function(list) {
         return [];
     }
 };
-var getAttr = function(el, name) {
+function getAttr(el, name) {
     return el.getAttribute(name);
 };
 
@@ -1471,10 +1484,10 @@ var select = function() {
  * @param {*} value
  * @returns {boolean}
  */
-var isArray = function(value) {
+function isArray(value) {
     return typeof value == "object" && varType(value) === 5;
 };
-var addListener = function(el, event, func) {
+function addListener(el, event, func) {
     if (el.attachEvent) {
         el.attachEvent('on' + event, func);
     } else {
@@ -1489,7 +1502,7 @@ var nextUid = function(){
     var uid = ['0', '0', '0'];
 
     // from AngularJs
-    return function() {
+    return function nextUid() {
         var index = uid.length;
         var digit;
 
@@ -1557,7 +1570,7 @@ var Observable = function() {
 };
 
 
-Observable.prototype = {
+extend(Observable.prototype, {
 
     /**
     * <p>You don't have to call this function unless you want to pass returnResult param.
@@ -1622,7 +1635,7 @@ Observable.prototype = {
     *       Callback function
     *       @required
     * }
-    * @param {object} scope "this" object for the callback function
+    * @param {object} context "this" object for the callback function
     * @param {object} options {
     *       @type bool first {
     *           True to prepend to the list of handlers
@@ -1641,13 +1654,13 @@ Observable.prototype = {
      *      @type bool allowDupes allow the same handler twice
     * }
     */
-    on: function(name, fn, scope, options) {
+    on: function(name, fn, context, options) {
         name = name.toLowerCase();
         var events  = this.events;
         if (!events[name]) {
             events[name] = new Event(name);
         }
-        return events[name].on(fn, scope, options);
+        return events[name].on(fn, context, options);
     },
 
     /**
@@ -1656,10 +1669,10 @@ Observable.prototype = {
     * @md-apply on
     * @access public
     */
-    once: function(name, fn, scope, options) {
+    once: function(name, fn, context, options) {
         options     = options || {};
         options.limit = 1;
-        return this.on(name, fn, scope, options);
+        return this.on(name, fn, context, options);
     },
 
 
@@ -1669,15 +1682,15 @@ Observable.prototype = {
     * @access public
     * @param {string} name Event name
     * @param {function} fn Event handler
-    * @param {object} scope If you called on() with scope you must call un() with the same scope
+    * @param {object} context If you called on() with context you must call un() with the same context
     */
-    un: function(name, fn, scope) {
+    un: function(name, fn, context) {
         name = name.toLowerCase();
         var events  = this.events;
         if (!events[name]) {
             return;
         }
-        events[name].un(fn, scope);
+        events[name].un(fn, context);
     },
 
     /**
@@ -1692,16 +1705,16 @@ Observable.prototype = {
     * @access public
     * @param {string} name Event name { @required }
     * @param {function} fn Callback function { @required }
-    * @param {object} scope Function's "this" object
+    * @param {object} context Function's "this" object
     * @return bool
     */
-    hasListener: function(name, fn, scope) {
+    hasListener: function(name, fn, context) {
         name = name.toLowerCase();
         var events  = this.events;
         if (!events[name]) {
             return false;
         }
-        return events[name].hasListener(fn, scope);
+        return events[name].hasListener(fn, context);
     },
 
 
@@ -1871,7 +1884,7 @@ Observable.prototype = {
 
         return self.api;
     }
-};
+}, true, false);
 
 
 /**
@@ -1894,7 +1907,7 @@ var Event = function(name, returnResult) {
 };
 
 
-Event.prototype = {
+extend(Event.prototype, {
 
     getName: function() {
         return this.name;
@@ -1912,36 +1925,36 @@ Event.prototype = {
     /**
      * @method
      * @param {function} fn Callback function { @required }
-     * @param {object} scope Function's "this" object
+     * @param {object} context Function's "this" object
      * @param {object} options See Observable's on()
      */
-    on: function(fn, scope, options) {
+    on: function(fn, context, options) {
 
         if (!fn) {
             return null;
         }
 
-        scope       = scope || null;
+        context     = context || null;
         options     = options || {};
 
         var self        = this,
             uni         = self.uni,
-            uniScope    = scope || fn;
+            uniContext  = context || fn;
 
-        if (uniScope[uni] && !options.allowDupes) {
+        if (uniContext[uni] && !options.allowDupes) {
             return null;
         }
 
         var id      = ++self.lid,
             first   = options.first || false;
 
-        uniScope[uni]  = id;
+        uniContext[uni]  = id;
 
 
         var e = {
             fn:         fn,
-            scope:      scope,
-            uniScope:   uniScope,
+            context:    context,
+            uniContext: uniContext,
             id:         id,
             called:     0, // how many times the function was triggered
             limit:      options.limit || 0, // how many times the function is allowed to trigger
@@ -1966,23 +1979,23 @@ Event.prototype = {
     /**
      * @method
      * @param {function} fn Callback function { @required }
-     * @param {object} scope Function's "this" object
+     * @param {object} context Function's "this" object
      * @param {object} options See Observable's on()
      */
-    once: function(fn, scope, options) {
+    once: function(fn, context, options) {
 
         options = options || {};
         options.once = true;
 
-        return this.on(fn, scope, options);
+        return this.on(fn, context, options);
     },
 
     /**
      * @method
      * @param {function} fn Callback function { @required }
-     * @param {object} scope Function's "this" object
+     * @param {object} context Function's "this" object
      */
-    un: function(fn, scope) {
+    un: function(fn, context) {
 
         var self        = this,
             inx         = -1,
@@ -1994,8 +2007,8 @@ Event.prototype = {
             id      = fn;
         }
         else {
-            scope   = scope || fn;
-            id      = scope[uni];
+            context = context || fn;
+            id      = context[uni];
         }
 
         if (!id) {
@@ -2005,7 +2018,7 @@ Event.prototype = {
         for (var i = 0, len = listeners.length; i < len; i++) {
             if (listeners[i].id == id) {
                 inx = i;
-                delete listeners[i].uniScope[uni];
+                delete listeners[i].uniContext[uni];
                 break;
             }
         }
@@ -2027,10 +2040,10 @@ Event.prototype = {
     /**
      * @method
      * @param {function} fn Callback function { @required }
-     * @param {object} scope Function's "this" object
+     * @param {object} context Function's "this" object
      * @return bool
      */
-    hasListener: function(fn, scope) {
+    hasListener: function(fn, context) {
 
         var self    = this,
             listeners   = self.listeners,
@@ -2038,13 +2051,13 @@ Event.prototype = {
 
         if (fn) {
 
-            scope   = scope || fn;
+            context = context || fn;
 
             if (!isFunction(fn)) {
                 id  = fn;
             }
             else {
-                id  = scope[self.uni];
+                id  = context[self.uni];
             }
 
             if (!id) {
@@ -2075,7 +2088,7 @@ Event.prototype = {
             i, len;
 
         for (i = 0, len = listeners.length; i < len; i++) {
-            delete listeners[i].uniScope[uni];
+            delete listeners[i].uniContext[uni];
         }
         self.listeners   = [];
         self.map         = {};
@@ -2157,7 +2170,7 @@ Event.prototype = {
                 continue;
             }
 
-            res = l.fn.apply(l.scope, self._prepareArgs(l, arguments));
+            res = l.fn.apply(l.context, self._prepareArgs(l, arguments));
 
             l.called++;
 
@@ -2186,7 +2199,7 @@ Event.prototype = {
             return ret;
         }
     }
-};
+}, true, false);
 
 
 
@@ -2197,7 +2210,7 @@ Event.prototype = {
  * @param {*} any
  * @returns {Function|boolean}
  */
-var isThenable = function(any) {
+function isThenable(any) {
     if (!any || !any.then) {
         return false;
     }
@@ -2209,7 +2222,6 @@ var isThenable = function(any) {
     return isFunction((then = any.then)) ?
            then : false;
 };
-
 
 
 
@@ -2340,7 +2352,7 @@ var Promise = function(){
         }
     };
 
-    Promise.prototype = {
+    extend(Promise.prototype, {
 
         _state: PENDING,
 
@@ -2371,10 +2383,10 @@ var Promise = function(){
         _cleanup: function() {
             var self    = this;
 
-            delete self._fulfills;
-            delete self._rejects;
-            delete self._dones;
-            delete self._fails;
+            self._fulfills = null;
+            self._rejects = null;
+            self._dones = null;
+            self._fails = null;
         },
 
         _processValue: function(value, cb) {
@@ -2706,7 +2718,7 @@ var Promise = function(){
 
             return self;
         }
-    };
+    }, true, false);
 
 
     Promise.fcall = function(fn, context, args) {
@@ -2930,11 +2942,11 @@ var Promise = function(){
 
 
 
-var isPrimitive = function(value) {
+function isPrimitive(value) {
     var vt = varType(value);
     return vt < 3 && vt > -1;
 };
-var setAttr = function(el, name, value) {
+function setAttr(el, name, value) {
     return el.setAttribute(name, value);
 };
 
@@ -3283,7 +3295,7 @@ var ajax = function(){
         }
     };
 
-    AJAX.prototype = {
+    extend(AJAX.prototype, {
 
         _jsonpName: null,
         _transport: null,
@@ -3433,12 +3445,12 @@ var ajax = function(){
 
             self._transport.destroy();
 
-            delete self._transport;
-            delete self._opt;
-            delete self._deferred;
-            delete self._promise;
-            delete self._timeout;
-            delete self._form;
+            self._transport = null;
+            self._opt = null;
+            self._deferred = null;
+            self._promise = null;
+            self._timeout = null;
+            self._form = null;
 
             if (self._jsonpName) {
                 if (typeof window != strUndef) {
@@ -3449,7 +3461,7 @@ var ajax = function(){
                 }
             }
         }
-    };
+    }, true, false);
 
 
 
@@ -3575,7 +3587,7 @@ var ajax = function(){
         xhr.onreadystatechange = bind(self.onReadyStateChange, self);
     };
 
-    XHRTransport.prototype = {
+    extend(XHRTransport.prototype, {
 
         _xhr: null,
         _deferred: null,
@@ -3660,14 +3672,14 @@ var ajax = function(){
         destroy: function() {
             var self    = this;
 
-            delete self._xhr;
-            delete self._deferred;
-            delete self._opt;
-            delete self._ajax;
+            self._xhr = null;
+            self._deferred = null;
+            self._opt = null;
+            self._ajax = null;
 
         }
 
-    };
+    }, true, false);
 
 
 
@@ -3682,7 +3694,7 @@ var ajax = function(){
 
     };
 
-    ScriptTransport.prototype = {
+    extend(ScriptTransport.prototype, {
 
         _opt: null,
         _deferred: null,
@@ -3732,14 +3744,14 @@ var ajax = function(){
                 self._el.parentNode.removeChild(self._el);
             }
 
-            delete self._el;
-            delete self._opt;
-            delete self._ajax;
-            delete self._deferred;
+            self._el = null;
+            self._opt = null;
+            self._ajax = null;
+            self._deferred = null;
 
         }
 
-    };
+    }, true, false);
 
 
 
@@ -3751,7 +3763,7 @@ var ajax = function(){
         self._deferred  = deferred;
     };
 
-    IframeTransport.prototype = {
+    extend(IframeTransport.prototype, {
 
         _opt: null,
         _deferred: null,
@@ -3819,14 +3831,14 @@ var ajax = function(){
                 self._el.parentNode.removeChild(self._el);
             }
 
-            delete self._el;
-            delete self._opt;
-            delete self._ajax;
-            delete self._deferred;
+            self._el = null;
+            self._opt = null;
+            self._ajax = null;
+            self._deferred = null;
 
         }
 
-    };
+    }, true, false);
 
     return ajax;
 }();
@@ -3849,9 +3861,11 @@ var Model = function(){
 
     /**
      * @namespace MetaphorJs
-     * @class MetaphorJs.data.Model
+     * @class MetaphorJs.model.Model
      */
-    return defineClass("MetaphorJs.data.Model", {
+    return defineClass({
+
+        $class:         "MetaphorJs.model.Model",
 
         type:           null,
         fields:         null,
@@ -4159,7 +4173,7 @@ var Model = function(){
 
         /**
          * @access public
-         * @param {MetaphorJs.data.Record} rec
+         * @param {MetaphorJs.model.Record} rec
          * @param {array|null} keys
          * @param {object|null} extra
          * @returns MetaphorJs.lib.Promise
@@ -4175,7 +4189,7 @@ var Model = function(){
 
         /**
          * @access public
-         * @param {MetaphorJs.data.Record} rec
+         * @param {MetaphorJs.model.Record} rec
          * @returns MetaphorJs.lib.Promise
          */
         deleteRecord: function(rec) {
@@ -4184,7 +4198,7 @@ var Model = function(){
 
         /**
          * @access public
-         * @param {MetaphorJs.data.Store} store
+         * @param {MetaphorJs.model.Store} store
          * @param {object} params
          * @returns MetaphorJs.lib.Promise
          */
@@ -4194,7 +4208,7 @@ var Model = function(){
 
         /**
          * @access public
-         * @param {MetaphorJs.data.Store} store
+         * @param {MetaphorJs.model.Store} store
          * @param {object} recordData
          * @returns MetaphorJs.lib.Promise
          */
@@ -4204,7 +4218,7 @@ var Model = function(){
 
         /**
          * @access public
-         * @param {MetaphorJs.data.Store} store
+         * @param {MetaphorJs.model.Store} store
          * @param {array} ids
          * @returns MetaphorJs.lib.Promise
          */
@@ -4222,7 +4236,7 @@ var Model = function(){
 
         /**
          * Convert field's value from database state to app state
-         * @param {MetaphorJs.data.Record} rec
+         * @param {MetaphorJs.model.Record} rec
          * @param {string} name
          * @param {string|int|bool|Date} value
          * @returns mixed
@@ -4284,7 +4298,7 @@ var Model = function(){
 
         /**
          * @access protected
-         * @param {MetaphorJs.data.Record} rec
+         * @param {MetaphorJs.model.Record} rec
          * @param {string} name
          * @param {string|int|bool} value
          * @returns string|int|bool|Date
@@ -4295,7 +4309,7 @@ var Model = function(){
 
         /**
          * Convert field's value from app state to database state
-         * @param {MetaphorJs.data.Record} rec
+         * @param {MetaphorJs.model.Record} rec
          * @param {string} name
          * @param {string|int|bool|Date} value
          * @returns mixed
@@ -4347,7 +4361,7 @@ var Model = function(){
 
         /**
          * @access protected
-         * @param {MetaphorJs.data.Record} rec
+         * @param {MetaphorJs.model.Record} rec
          * @param {string} name
          * @param {string|int|bool} value
          * @returns string|int
@@ -4365,7 +4379,7 @@ var Model = function(){
          */
         create: function(model, cfg) {
 
-            if (model == "MetaphorJs.data.Model") {
+            if (model == "MetaphorJs.model.Model") {
                 return factory(model, cfg);
             }
             else {
@@ -4385,14 +4399,14 @@ var Model = function(){
 
         /**
          * @static
-         * @param {MetaphorJs.data.Record} rec
+         * @param {MetaphorJs.model.Record} rec
          */
         addToCache: function(rec) {
 
-            var cls     = rec.getClass(),
+            var cls     = rec.$getClass(),
                 id      = rec.getId();
 
-            if (cls != "MetaphorJs.data.Record") {
+            if (cls != "MetaphorJs.model.Record") {
                 if (!cache[cls]) {
                     cache[cls] = {};
                 }
@@ -4444,7 +4458,9 @@ var isInstanceOf = cs.isInstanceOf;
  * @namespace MetaphorJs
  * @class MetaphorJs.cmp.Base
  */
- defineClass("MetaphorJs.cmp.Base", {
+defineClass({
+
+    $class: "MetaphorJs.cmp.Base",
 
     /**
      * @var bool
@@ -4473,6 +4489,7 @@ var isInstanceOf = cs.isInstanceOf;
 
             var cb      = cfg.callback,
                 scope   = cb.scope || self;
+
             delete cb.scope;
 
             for (var k in cb) {
@@ -4508,8 +4525,9 @@ var isInstanceOf = cs.isInstanceOf;
         self.trigger('destroy', self);
 
         self.$$observable.destroy();
-        delete this.$$observable;
+        self.$$observable = null;
 
+        self.supr();
     },
 
     /**
@@ -4527,10 +4545,13 @@ var isInstanceOf = cs.isInstanceOf;
 
 /**
  * @namespace MetaphorJs
- * @class MetaphorJs.data.Record
+ * @class MetaphorJs.model.Record
  * @extends MetaphorJs.cmp.Observable
  */
-var Record = defineClass("MetaphorJs.data.Record", "MetaphorJs.cmp.Base", {
+var Record = defineClass({
+
+    $class:         "MetaphorJs.model.Record",
+    $extends:       "MetaphorJs.cmp.Base",
 
     /**
      * @var mixed
@@ -4575,7 +4596,7 @@ var Record = defineClass("MetaphorJs.data.Record", "MetaphorJs.cmp.Base", {
     destroyed:      false,
 
     /**
-     * @var MetaphorJs.data.Model
+     * @var MetaphorJs.model.Model
      * @access protected
      */
     model:          null,
@@ -4636,8 +4657,8 @@ var Record = defineClass("MetaphorJs.data.Record", "MetaphorJs.cmp.Base", {
         if (isString(self.model)) {
             self.model  = factory(self.model);
         }
-        else if (!isInstanceOf(self.model, "MetaphorJs.data.Model")) {
-            self.model  = factory("MetaphorJs.data.Model", self.model);
+        else if (!isInstanceOf(self.model, "MetaphorJs.model.Model")) {
+            self.model  = factory("MetaphorJs.model.Model", self.model);
         }
 
         self.id     = id;
@@ -4649,7 +4670,7 @@ var Record = defineClass("MetaphorJs.data.Record", "MetaphorJs.cmp.Base", {
             self.load();
         }
 
-        if (self.getClass() != "MetaphorJs.data.Record") {
+        if (self.$getClass() != "MetaphorJs.model.Record") {
             Model.addToCache(self);
         }
     },
@@ -4676,14 +4697,14 @@ var Record = defineClass("MetaphorJs.data.Record", "MetaphorJs.cmp.Base", {
     },
 
     /**
-     * @returns {MetaphorJs.data.Model}
+     * @returns {MetaphorJs.model.Model}
      */
     getModel: function() {
         return this.model;
     },
 
     /**
-     * @param {MetaphorJs.data.Store} store
+     * @param {MetaphorJs.model.Store} store
      */
     attachStore: function(store) {
         var self    = this,
@@ -4695,7 +4716,7 @@ var Record = defineClass("MetaphorJs.data.Record", "MetaphorJs.cmp.Base", {
     },
 
     /**
-     * @param {MetaphorJs.data.Store} store
+     * @param {MetaphorJs.model.Store} store
      */
     detachStore: function(store) {
         var self    = this,
@@ -4946,7 +4967,7 @@ var Record = defineClass("MetaphorJs.data.Record", "MetaphorJs.cmp.Base", {
         self.model      = null;
         self.stores     = null;
 
-        Model.removeFromCache(self.getClass(), self.id);
+        Model.removeFromCache(self.$getClass(), self.id);
 
         self.supr();
     }
@@ -4956,7 +4977,7 @@ var Record = defineClass("MetaphorJs.data.Record", "MetaphorJs.cmp.Base", {
 
 
 
-var isNumber = function(value) {
+function isNumber(value) {
     return varType(value) === 1;
 };
 
@@ -5024,7 +5045,7 @@ var filterArray = function(){
             return false;
         };
 
-    var filterArray = function(a, by, opt) {
+    var filterArray = function filterArray(a, by, opt) {
 
         if (!isPlainObject(by)) {
             by = {$: by};
@@ -5049,7 +5070,7 @@ var filterArray = function(){
 }();
 
 
-var sortArray = function(arr, by, dir) {
+function sortArray(arr, by, dir) {
 
     if (!dir) {
         dir = "asc";
@@ -5166,7 +5187,7 @@ if (!aIndexOf) {
 
 
 
- (function(){
+(function(){
 
     var allStores   = {};
 
@@ -5174,10 +5195,13 @@ if (!aIndexOf) {
 
     /**
      * @namespace MetaphorJs
-     * @class MetaphorJs.data.Store
+     * @class MetaphorJs.model.Store
      * @extends MetaphorJs.cmp.Observable
      */
-    return defineClass("MetaphorJs.data.Store", "MetaphorJs.cmp.Base", {
+    return defineClass({
+
+            $class:         "MetaphorJs.model.Store",
+            $extends:       "MetaphorJs.cmp.Base",
 
             /**
              * @var {string}
@@ -5196,7 +5220,7 @@ if (!aIndexOf) {
             clearOnLoad:    true,
 
             /**
-             * @var {MetaphorJs.data.Model}
+             * @var {MetaphorJs.model.Model}
              * @access protected
              */
             model:          null,
@@ -5412,7 +5436,7 @@ if (!aIndexOf) {
                     self.model  = factory(self.model);
                 }
                 else if (!(self.model instanceof Model)) {
-                    self.model  = factory("MetaphorJs.data.Model", self.model);
+                    self.model  = factory("MetaphorJs.model.Model", self.model);
                 }
 
                 if (options.url) {
@@ -5575,7 +5599,7 @@ if (!aIndexOf) {
             },
 
             /**
-             * @returns MetaphorJs.data.Model
+             * @returns MetaphorJs.model.Model
              */
             getModel: function() {
                 return this.model;
@@ -5899,7 +5923,7 @@ if (!aIndexOf) {
             },
 
             /**
-             * @param {MetaphorJs.data.Record} rec
+             * @param {MetaphorJs.model.Record} rec
              * @param {boolean} silent
              * @param {boolean} skipUpdate
              * @returns MetaphorJs.lib.Promise
@@ -5910,7 +5934,7 @@ if (!aIndexOf) {
             },
 
             /**
-             * @param {MetaphorJs.data.Record[]} recs
+             * @param {MetaphorJs.model.Record[]} recs
              * @param {boolean} silent
              * @param {boolean} skipUpdate
              * @returns MetaphorJs.lib.Promise
@@ -6028,7 +6052,7 @@ if (!aIndexOf) {
 
 
             /**
-             * @param {MetaphorJs.data.Record|Object} rec
+             * @param {MetaphorJs.model.Record|Object} rec
              */
             getRecordId: function(rec) {
                 if (rec instanceof Record) {
@@ -6045,8 +6069,8 @@ if (!aIndexOf) {
 
             /**
              * @access protected
-             * @param {MetaphorJs.data.Record|Object} item
-             * @returns MetaphorJs.data.Record|Object
+             * @param {MetaphorJs.model.Record|Object} item
+             * @returns MetaphorJs.model.Record|Object
              */
             processRawDataItem: function(item) {
 
@@ -6090,7 +6114,7 @@ if (!aIndexOf) {
 
             /**
              * @access protected
-             * @param {MetaphorJs.data.Record|Object} rec
+             * @param {MetaphorJs.model.Record|Object} rec
              */
             onRecordDirtyChange: function(rec) {
                 this.trigger("update", this, rec);
@@ -6098,7 +6122,7 @@ if (!aIndexOf) {
 
             /**
              * @access protected
-             * @param {MetaphorJs.data.Record|Object} rec
+             * @param {MetaphorJs.model.Record|Object} rec
              * @param {string} k
              * @param {string|int|bool} v
              * @param {string|int|bool} prev
@@ -6109,7 +6133,7 @@ if (!aIndexOf) {
 
             /**
              * @access protected
-             * @param {MetaphorJs.data.Record|Object} rec
+             * @param {MetaphorJs.model.Record|Object} rec
              */
             onRecordDestroy: function(rec) {
                 this.remove(rec);
@@ -6123,7 +6147,7 @@ if (!aIndexOf) {
              * @param {boolean} silent
              * @param {boolean} skipUpdate
              * @param {boolean} unfiltered
-             * @returns {MetaphorJs.data.Record|Object|null}
+             * @returns {MetaphorJs.model.Record|Object|null}
              */
             shift: function(silent, skipUpdate, unfiltered) {
                 return this.removeAt(0, silent, skipUpdate, unfiltered);
@@ -6131,10 +6155,10 @@ if (!aIndexOf) {
 
             /**
              * Works with unfiltered data
-             * @param {{}|MetaphorJs.data.Record} rec
+             * @param {{}|MetaphorJs.model.Record} rec
              * @param {boolean} silent
              * @param {boolean} skipUpdate
-             * @returns {MetaphorJs.data.Record|Object}
+             * @returns {MetaphorJs.model.Record|Object}
              */
             unshift: function(rec, silent, skipUpdate) {
                 return this.insert(0, rec, silent, skipUpdate);
@@ -6144,7 +6168,7 @@ if (!aIndexOf) {
              * @param {boolean} silent
              * @param {boolean} skipUpdate
              * @param {boolean} unfiltered
-             * @returns {MetaphorJs.data.Record|Object|null}
+             * @returns {MetaphorJs.model.Record|Object|null}
              */
             pop: function(silent, skipUpdate, unfiltered) {
                 return this.removeAt(this.length - 1, silent, skipUpdate, unfiltered);
@@ -6174,7 +6198,7 @@ if (!aIndexOf) {
 
             /**
              * Works with unfiltered data
-             * @param {MetaphorJs.data.Record|Object} rec
+             * @param {MetaphorJs.model.Record|Object} rec
              * @param {boolean} silent
              * @param {boolean} skipUpdate
              */
@@ -6190,7 +6214,7 @@ if (!aIndexOf) {
              * @param {boolean} silent
              * @param {boolean} skipUpdate
              * @param {boolean} unfiltered -- index from unfiltered item list
-             * @returns MetaphorJs.data.Record|Object|null
+             * @returns MetaphorJs.model.Record|Object|null
              */
             removeAt: function(index, silent, skipUpdate, unfiltered) {
 
@@ -6258,10 +6282,10 @@ if (!aIndexOf) {
             /**
              * Works with unfiltered items
              * @param {number} index
-             * @param {MetaphorJs.data.Record|Object} rec
+             * @param {MetaphorJs.model.Record|Object} rec
              * @param {boolean} silent
              * @param {boolean} skipUpdate
-             * @returns MetaphorJs.data.Record|Object
+             * @returns MetaphorJs.model.Record|Object
              */
             insert: function(index, rec, silent, skipUpdate) {
 
@@ -6320,11 +6344,11 @@ if (!aIndexOf) {
             },
 
             /**
-             * @param {MetaphorJs.data.Record|Object} old
-             * @param {MetaphorJs.data.Record|Object} rec
+             * @param {MetaphorJs.model.Record|Object} old
+             * @param {MetaphorJs.model.Record|Object} rec
              * @param {boolean} silent
              * @param {boolean} skipUpdate
-             * @returns MetaphorJs.data.Record|Object
+             * @returns MetaphorJs.model.Record|Object
              */
             replace: function(old, rec, silent, skipUpdate) {
                 var self    = this,
@@ -6349,10 +6373,10 @@ if (!aIndexOf) {
             onReplace: emptyFn,
 
             /**
-             * @param {MetaphorJs.data.Record|Object} rec
+             * @param {MetaphorJs.model.Record|Object} rec
              * @param {boolean} silent
              * @param {boolean} skipUpdate
-             * @returns MetaphorJs.data.Record|Object|null
+             * @returns MetaphorJs.model.Record|Object|null
              */
             remove: function(rec, silent, skipUpdate) {
                 return this.removeAt(this.indexOf(rec, true), silent, skipUpdate, true);
@@ -6362,14 +6386,14 @@ if (!aIndexOf) {
              * @param {string|int} id
              * @param {boolean} silent
              * @param {boolean} skipUpdate
-             * @returns MetaphorJs.data.Record|Object|null
+             * @returns MetaphorJs.model.Record|Object|null
              */
             removeId: function(id, silent, skipUpdate) {
                 return this.removeAt(this.indexOfId(id, true), silent, skipUpdate, true);
             },
 
             /**
-             * @param {MetaphorJs.data.Record|Object} rec
+             * @param {MetaphorJs.model.Record|Object} rec
              * @param {boolean} unfiltered
              * @returns bool
              */
@@ -6445,7 +6469,7 @@ if (!aIndexOf) {
             /**
              * @param {number} index
              * @param {boolean} unfiltered
-             * @returns MetaphorJs.data.Record|Object|null
+             * @returns MetaphorJs.model.Record|Object|null
              */
             getAt: function(index, unfiltered) {
                 return unfiltered ?
@@ -6456,7 +6480,7 @@ if (!aIndexOf) {
             /**
              * @param {string|int} id
              * @param {boolean} unfiltered
-             * @returns MetaphorJs.data.Record|Object|null
+             * @returns MetaphorJs.model.Record|Object|null
              */
             getById: function(id, unfiltered) {
                 return unfiltered ?
@@ -6466,7 +6490,7 @@ if (!aIndexOf) {
 
             /**
              * Works with filtered list unless fromOriginal = true
-             * @param {MetaphorJs.data.Record|Object} rec
+             * @param {MetaphorJs.model.Record|Object} rec
              * @param {boolean} unfiltered
              * @returns Number
              */
@@ -6487,7 +6511,7 @@ if (!aIndexOf) {
 
             /**
              * @param {function} fn {
-             *      @param {MetaphorJs.data.Record|Object} rec
+             *      @param {MetaphorJs.model.Record|Object} rec
              *      @param {number} index
              *      @param {number} length
              * }
@@ -6549,7 +6573,7 @@ if (!aIndexOf) {
 
             /**
              * @param {boolean} unfiltered
-             * @returns MetaphorJs.data.Record|Object
+             * @returns MetaphorJs.model.Record|Object
              */
             first : function(unfiltered){
                 return unfiltered ? this.items[0] : this.current[0];
@@ -6557,7 +6581,7 @@ if (!aIndexOf) {
 
             /**
              * @param {boolean} unfiltered
-             * @returns MetaphorJs.data.Record|Object
+             * @returns MetaphorJs.model.Record|Object
              */
             last : function(unfiltered){
                 return unfiltered ? this.items[this.length-1] : this.current[this.current-1];
@@ -6568,7 +6592,7 @@ if (!aIndexOf) {
              * @param {number} start Optional
              * @param {number} end Optional
              * @param {boolean} unfiltered
-             * @returns MetaphorJs.data.Record[]|Object[]
+             * @returns MetaphorJs.model.Record[]|Object[]
              */
             getRange : function(start, end, unfiltered){
                 var self    = this,
@@ -6598,13 +6622,13 @@ if (!aIndexOf) {
             /**
              *
              * @param {function} fn {
-             *      @param {MetaphorJs.data.Record|Object} rec
+             *      @param {MetaphorJs.model.Record|Object} rec
              *      @param {string|int} id
              * }
              * @param {object} context
              * @param {number} start { @default 0 }
              * @param {boolean} unfiltered
-             * @returns MetaphorJs.data.Record|Object|null
+             * @returns MetaphorJs.model.Record|Object|null
              */
             findBy: function(fn, context, start, unfiltered) {
                 var inx = this.findIndexBy(fn, context, start, unfiltered);
@@ -6614,7 +6638,7 @@ if (!aIndexOf) {
             /**
              *
              * @param {function} fn {
-             *      @param {MetaphorJs.data.Record|Object} rec
+             *      @param {MetaphorJs.model.Record|Object} rec
              *      @param {string|int} id
              * }
              * @param {object} context
@@ -6676,7 +6700,7 @@ if (!aIndexOf) {
             /**
              * @param {object} props
              * @param {boolean} unfiltered
-             * @returns MetaphorJs.data.Record|Object|null
+             * @returns MetaphorJs.model.Record|Object|null
              */
             findBySet: function(props, unfiltered) {
 
@@ -6819,7 +6843,7 @@ if (!aIndexOf) {
             /**
              * @static
              * @param {string} id
-             * @returns MetaphorJs.data.Store|null
+             * @returns MetaphorJs.model.Store|null
              */
             lookupStore: function(id) {
                 return allStores[id] || null;
@@ -6845,7 +6869,10 @@ if (!aIndexOf) {
 
 
 
-defineClass("MetaphorJs.data.FirebaseStore", "MetaphorJs.data.Store", {
+defineClass({
+
+    $class: "MetaphorJs.model.FirebaseStore",
+    $extends: "MetaphorJs.model.Store",
 
     firebase: null,
 
@@ -6879,6 +6906,7 @@ defineClass("MetaphorJs.data.FirebaseStore", "MetaphorJs.data.Store", {
     },
 
     onSnapshotLoaded: function(recordsSnapshot) {
+
 
         var self = this;
 

@@ -14,16 +14,7 @@ var defineClass = require("../../../metaphorjs-class/src/func/defineClass.js"),
     getNodeConfig = require("../../../metaphorjs/src/func/dom/getNodeConfig.js");
 
 
-var StoreRenderer = defineClass(
-    null,
-    ListRenderer,
-    function(scope, node, expr) {
-        if (!(this instanceof StoreRenderer)) {
-            return new StoreRenderer(scope, node, expr);
-        }
-        this.supr(scope, node, expr);
-    },
-    {
+var StoreRenderer = ListRenderer.$extend({
 
         store: null,
         pullNext: false,
@@ -67,7 +58,7 @@ var StoreRenderer = defineClass(
             var self = this;
             self.onStoreUpdate();
             self.watcher.unsubscribeAndDestroy(self.onChange, self);
-            delete self.watcher;
+            self.watcher = null;
         },
 
 
@@ -127,12 +118,14 @@ var StoreRenderer = defineClass(
         destroy: function() {
             var self = this;
             self.bindStore(self.store, "un");
-            delete self.store;
+            self.store = null;
 
             if (self.pullNext && !self.buffered) {
                 removeListener(self.scrollEl, "scroll", self.pullNextDelegate);
                 removeListener(window, "resize", self.pullNextDelegate);
             }
+
+            self.pullNextDelegate = null;
 
             self.supr();
         }

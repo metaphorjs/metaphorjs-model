@@ -19,9 +19,11 @@ module.exports = function(){
 
     /**
      * @namespace MetaphorJs
-     * @class MetaphorJs.data.Model
+     * @class MetaphorJs.model.Model
      */
-    return defineClass("MetaphorJs.data.Model", {
+    return defineClass({
+
+        $class:         "MetaphorJs.model.Model",
 
         type:           null,
         fields:         null,
@@ -329,7 +331,7 @@ module.exports = function(){
 
         /**
          * @access public
-         * @param {MetaphorJs.data.Record} rec
+         * @param {MetaphorJs.model.Record} rec
          * @param {array|null} keys
          * @param {object|null} extra
          * @returns MetaphorJs.lib.Promise
@@ -345,7 +347,7 @@ module.exports = function(){
 
         /**
          * @access public
-         * @param {MetaphorJs.data.Record} rec
+         * @param {MetaphorJs.model.Record} rec
          * @returns MetaphorJs.lib.Promise
          */
         deleteRecord: function(rec) {
@@ -354,7 +356,7 @@ module.exports = function(){
 
         /**
          * @access public
-         * @param {MetaphorJs.data.Store} store
+         * @param {MetaphorJs.model.Store} store
          * @param {object} params
          * @returns MetaphorJs.lib.Promise
          */
@@ -364,7 +366,7 @@ module.exports = function(){
 
         /**
          * @access public
-         * @param {MetaphorJs.data.Store} store
+         * @param {MetaphorJs.model.Store} store
          * @param {object} recordData
          * @returns MetaphorJs.lib.Promise
          */
@@ -374,7 +376,7 @@ module.exports = function(){
 
         /**
          * @access public
-         * @param {MetaphorJs.data.Store} store
+         * @param {MetaphorJs.model.Store} store
          * @param {array} ids
          * @returns MetaphorJs.lib.Promise
          */
@@ -392,7 +394,7 @@ module.exports = function(){
 
         /**
          * Convert field's value from database state to app state
-         * @param {MetaphorJs.data.Record} rec
+         * @param {MetaphorJs.model.Record} rec
          * @param {string} name
          * @param {string|int|bool|Date} value
          * @returns mixed
@@ -454,7 +456,7 @@ module.exports = function(){
 
         /**
          * @access protected
-         * @param {MetaphorJs.data.Record} rec
+         * @param {MetaphorJs.model.Record} rec
          * @param {string} name
          * @param {string|int|bool} value
          * @returns string|int|bool|Date
@@ -465,7 +467,7 @@ module.exports = function(){
 
         /**
          * Convert field's value from app state to database state
-         * @param {MetaphorJs.data.Record} rec
+         * @param {MetaphorJs.model.Record} rec
          * @param {string} name
          * @param {string|int|bool|Date} value
          * @returns mixed
@@ -517,7 +519,7 @@ module.exports = function(){
 
         /**
          * @access protected
-         * @param {MetaphorJs.data.Record} rec
+         * @param {MetaphorJs.model.Record} rec
          * @param {string} name
          * @param {string|int|bool} value
          * @returns string|int
@@ -535,7 +537,7 @@ module.exports = function(){
          */
         create: function(model, cfg) {
 
-            if (model == "MetaphorJs.data.Model") {
+            if (model == "MetaphorJs.model.Model") {
                 return factory(model, cfg);
             }
             else {
@@ -555,14 +557,14 @@ module.exports = function(){
 
         /**
          * @static
-         * @param {MetaphorJs.data.Record} rec
+         * @param {MetaphorJs.model.Record} rec
          */
         addToCache: function(rec) {
 
-            var cls     = rec.getClass(),
+            var cls     = rec.$getClass(),
                 id      = rec.getId();
 
-            if (cls != "MetaphorJs.data.Record") {
+            if (cls != "MetaphorJs.model.Record") {
                 if (!cache[cls]) {
                     cache[cls] = {};
                 }

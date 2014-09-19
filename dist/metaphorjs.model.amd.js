@@ -53,7 +53,7 @@ var varType = function(){
         'date': 10
     */
 
-    return function(val) {
+    return function varType(val) {
 
         if (!val) {
             if (val === null) {
@@ -80,26 +80,30 @@ var varType = function(){
 }();
 
 
-var isString = function(value) {
+function isString(value) {
     return typeof value == "string" || value === ""+value;
     //return typeof value == "string" || varType(value) === 0;
 };
 
-var emptyFn = function(){};
+function emptyFn(){};
 
 var slice = Array.prototype.slice;
 
 
-var isPlainObject = function(value) {
+function isPlainObject(value) {
     // IE < 9 returns [object Object] from toString(htmlElement)
-    return typeof value == "object" && varType(value) === 3 && !value.nodeType;
+    return typeof value == "object" &&
+           varType(value) === 3 &&
+            !value.nodeType &&
+            value.constructor === Object;
+
 };
 
 
-var isBool = function(value) {
+function isBool(value) {
     return value === true || value === false;
 };
-var isNull = function(value) {
+function isNull(value) {
     return value === null;
 };
 
@@ -170,7 +174,7 @@ var extend = function(){
 
     return extend;
 }();
-var isFunction = function(value) {
+function isFunction(value) {
     return typeof value == 'function';
 };
 
@@ -186,9 +190,11 @@ var Model = function(){
 
     /**
      * @namespace MetaphorJs
-     * @class MetaphorJs.data.Model
+     * @class MetaphorJs.model.Model
      */
-    return defineClass("MetaphorJs.data.Model", {
+    return defineClass({
+
+        $class:         "MetaphorJs.model.Model",
 
         type:           null,
         fields:         null,
@@ -496,7 +502,7 @@ var Model = function(){
 
         /**
          * @access public
-         * @param {MetaphorJs.data.Record} rec
+         * @param {MetaphorJs.model.Record} rec
          * @param {array|null} keys
          * @param {object|null} extra
          * @returns MetaphorJs.lib.Promise
@@ -512,7 +518,7 @@ var Model = function(){
 
         /**
          * @access public
-         * @param {MetaphorJs.data.Record} rec
+         * @param {MetaphorJs.model.Record} rec
          * @returns MetaphorJs.lib.Promise
          */
         deleteRecord: function(rec) {
@@ -521,7 +527,7 @@ var Model = function(){
 
         /**
          * @access public
-         * @param {MetaphorJs.data.Store} store
+         * @param {MetaphorJs.model.Store} store
          * @param {object} params
          * @returns MetaphorJs.lib.Promise
          */
@@ -531,7 +537,7 @@ var Model = function(){
 
         /**
          * @access public
-         * @param {MetaphorJs.data.Store} store
+         * @param {MetaphorJs.model.Store} store
          * @param {object} recordData
          * @returns MetaphorJs.lib.Promise
          */
@@ -541,7 +547,7 @@ var Model = function(){
 
         /**
          * @access public
-         * @param {MetaphorJs.data.Store} store
+         * @param {MetaphorJs.model.Store} store
          * @param {array} ids
          * @returns MetaphorJs.lib.Promise
          */
@@ -559,7 +565,7 @@ var Model = function(){
 
         /**
          * Convert field's value from database state to app state
-         * @param {MetaphorJs.data.Record} rec
+         * @param {MetaphorJs.model.Record} rec
          * @param {string} name
          * @param {string|int|bool|Date} value
          * @returns mixed
@@ -621,7 +627,7 @@ var Model = function(){
 
         /**
          * @access protected
-         * @param {MetaphorJs.data.Record} rec
+         * @param {MetaphorJs.model.Record} rec
          * @param {string} name
          * @param {string|int|bool} value
          * @returns string|int|bool|Date
@@ -632,7 +638,7 @@ var Model = function(){
 
         /**
          * Convert field's value from app state to database state
-         * @param {MetaphorJs.data.Record} rec
+         * @param {MetaphorJs.model.Record} rec
          * @param {string} name
          * @param {string|int|bool|Date} value
          * @returns mixed
@@ -684,7 +690,7 @@ var Model = function(){
 
         /**
          * @access protected
-         * @param {MetaphorJs.data.Record} rec
+         * @param {MetaphorJs.model.Record} rec
          * @param {string} name
          * @param {string|int|bool} value
          * @returns string|int
@@ -702,7 +708,7 @@ var Model = function(){
          */
         create: function(model, cfg) {
 
-            if (model == "MetaphorJs.data.Model") {
+            if (model == "MetaphorJs.model.Model") {
                 return factory(model, cfg);
             }
             else {
@@ -722,14 +728,14 @@ var Model = function(){
 
         /**
          * @static
-         * @param {MetaphorJs.data.Record} rec
+         * @param {MetaphorJs.model.Record} rec
          */
         addToCache: function(rec) {
 
-            var cls     = rec.getClass(),
+            var cls     = rec.$getClass(),
                 id      = rec.getId();
 
-            if (cls != "MetaphorJs.data.Record") {
+            if (cls != "MetaphorJs.model.Record") {
                 if (!cache[cls]) {
                     cache[cls] = {};
                 }
@@ -778,7 +784,9 @@ var Model = function(){
  * @namespace MetaphorJs
  * @class MetaphorJs.cmp.Base
  */
- defineClass("MetaphorJs.cmp.Base", {
+defineClass({
+
+    $class: "MetaphorJs.cmp.Base",
 
     /**
      * @var bool
@@ -807,6 +815,7 @@ var Model = function(){
 
             var cb      = cfg.callback,
                 scope   = cb.scope || self;
+
             delete cb.scope;
 
             for (var k in cb) {
@@ -842,8 +851,9 @@ var Model = function(){
         self.trigger('destroy', self);
 
         self.$$observable.destroy();
-        delete this.$$observable;
+        self.$$observable = null;
 
+        self.supr();
     },
 
     /**
@@ -861,10 +871,13 @@ var Model = function(){
 
 /**
  * @namespace MetaphorJs
- * @class MetaphorJs.data.Record
+ * @class MetaphorJs.model.Record
  * @extends MetaphorJs.cmp.Observable
  */
-var Record = defineClass("MetaphorJs.data.Record", "MetaphorJs.cmp.Base", {
+var Record = defineClass({
+
+    $class:         "MetaphorJs.model.Record",
+    $extends:       "MetaphorJs.cmp.Base",
 
     /**
      * @var mixed
@@ -909,7 +922,7 @@ var Record = defineClass("MetaphorJs.data.Record", "MetaphorJs.cmp.Base", {
     destroyed:      false,
 
     /**
-     * @var MetaphorJs.data.Model
+     * @var MetaphorJs.model.Model
      * @access protected
      */
     model:          null,
@@ -970,8 +983,8 @@ var Record = defineClass("MetaphorJs.data.Record", "MetaphorJs.cmp.Base", {
         if (isString(self.model)) {
             self.model  = factory(self.model);
         }
-        else if (!isInstanceOf(self.model, "MetaphorJs.data.Model")) {
-            self.model  = factory("MetaphorJs.data.Model", self.model);
+        else if (!isInstanceOf(self.model, "MetaphorJs.model.Model")) {
+            self.model  = factory("MetaphorJs.model.Model", self.model);
         }
 
         self.id     = id;
@@ -983,7 +996,7 @@ var Record = defineClass("MetaphorJs.data.Record", "MetaphorJs.cmp.Base", {
             self.load();
         }
 
-        if (self.getClass() != "MetaphorJs.data.Record") {
+        if (self.$getClass() != "MetaphorJs.model.Record") {
             Model.addToCache(self);
         }
     },
@@ -1010,14 +1023,14 @@ var Record = defineClass("MetaphorJs.data.Record", "MetaphorJs.cmp.Base", {
     },
 
     /**
-     * @returns {MetaphorJs.data.Model}
+     * @returns {MetaphorJs.model.Model}
      */
     getModel: function() {
         return this.model;
     },
 
     /**
-     * @param {MetaphorJs.data.Store} store
+     * @param {MetaphorJs.model.Store} store
      */
     attachStore: function(store) {
         var self    = this,
@@ -1029,7 +1042,7 @@ var Record = defineClass("MetaphorJs.data.Record", "MetaphorJs.cmp.Base", {
     },
 
     /**
-     * @param {MetaphorJs.data.Store} store
+     * @param {MetaphorJs.model.Store} store
      */
     detachStore: function(store) {
         var self    = this,
@@ -1280,7 +1293,7 @@ var Record = defineClass("MetaphorJs.data.Record", "MetaphorJs.cmp.Base", {
         self.model      = null;
         self.stores     = null;
 
-        Model.removeFromCache(self.getClass(), self.id);
+        Model.removeFromCache(self.$getClass(), self.id);
 
         self.supr();
     }
@@ -1294,12 +1307,12 @@ var Record = defineClass("MetaphorJs.data.Record", "MetaphorJs.cmp.Base", {
  * @param {*} value
  * @returns {boolean}
  */
-var isArray = function(value) {
+function isArray(value) {
     return typeof value == "object" && varType(value) === 5;
 };
 
 
-var isNumber = function(value) {
+function isNumber(value) {
     return varType(value) === 1;
 };
 
@@ -1310,7 +1323,7 @@ var nextUid = function(){
     var uid = ['0', '0', '0'];
 
     // from AngularJs
-    return function() {
+    return function nextUid() {
         var index = uid.length;
         var digit;
 
@@ -1335,7 +1348,7 @@ var nextUid = function(){
 
 
 
-var isPrimitive = function(value) {
+function isPrimitive(value) {
     var vt = varType(value);
     return vt < 3 && vt > -1;
 };
@@ -1404,7 +1417,7 @@ var filterArray = function(){
             return false;
         };
 
-    var filterArray = function(a, by, opt) {
+    var filterArray = function filterArray(a, by, opt) {
 
         if (!isPlainObject(by)) {
             by = {$: by};
@@ -1429,7 +1442,7 @@ var filterArray = function(){
 }();
 
 
-var sortArray = function(arr, by, dir) {
+function sortArray(arr, by, dir) {
 
     if (!dir) {
         dir = "asc";
@@ -1546,7 +1559,7 @@ if (!aIndexOf) {
 
 
 
- (function(){
+(function(){
 
     var allStores   = {};
 
@@ -1554,10 +1567,13 @@ if (!aIndexOf) {
 
     /**
      * @namespace MetaphorJs
-     * @class MetaphorJs.data.Store
+     * @class MetaphorJs.model.Store
      * @extends MetaphorJs.cmp.Observable
      */
-    return defineClass("MetaphorJs.data.Store", "MetaphorJs.cmp.Base", {
+    return defineClass({
+
+            $class:         "MetaphorJs.model.Store",
+            $extends:       "MetaphorJs.cmp.Base",
 
             /**
              * @var {string}
@@ -1576,7 +1592,7 @@ if (!aIndexOf) {
             clearOnLoad:    true,
 
             /**
-             * @var {MetaphorJs.data.Model}
+             * @var {MetaphorJs.model.Model}
              * @access protected
              */
             model:          null,
@@ -1792,7 +1808,7 @@ if (!aIndexOf) {
                     self.model  = factory(self.model);
                 }
                 else if (!(self.model instanceof Model)) {
-                    self.model  = factory("MetaphorJs.data.Model", self.model);
+                    self.model  = factory("MetaphorJs.model.Model", self.model);
                 }
 
                 if (options.url) {
@@ -1955,7 +1971,7 @@ if (!aIndexOf) {
             },
 
             /**
-             * @returns MetaphorJs.data.Model
+             * @returns MetaphorJs.model.Model
              */
             getModel: function() {
                 return this.model;
@@ -2279,7 +2295,7 @@ if (!aIndexOf) {
             },
 
             /**
-             * @param {MetaphorJs.data.Record} rec
+             * @param {MetaphorJs.model.Record} rec
              * @param {boolean} silent
              * @param {boolean} skipUpdate
              * @returns MetaphorJs.lib.Promise
@@ -2290,7 +2306,7 @@ if (!aIndexOf) {
             },
 
             /**
-             * @param {MetaphorJs.data.Record[]} recs
+             * @param {MetaphorJs.model.Record[]} recs
              * @param {boolean} silent
              * @param {boolean} skipUpdate
              * @returns MetaphorJs.lib.Promise
@@ -2408,7 +2424,7 @@ if (!aIndexOf) {
 
 
             /**
-             * @param {MetaphorJs.data.Record|Object} rec
+             * @param {MetaphorJs.model.Record|Object} rec
              */
             getRecordId: function(rec) {
                 if (rec instanceof Record) {
@@ -2425,8 +2441,8 @@ if (!aIndexOf) {
 
             /**
              * @access protected
-             * @param {MetaphorJs.data.Record|Object} item
-             * @returns MetaphorJs.data.Record|Object
+             * @param {MetaphorJs.model.Record|Object} item
+             * @returns MetaphorJs.model.Record|Object
              */
             processRawDataItem: function(item) {
 
@@ -2470,7 +2486,7 @@ if (!aIndexOf) {
 
             /**
              * @access protected
-             * @param {MetaphorJs.data.Record|Object} rec
+             * @param {MetaphorJs.model.Record|Object} rec
              */
             onRecordDirtyChange: function(rec) {
                 this.trigger("update", this, rec);
@@ -2478,7 +2494,7 @@ if (!aIndexOf) {
 
             /**
              * @access protected
-             * @param {MetaphorJs.data.Record|Object} rec
+             * @param {MetaphorJs.model.Record|Object} rec
              * @param {string} k
              * @param {string|int|bool} v
              * @param {string|int|bool} prev
@@ -2489,7 +2505,7 @@ if (!aIndexOf) {
 
             /**
              * @access protected
-             * @param {MetaphorJs.data.Record|Object} rec
+             * @param {MetaphorJs.model.Record|Object} rec
              */
             onRecordDestroy: function(rec) {
                 this.remove(rec);
@@ -2503,7 +2519,7 @@ if (!aIndexOf) {
              * @param {boolean} silent
              * @param {boolean} skipUpdate
              * @param {boolean} unfiltered
-             * @returns {MetaphorJs.data.Record|Object|null}
+             * @returns {MetaphorJs.model.Record|Object|null}
              */
             shift: function(silent, skipUpdate, unfiltered) {
                 return this.removeAt(0, silent, skipUpdate, unfiltered);
@@ -2511,10 +2527,10 @@ if (!aIndexOf) {
 
             /**
              * Works with unfiltered data
-             * @param {{}|MetaphorJs.data.Record} rec
+             * @param {{}|MetaphorJs.model.Record} rec
              * @param {boolean} silent
              * @param {boolean} skipUpdate
-             * @returns {MetaphorJs.data.Record|Object}
+             * @returns {MetaphorJs.model.Record|Object}
              */
             unshift: function(rec, silent, skipUpdate) {
                 return this.insert(0, rec, silent, skipUpdate);
@@ -2524,7 +2540,7 @@ if (!aIndexOf) {
              * @param {boolean} silent
              * @param {boolean} skipUpdate
              * @param {boolean} unfiltered
-             * @returns {MetaphorJs.data.Record|Object|null}
+             * @returns {MetaphorJs.model.Record|Object|null}
              */
             pop: function(silent, skipUpdate, unfiltered) {
                 return this.removeAt(this.length - 1, silent, skipUpdate, unfiltered);
@@ -2554,7 +2570,7 @@ if (!aIndexOf) {
 
             /**
              * Works with unfiltered data
-             * @param {MetaphorJs.data.Record|Object} rec
+             * @param {MetaphorJs.model.Record|Object} rec
              * @param {boolean} silent
              * @param {boolean} skipUpdate
              */
@@ -2570,7 +2586,7 @@ if (!aIndexOf) {
              * @param {boolean} silent
              * @param {boolean} skipUpdate
              * @param {boolean} unfiltered -- index from unfiltered item list
-             * @returns MetaphorJs.data.Record|Object|null
+             * @returns MetaphorJs.model.Record|Object|null
              */
             removeAt: function(index, silent, skipUpdate, unfiltered) {
 
@@ -2638,10 +2654,10 @@ if (!aIndexOf) {
             /**
              * Works with unfiltered items
              * @param {number} index
-             * @param {MetaphorJs.data.Record|Object} rec
+             * @param {MetaphorJs.model.Record|Object} rec
              * @param {boolean} silent
              * @param {boolean} skipUpdate
-             * @returns MetaphorJs.data.Record|Object
+             * @returns MetaphorJs.model.Record|Object
              */
             insert: function(index, rec, silent, skipUpdate) {
 
@@ -2700,11 +2716,11 @@ if (!aIndexOf) {
             },
 
             /**
-             * @param {MetaphorJs.data.Record|Object} old
-             * @param {MetaphorJs.data.Record|Object} rec
+             * @param {MetaphorJs.model.Record|Object} old
+             * @param {MetaphorJs.model.Record|Object} rec
              * @param {boolean} silent
              * @param {boolean} skipUpdate
-             * @returns MetaphorJs.data.Record|Object
+             * @returns MetaphorJs.model.Record|Object
              */
             replace: function(old, rec, silent, skipUpdate) {
                 var self    = this,
@@ -2729,10 +2745,10 @@ if (!aIndexOf) {
             onReplace: emptyFn,
 
             /**
-             * @param {MetaphorJs.data.Record|Object} rec
+             * @param {MetaphorJs.model.Record|Object} rec
              * @param {boolean} silent
              * @param {boolean} skipUpdate
-             * @returns MetaphorJs.data.Record|Object|null
+             * @returns MetaphorJs.model.Record|Object|null
              */
             remove: function(rec, silent, skipUpdate) {
                 return this.removeAt(this.indexOf(rec, true), silent, skipUpdate, true);
@@ -2742,14 +2758,14 @@ if (!aIndexOf) {
              * @param {string|int} id
              * @param {boolean} silent
              * @param {boolean} skipUpdate
-             * @returns MetaphorJs.data.Record|Object|null
+             * @returns MetaphorJs.model.Record|Object|null
              */
             removeId: function(id, silent, skipUpdate) {
                 return this.removeAt(this.indexOfId(id, true), silent, skipUpdate, true);
             },
 
             /**
-             * @param {MetaphorJs.data.Record|Object} rec
+             * @param {MetaphorJs.model.Record|Object} rec
              * @param {boolean} unfiltered
              * @returns bool
              */
@@ -2825,7 +2841,7 @@ if (!aIndexOf) {
             /**
              * @param {number} index
              * @param {boolean} unfiltered
-             * @returns MetaphorJs.data.Record|Object|null
+             * @returns MetaphorJs.model.Record|Object|null
              */
             getAt: function(index, unfiltered) {
                 return unfiltered ?
@@ -2836,7 +2852,7 @@ if (!aIndexOf) {
             /**
              * @param {string|int} id
              * @param {boolean} unfiltered
-             * @returns MetaphorJs.data.Record|Object|null
+             * @returns MetaphorJs.model.Record|Object|null
              */
             getById: function(id, unfiltered) {
                 return unfiltered ?
@@ -2846,7 +2862,7 @@ if (!aIndexOf) {
 
             /**
              * Works with filtered list unless fromOriginal = true
-             * @param {MetaphorJs.data.Record|Object} rec
+             * @param {MetaphorJs.model.Record|Object} rec
              * @param {boolean} unfiltered
              * @returns Number
              */
@@ -2867,7 +2883,7 @@ if (!aIndexOf) {
 
             /**
              * @param {function} fn {
-             *      @param {MetaphorJs.data.Record|Object} rec
+             *      @param {MetaphorJs.model.Record|Object} rec
              *      @param {number} index
              *      @param {number} length
              * }
@@ -2929,7 +2945,7 @@ if (!aIndexOf) {
 
             /**
              * @param {boolean} unfiltered
-             * @returns MetaphorJs.data.Record|Object
+             * @returns MetaphorJs.model.Record|Object
              */
             first : function(unfiltered){
                 return unfiltered ? this.items[0] : this.current[0];
@@ -2937,7 +2953,7 @@ if (!aIndexOf) {
 
             /**
              * @param {boolean} unfiltered
-             * @returns MetaphorJs.data.Record|Object
+             * @returns MetaphorJs.model.Record|Object
              */
             last : function(unfiltered){
                 return unfiltered ? this.items[this.length-1] : this.current[this.current-1];
@@ -2948,7 +2964,7 @@ if (!aIndexOf) {
              * @param {number} start Optional
              * @param {number} end Optional
              * @param {boolean} unfiltered
-             * @returns MetaphorJs.data.Record[]|Object[]
+             * @returns MetaphorJs.model.Record[]|Object[]
              */
             getRange : function(start, end, unfiltered){
                 var self    = this,
@@ -2978,13 +2994,13 @@ if (!aIndexOf) {
             /**
              *
              * @param {function} fn {
-             *      @param {MetaphorJs.data.Record|Object} rec
+             *      @param {MetaphorJs.model.Record|Object} rec
              *      @param {string|int} id
              * }
              * @param {object} context
              * @param {number} start { @default 0 }
              * @param {boolean} unfiltered
-             * @returns MetaphorJs.data.Record|Object|null
+             * @returns MetaphorJs.model.Record|Object|null
              */
             findBy: function(fn, context, start, unfiltered) {
                 var inx = this.findIndexBy(fn, context, start, unfiltered);
@@ -2994,7 +3010,7 @@ if (!aIndexOf) {
             /**
              *
              * @param {function} fn {
-             *      @param {MetaphorJs.data.Record|Object} rec
+             *      @param {MetaphorJs.model.Record|Object} rec
              *      @param {string|int} id
              * }
              * @param {object} context
@@ -3056,7 +3072,7 @@ if (!aIndexOf) {
             /**
              * @param {object} props
              * @param {boolean} unfiltered
-             * @returns MetaphorJs.data.Record|Object|null
+             * @returns MetaphorJs.model.Record|Object|null
              */
             findBySet: function(props, unfiltered) {
 
@@ -3199,7 +3215,7 @@ if (!aIndexOf) {
             /**
              * @static
              * @param {string} id
-             * @returns MetaphorJs.data.Store|null
+             * @returns MetaphorJs.model.Store|null
              */
             lookupStore: function(id) {
                 return allStores[id] || null;
@@ -3225,7 +3241,10 @@ if (!aIndexOf) {
 
 
 
-defineClass("MetaphorJs.data.FirebaseStore", "MetaphorJs.data.Store", {
+defineClass({
+
+    $class: "MetaphorJs.model.FirebaseStore",
+    $extends: "MetaphorJs.model.Store",
 
     firebase: null,
 
@@ -3259,6 +3278,7 @@ defineClass("MetaphorJs.data.FirebaseStore", "MetaphorJs.data.Store", {
     },
 
     onSnapshotLoaded: function(recordsSnapshot) {
+
 
         var self = this;
 
