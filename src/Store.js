@@ -13,10 +13,11 @@ var Model   = require("./Model.js"),
     undf = require("../../metaphorjs/src/var/undf.js"),
     nextUid = require("../../metaphorjs/src/func/nextUid.js"),
     filterArray = require("../../metaphorjs/src/func/array/filterArray.js"),
-    sortArray = require("../../metaphorjs/src/func/array/sortArray.js");
+    sortArray = require("../../metaphorjs/src/func/array/sortArray.js"),
+    ObservableMixin = require("../../metaphorjs/src/mixin/ObservableMixin.js");
 
 require("../../metaphorjs/src/func/array/aIndexOf.js");
-require("../../metaphorjs/src/cmp/Base.js");
+
 
 module.exports = (function(){
 
@@ -26,13 +27,12 @@ module.exports = (function(){
 
     /**
      * @namespace MetaphorJs
-     * @class MetaphorJs.model.Store
-     * @extends MetaphorJs.cmp.Observable
+     * @class MetaphorJs.Store
      */
     return defineClass({
 
-            $class:         "MetaphorJs.model.Store",
-            $extends:       "MetaphorJs.cmp.Base",
+            $class:         "MetaphorJs.Store",
+            $mixins:        [ObservableMixin],
 
             /**
              * @var {string}
@@ -51,7 +51,7 @@ module.exports = (function(){
             clearOnLoad:    true,
 
             /**
-             * @var {MetaphorJs.model.Model}
+             * @var {MetaphorJs.Model}
              * @access protected
              */
             model:          null,
@@ -230,9 +230,10 @@ module.exports = (function(){
                     options.url = url;
                 }
 
-                self.supr(options);
+                self.$super(options);
+                extend(self, options, true, false);
 
-                self.id             = self.id || nextUid();
+                self.id         = self.id || nextUid();
                 
                 if (self.publicStore) {
                     allStores[self.id]  = self;
@@ -240,7 +241,7 @@ module.exports = (function(){
 
                 self.initModel(options);
 
-                self.createEvent("beforeload", false);
+                self.$$observable.createEvent("beforeload", false);
 
                 if (!self.local && self.autoLoad) {
                     self.load();
@@ -264,10 +265,10 @@ module.exports = (function(){
                 var self = this;
 
                 if (isString(self.model)) {
-                    self.model  = factory(self.model);
+                    self.model  = Model.create(self.model);
                 }
                 else if (!(self.model instanceof Model)) {
-                    self.model  = factory("MetaphorJs.model.Model", self.model);
+                    self.model  = new Model(self.model);
                 }
 
                 if (options.url) {
@@ -430,7 +431,7 @@ module.exports = (function(){
             },
 
             /**
-             * @returns MetaphorJs.model.Model
+             * @returns MetaphorJs.Model
              */
             getModel: function() {
                 return this.model;
@@ -709,7 +710,7 @@ module.exports = (function(){
                     rec = self.getById(ids[i]);
                     self.remove(rec, silent, skipUpdate);
                     if (rec instanceof Record) {
-                        rec.destroy();
+                        rec.$destroy();
                     }
                 }
 
@@ -754,7 +755,7 @@ module.exports = (function(){
             },
 
             /**
-             * @param {MetaphorJs.model.Record} rec
+             * @param {MetaphorJs.Record} rec
              * @param {boolean} silent
              * @param {boolean} skipUpdate
              * @returns MetaphorJs.lib.Promise
@@ -765,7 +766,7 @@ module.exports = (function(){
             },
 
             /**
-             * @param {MetaphorJs.model.Record[]} recs
+             * @param {MetaphorJs.Record[]} recs
              * @param {boolean} silent
              * @param {boolean} skipUpdate
              * @returns MetaphorJs.lib.Promise
@@ -883,7 +884,7 @@ module.exports = (function(){
 
 
             /**
-             * @param {MetaphorJs.model.Record|Object} rec
+             * @param {MetaphorJs.Record|Object} rec
              */
             getRecordId: function(rec) {
                 if (rec instanceof Record) {
@@ -900,8 +901,8 @@ module.exports = (function(){
 
             /**
              * @access protected
-             * @param {MetaphorJs.model.Record|Object} item
-             * @returns MetaphorJs.model.Record|Object
+             * @param {MetaphorJs.Record|Object} item
+             * @returns MetaphorJs.Record|Object
              */
             processRawDataItem: function(item) {
 
@@ -945,7 +946,7 @@ module.exports = (function(){
 
             /**
              * @access protected
-             * @param {MetaphorJs.model.Record|Object} rec
+             * @param {MetaphorJs.Record|Object} rec
              */
             onRecordDirtyChange: function(rec) {
                 this.trigger("update", this, rec);
@@ -953,7 +954,7 @@ module.exports = (function(){
 
             /**
              * @access protected
-             * @param {MetaphorJs.model.Record|Object} rec
+             * @param {MetaphorJs.Record|Object} rec
              * @param {string} k
              * @param {string|int|bool} v
              * @param {string|int|bool} prev
@@ -964,7 +965,7 @@ module.exports = (function(){
 
             /**
              * @access protected
-             * @param {MetaphorJs.model.Record|Object} rec
+             * @param {MetaphorJs.Record|Object} rec
              */
             onRecordDestroy: function(rec) {
                 this.remove(rec);
@@ -978,7 +979,7 @@ module.exports = (function(){
              * @param {boolean} silent
              * @param {boolean} skipUpdate
              * @param {boolean} unfiltered
-             * @returns {MetaphorJs.model.Record|Object|null}
+             * @returns {MetaphorJs.Record|Object|null}
              */
             shift: function(silent, skipUpdate, unfiltered) {
                 return this.removeAt(0, silent, skipUpdate, unfiltered);
@@ -986,10 +987,10 @@ module.exports = (function(){
 
             /**
              * Works with unfiltered data
-             * @param {{}|MetaphorJs.model.Record} rec
+             * @param {{}|MetaphorJs.Record} rec
              * @param {boolean} silent
              * @param {boolean} skipUpdate
-             * @returns {MetaphorJs.model.Record|Object}
+             * @returns {MetaphorJs.Record|Object}
              */
             unshift: function(rec, silent, skipUpdate) {
                 return this.insert(0, rec, silent, skipUpdate);
@@ -999,7 +1000,7 @@ module.exports = (function(){
              * @param {boolean} silent
              * @param {boolean} skipUpdate
              * @param {boolean} unfiltered
-             * @returns {MetaphorJs.model.Record|Object|null}
+             * @returns {MetaphorJs.Record|Object|null}
              */
             pop: function(silent, skipUpdate, unfiltered) {
                 return this.removeAt(this.length - 1, silent, skipUpdate, unfiltered);
@@ -1029,7 +1030,7 @@ module.exports = (function(){
 
             /**
              * Works with unfiltered data
-             * @param {MetaphorJs.model.Record|Object} rec
+             * @param {MetaphorJs.Record|Object} rec
              * @param {boolean} silent
              * @param {boolean} skipUpdate
              */
@@ -1045,7 +1046,7 @@ module.exports = (function(){
              * @param {boolean} silent
              * @param {boolean} skipUpdate
              * @param {boolean} unfiltered -- index from unfiltered item list
-             * @returns MetaphorJs.model.Record|Object|null
+             * @returns MetaphorJs.Record|Object|null
              */
             removeAt: function(index, silent, skipUpdate, unfiltered) {
 
@@ -1078,7 +1079,7 @@ module.exports = (function(){
                     if (rec instanceof Record) {
                         self.bindRecord("un", rec);
                         rec.detachStore(self);
-                        return rec.destroyed ? undf : rec;
+                        return rec.$destroyed ? undf : rec;
                     }
                     else {
                         return rec;
@@ -1113,10 +1114,10 @@ module.exports = (function(){
             /**
              * Works with unfiltered items
              * @param {number} index
-             * @param {MetaphorJs.model.Record|Object} rec
+             * @param {MetaphorJs.Record|Object} rec
              * @param {boolean} silent
              * @param {boolean} skipUpdate
-             * @returns MetaphorJs.model.Record|Object
+             * @returns MetaphorJs.Record|Object
              */
             insert: function(index, rec, silent, skipUpdate) {
 
@@ -1175,11 +1176,11 @@ module.exports = (function(){
             },
 
             /**
-             * @param {MetaphorJs.model.Record|Object} old
-             * @param {MetaphorJs.model.Record|Object} rec
+             * @param {MetaphorJs.Record|Object} old
+             * @param {MetaphorJs.Record|Object} rec
              * @param {boolean} silent
              * @param {boolean} skipUpdate
-             * @returns MetaphorJs.model.Record|Object
+             * @returns MetaphorJs.Record|Object
              */
             replace: function(old, rec, silent, skipUpdate) {
                 var self    = this,
@@ -1204,10 +1205,10 @@ module.exports = (function(){
             onReplace: emptyFn,
 
             /**
-             * @param {MetaphorJs.model.Record|Object} rec
+             * @param {MetaphorJs.Record|Object} rec
              * @param {boolean} silent
              * @param {boolean} skipUpdate
-             * @returns MetaphorJs.model.Record|Object|null
+             * @returns MetaphorJs.Record|Object|null
              */
             remove: function(rec, silent, skipUpdate) {
                 return this.removeAt(this.indexOf(rec, true), silent, skipUpdate, true);
@@ -1217,14 +1218,14 @@ module.exports = (function(){
              * @param {string|int} id
              * @param {boolean} silent
              * @param {boolean} skipUpdate
-             * @returns MetaphorJs.model.Record|Object|null
+             * @returns MetaphorJs.Record|Object|null
              */
             removeId: function(id, silent, skipUpdate) {
                 return this.removeAt(this.indexOfId(id, true), silent, skipUpdate, true);
             },
 
             /**
-             * @param {MetaphorJs.model.Record|Object} rec
+             * @param {MetaphorJs.Record|Object} rec
              * @param {boolean} unfiltered
              * @returns bool
              */
@@ -1300,7 +1301,7 @@ module.exports = (function(){
             /**
              * @param {number} index
              * @param {boolean} unfiltered
-             * @returns MetaphorJs.model.Record|Object|null
+             * @returns MetaphorJs.Record|Object|null
              */
             getAt: function(index, unfiltered) {
                 return unfiltered ?
@@ -1311,7 +1312,7 @@ module.exports = (function(){
             /**
              * @param {string|int} id
              * @param {boolean} unfiltered
-             * @returns MetaphorJs.model.Record|Object|null
+             * @returns MetaphorJs.Record|Object|null
              */
             getById: function(id, unfiltered) {
                 return unfiltered ?
@@ -1321,7 +1322,7 @@ module.exports = (function(){
 
             /**
              * Works with filtered list unless fromOriginal = true
-             * @param {MetaphorJs.model.Record|Object} rec
+             * @param {MetaphorJs.Record|Object} rec
              * @param {boolean} unfiltered
              * @returns Number
              */
@@ -1342,7 +1343,7 @@ module.exports = (function(){
 
             /**
              * @param {function} fn {
-             *      @param {MetaphorJs.model.Record|Object} rec
+             *      @param {MetaphorJs.Record|Object} rec
              *      @param {number} index
              *      @param {number} length
              * }
@@ -1404,7 +1405,7 @@ module.exports = (function(){
 
             /**
              * @param {boolean} unfiltered
-             * @returns MetaphorJs.model.Record|Object
+             * @returns MetaphorJs.Record|Object
              */
             first : function(unfiltered){
                 return unfiltered ? this.items[0] : this.current[0];
@@ -1412,7 +1413,7 @@ module.exports = (function(){
 
             /**
              * @param {boolean} unfiltered
-             * @returns MetaphorJs.model.Record|Object
+             * @returns MetaphorJs.Record|Object
              */
             last : function(unfiltered){
                 return unfiltered ? this.items[this.length-1] : this.current[this.current-1];
@@ -1423,7 +1424,7 @@ module.exports = (function(){
              * @param {number} start Optional
              * @param {number} end Optional
              * @param {boolean} unfiltered
-             * @returns MetaphorJs.model.Record[]|Object[]
+             * @returns MetaphorJs.Record[]|Object[]
              */
             getRange : function(start, end, unfiltered){
                 var self    = this,
@@ -1453,13 +1454,13 @@ module.exports = (function(){
             /**
              *
              * @param {function} fn {
-             *      @param {MetaphorJs.model.Record|Object} rec
+             *      @param {MetaphorJs.Record|Object} rec
              *      @param {string|int} id
              * }
              * @param {object} context
              * @param {number} start { @default 0 }
              * @param {boolean} unfiltered
-             * @returns MetaphorJs.model.Record|Object|null
+             * @returns MetaphorJs.Record|Object|null
              */
             findBy: function(fn, context, start, unfiltered) {
                 var inx = this.findIndexBy(fn, context, start, unfiltered);
@@ -1469,7 +1470,7 @@ module.exports = (function(){
             /**
              *
              * @param {function} fn {
-             *      @param {MetaphorJs.model.Record|Object} rec
+             *      @param {MetaphorJs.Record|Object} rec
              *      @param {string|int} id
              * }
              * @param {object} context
@@ -1531,7 +1532,7 @@ module.exports = (function(){
             /**
              * @param {object} props
              * @param {boolean} unfiltered
-             * @returns MetaphorJs.model.Record|Object|null
+             * @returns MetaphorJs.Record|Object|null
              */
             findBySet: function(props, unfiltered) {
 
@@ -1658,14 +1659,14 @@ module.exports = (function(){
             },
 
 
-            onDestroy: function() {
+            destroy: function() {
 
                 var self    = this;
 
                 delete allStores[self.id];
 
                 self.clear();
-                self.supr();
+                self.$super();
             }
 
         },
@@ -1674,7 +1675,7 @@ module.exports = (function(){
             /**
              * @static
              * @param {string} id
-             * @returns MetaphorJs.model.Store|null
+             * @returns MetaphorJs.Store|null
              */
             lookupStore: function(id) {
                 return allStores[id] || null;

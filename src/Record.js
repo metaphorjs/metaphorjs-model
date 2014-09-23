@@ -4,19 +4,18 @@ var Model   = require("./Model.js"),
     factory = require("../../metaphorjs-class/src/func/factory.js"),
     isInstanceOf = require("../../metaphorjs-class/src/func/isInstanceOf.js"),
     extend  = require("../../metaphorjs/src/func/extend.js"),
-    isString = require("../../metaphorjs/src/func/isString.js");
+    isString = require("../../metaphorjs/src/func/isString.js"),
+    ObservableMixin = require("../../metaphorjs/src/mixin/ObservableMixin.js");
 
-require("../../metaphorjs/src/cmp/Base.js");
 
 /**
  * @namespace MetaphorJs
- * @class MetaphorJs.model.Record
- * @extends MetaphorJs.cmp.Observable
+ * @class Record
  */
 module.exports = defineClass({
 
-    $class:         "MetaphorJs.model.Record",
-    $extends:       "MetaphorJs.cmp.Base",
+    $class: "MetaphorJs.Record",
+    $mixins: [ObservableMixin],
 
     /**
      * @var mixed
@@ -55,13 +54,7 @@ module.exports = defineClass({
     dirty:          false,
 
     /**
-     * @var bool
-     * @access protected
-     */
-    destroyed:      false,
-
-    /**
-     * @var MetaphorJs.model.Model
+     * @var MetaphorJs.Model
      * @access protected
      */
     model:          null,
@@ -117,13 +110,13 @@ module.exports = defineClass({
         self.stores     = [];
         self.modified   = {};
         cfg             = cfg || {};
-        self.supr(cfg);
+        self.$super(cfg);
 
         if (isString(self.model)) {
-            self.model  = factory(self.model);
+            self.model  = Model.create(self.model);
         }
-        else if (!isInstanceOf(self.model, "MetaphorJs.model.Model")) {
-            self.model  = factory("MetaphorJs.model.Model", self.model);
+        else if (!(self.model instanceof Model)) {
+            self.model  = new Model(self.model);
         }
 
         self.id     = id;
@@ -135,7 +128,7 @@ module.exports = defineClass({
             self.load();
         }
 
-        if (self.$getClass() != "MetaphorJs.model.Record") {
+        if (self.$getClass() != "MetaphorJs.Record") {
             Model.addToCache(self);
         }
     },
@@ -162,14 +155,14 @@ module.exports = defineClass({
     },
 
     /**
-     * @returns {MetaphorJs.model.Model}
+     * @returns {MetaphorJs.Model}
      */
     getModel: function() {
         return this.model;
     },
 
     /**
-     * @param {MetaphorJs.model.Store} store
+     * @param {MetaphorJs.Store} store
      */
     attachStore: function(store) {
         var self    = this,
@@ -181,18 +174,18 @@ module.exports = defineClass({
     },
 
     /**
-     * @param {MetaphorJs.model.Store} store
+     * @param {MetaphorJs.Store} store
      */
     detachStore: function(store) {
         var self    = this,
             sid     = store.getId(),
             inx;
 
-        if (!self.destroyed && (inx = self.stores.indexOf(sid)) != -1) {
+        if (!self.$destroyed && (inx = self.stores.indexOf(sid)) != -1) {
             self.stores.splice(inx, 1);
 
             if (self.stores.length == 0 && !self.standalone) {
-                self.destroy();
+                self.$destroy();
             }
         }
     },
@@ -390,7 +383,7 @@ module.exports = defineClass({
         return self.model.deleteRecord(self)
             .done(function() {
                 self.trigger("delete", self);
-                self.destroy();
+                self.$destroy();
             }).
             fail(function() {
                 self.trigger("faileddelete", self);
@@ -417,24 +410,8 @@ module.exports = defineClass({
     destroy: function() {
 
         var self    = this;
-
-        if (self.destroyed) {
-            return;
-        }
-
-        self.destroyed  = true;
-
-        self.trigger("destroy", self);
-
-        self.data       = null;
-        self.orig       = null;
-        self.modified   = null;
-        self.model      = null;
-        self.stores     = null;
-
         Model.removeFromCache(self.$getClass(), self.id);
-
-        self.supr();
+        self.$super();
     }
 
 });

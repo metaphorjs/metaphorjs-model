@@ -8,8 +8,8 @@ require("./Store.js");
 
 defineClass({
 
-    $class: "MetaphorJs.model.FirebaseStore",
-    $extends: "MetaphorJs.model.Store",
+    $class: "MetaphorJs.FirebaseStore",
+    $extends: "MetaphorJs.Store",
 
     firebase: null,
 
@@ -24,7 +24,7 @@ defineClass({
         self.firebase.on("child_changed", bind(self.onChildChanged, self));
         self.firebase.on("child_moved", bind(self.onChildMoved, self));
 
-        self.supr();
+        self.$super();
     },
 
     initModel: emptyFn,
