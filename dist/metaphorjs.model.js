@@ -1,11 +1,18 @@
 (function(){
 "use strict";
 
-function isFunction(value) {
-    return typeof value == 'function';
+var MetaphorJs = {
+
 };
+
+
+
+var slice = Array.prototype.slice;
+
 var toString = Object.prototype.toString;
+
 var undf = undefined;
+
 
 
 
@@ -64,10 +71,102 @@ var varType = function(){
 }();
 
 
+
+function isPlainObject(value) {
+    // IE < 9 returns [object Object] from toString(htmlElement)
+    return typeof value == "object" &&
+           varType(value) === 3 &&
+            !value.nodeType &&
+            value.constructor === Object;
+
+};
+
+function isBool(value) {
+    return value === true || value === false;
+};
+
+
+
+/**
+ * @param {Object} dst
+ * @param {Object} src
+ * @param {Object} src2 ... srcN
+ * @param {boolean} override = false
+ * @param {boolean} deep = false
+ * @returns {*}
+ */
+var extend = function(){
+
+    var extend = function extend() {
+
+
+        var override    = false,
+            deep        = false,
+            args        = slice.call(arguments),
+            dst         = args.shift(),
+            src,
+            k,
+            value;
+
+        if (isBool(args[args.length - 1])) {
+            override    = args.pop();
+        }
+        if (isBool(args[args.length - 1])) {
+            deep        = override;
+            override    = args.pop();
+        }
+
+        while (args.length) {
+            if (src = args.shift()) {
+                for (k in src) {
+
+                    if (src.hasOwnProperty(k) && (value = src[k]) !== undf) {
+
+                        if (deep) {
+                            if (dst[k] && isPlainObject(dst[k]) && isPlainObject(value)) {
+                                extend(dst[k], value, override, deep);
+                            }
+                            else {
+                                if (override === true || dst[k] == undf) { // == checks for null and undefined
+                                    if (isPlainObject(value)) {
+                                        dst[k] = {};
+                                        extend(dst[k], value, override, true);
+                                    }
+                                    else {
+                                        dst[k] = value;
+                                    }
+                                }
+                            }
+                        }
+                        else {
+                            if (override === true || dst[k] == undf) {
+                                dst[k] = value;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        return dst;
+    };
+
+    return extend;
+}();
+
+function isFunction(value) {
+    return typeof value == 'function';
+};
+
+
+
 function isString(value) {
     return typeof value == "string" || value === ""+value;
     //return typeof value == "string" || varType(value) === 0;
 };
+
+var strUndef = "undefined";
+
 
 
 function isObject(value) {
@@ -77,7 +176,7 @@ function isObject(value) {
     var vt = varType(value);
     return vt > 2 || vt == -1;
 };
-var strUndef = "undefined";
+
 
 
 
@@ -284,123 +383,9 @@ Namespace.prototype.normalize = null;
 
 
 
-var slice = Array.prototype.slice;/**
- * @param {Function} fn
- * @param {Object} context
- * @param {[]} args
- * @param {number} timeout
- */
-function async(fn, context, args, timeout) {
-    setTimeout(function(){
-        fn.apply(context, args || []);
-    }, timeout || 0);
-};
-
-
-function error(e) {
-
-    var stack = e.stack || (new Error).stack;
-
-    if (typeof console != strUndef && console.log) {
-        async(function(){
-            console.log(e);
-            if (stack) {
-                console.log(stack);
-            }
-        });
-    }
-    else {
-        throw e;
-    }
-};
-
-
-function isPlainObject(value) {
-    // IE < 9 returns [object Object] from toString(htmlElement)
-    return typeof value == "object" &&
-           varType(value) === 3 &&
-            !value.nodeType &&
-            value.constructor === Object;
-
-};
-
-
-function isBool(value) {
-    return value === true || value === false;
-};
-function isNull(value) {
-    return value === null;
-};
-
-
-/**
- * @param {Object} dst
- * @param {Object} src
- * @param {Object} src2 ... srcN
- * @param {boolean} override = false
- * @param {boolean} deep = false
- * @returns {*}
- */
-var extend = function(){
-
-    var extend = function extend() {
-
-
-        var override    = false,
-            deep        = false,
-            args        = slice.call(arguments),
-            dst         = args.shift(),
-            src,
-            k,
-            value;
-
-        if (isBool(args[args.length - 1])) {
-            override    = args.pop();
-        }
-        if (isBool(args[args.length - 1])) {
-            deep        = override;
-            override    = args.pop();
-        }
-
-        while (args.length) {
-            if (src = args.shift()) {
-                for (k in src) {
-
-                    if (src.hasOwnProperty(k) && (value = src[k]) !== undf) {
-
-                        if (deep) {
-                            if (dst[k] && isPlainObject(dst[k]) && isPlainObject(value)) {
-                                extend(dst[k], value, override, deep);
-                            }
-                            else {
-                                if (override === true || dst[k] == undf) { // == checks for null and undefined
-                                    if (isPlainObject(value)) {
-                                        dst[k] = {};
-                                        extend(dst[k], value, override, true);
-                                    }
-                                    else {
-                                        dst[k] = value;
-                                    }
-                                }
-                            }
-                        }
-                        else {
-                            if (override === true || dst[k] == undf) {
-                                dst[k] = value;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        return dst;
-    };
-
-    return extend;
-}();
 
 function emptyFn(){};
+
 
 
 var instantiate = function(fn, args) {
@@ -418,6 +403,7 @@ var instantiate = function(fn, args) {
     return isObject(ret) || ret === false ? ret : inst;
 
 };
+
 
 var intercept = function(origFn, interceptor, context, origContext, when, replaceValue) {
 
@@ -443,6 +429,7 @@ var intercept = function(origFn, interceptor, context, origContext, when, replac
         return replaceValue ? intrRes : origRes;
     };
 };
+
 
 
 var Class = function(){
@@ -776,7 +763,7 @@ var Class = function(){
             }
 
             if (parentClass && !pConstructor) {
-                throw new Error(parentClass + " not found");
+                throw parentClass + " not found";
             }
 
             if (name) {
@@ -854,7 +841,7 @@ var Class = function(){
                 args    = slice.call(arguments, 1);
 
             if (!cls) {
-                throw new Error(name + " not found");
+                throw name + " not found";
             }
 
             return cls.$instantiate.apply(cls, args);
@@ -933,13 +920,11 @@ var Class = function(){
 
 }();
 
-var MetaphorJs = {
-
-};
 
 
 
 var ns  = new Namespace(MetaphorJs, "MetaphorJs");
+
 
 
 var cs = new Class(ns);
@@ -947,7 +932,9 @@ var cs = new Class(ns);
 
 
 
+
 var defineClass = cs.define;
+
 /**
  * @param {Function} fn
  * @param {*} context
@@ -961,6 +948,7 @@ var bind = Function.prototype.bind ?
                       return fn.apply(context, arguments);
                   };
               };
+
 
 
 
@@ -980,6 +968,18 @@ var trim = function() {
         return isString(value) ? value.trim() : value;
     };
 }();
+/**
+ * @param {Function} fn
+ * @param {Object} context
+ * @param {[]} args
+ * @param {number} timeout
+ */
+function async(fn, context, args, timeout) {
+    setTimeout(function(){
+        fn.apply(context, args || []);
+    }, timeout || 0);
+};
+
 
 
 var parseJSON = function() {
@@ -992,6 +992,7 @@ var parseJSON = function() {
                return (new Function("return " + data))();
            };
 }();
+
 
 
 
@@ -1020,6 +1021,7 @@ function parseXML(data, type) {
 };
 
 
+
 /**
  * @param {*} list
  * @returns {[]}
@@ -1036,9 +1038,11 @@ function toArray(list) {
         return [];
     }
 };
+
 function getAttr(el, name) {
-    return el.getAttribute(name);
+    return el.getAttribute ? el.getAttribute(name) : null;
 };
+
 
 
 /**
@@ -1631,6 +1635,7 @@ var select = function() {
 }();
 
 
+
 /**
  * @param {*} value
  * @returns {boolean}
@@ -1638,6 +1643,7 @@ var select = function() {
 function isArray(value) {
     return typeof value == "object" && varType(value) === 5;
 };
+
 function addListener(el, event, func) {
     if (el.attachEvent) {
         el.attachEvent('on' + event, func);
@@ -1645,6 +1651,7 @@ function addListener(el, event, func) {
         el.addEventListener(event, func, false);
     }
 };
+
 
 /**
  * @returns {String}
@@ -1675,6 +1682,7 @@ var nextUid = function(){
         return uid.join('');
     };
 }();
+
 
 
 
@@ -2356,6 +2364,7 @@ extend(Event.prototype, {
 
 
 
+
 /**
  * Returns 'then' function or false
  * @param {*} any
@@ -2373,6 +2382,26 @@ function isThenable(any) {
     return isFunction((then = any.then)) ?
            then : false;
 };
+
+
+
+function error(e) {
+
+    var stack = e.stack || (new Error).stack;
+
+    if (typeof console != strUndef && console.log) {
+        async(function(){
+            console.log(e);
+            if (stack) {
+                console.log(stack);
+            }
+        });
+    }
+    else {
+        throw e;
+    }
+};
+
 
 
 
@@ -3093,13 +3122,16 @@ var Promise = function(){
 
 
 
+
 function isPrimitive(value) {
     var vt = varType(value);
     return vt < 3 && vt > -1;
 };
+
 function setAttr(el, name, value) {
     return el.setAttribute(name, value);
 };
+
 
 
 
@@ -3998,7 +4030,9 @@ var ajax = function(){
 
 
 
+
 var factory = cs.factory;
+
 
 
 
@@ -4599,8 +4633,6 @@ var Model = function(){
 
 
 
-var isInstanceOf = cs.isInstanceOf;
-
 
 /**
  * @mixin ObservableMixin
@@ -4666,6 +4698,7 @@ var ObservableMixin = ns.add("mixin.Observable", {
         self.$$observable = null;
     }
 });
+
 
 
 
@@ -5080,10 +5113,6 @@ var Record = defineClass({
 
 
 
-function isNumber(value) {
-    return varType(value) === 1;
-};
-
 
 
 var filterArray = function(){
@@ -5173,6 +5202,7 @@ var filterArray = function(){
 }();
 
 
+
 function sortArray(arr, by, dir) {
 
     if (!dir) {
@@ -5217,6 +5247,7 @@ function sortArray(arr, by, dir) {
     return dir == "desc" ? ret.reverse() : ret;
 
 };
+
 var aIndexOf    = Array.prototype.indexOf;
 
 if (!aIndexOf) {
@@ -5290,7 +5321,8 @@ if (!aIndexOf) {
 
 
 
-(function(){
+
+var Store = function(){
 
     var allStores   = {};
 
@@ -6967,104 +6999,10 @@ if (!aIndexOf) {
     );
 
 
-}());
-
-
-
-
-defineClass({
-
-    $class: "MetaphorJs.FirebaseStore",
-    $extends: "MetaphorJs.Store",
-
-    firebase: null,
-
-    $init: function(ref) {
-
-        var self    = this;
-
-        self.firebase = isString(ref) ? new Firebase(ref) : ref;
-
-        self.firebase.on("child_added", bind(self.onChildAdded, self));
-        self.firebase.on("child_removed", bind(self.onChildRemoved, self));
-        self.firebase.on("child_changed", bind(self.onChildChanged, self));
-        self.firebase.on("child_moved", bind(self.onChildMoved, self));
-
-        self.$super();
-    },
-
-    initModel: emptyFn,
-
-    ref: function() {
-        return this.firebase.ref ?
-                this.firebase.ref() :
-                this.firebase;
-    },
-
-    load: function() {
-        var self = this;
-        if (!self.loaded) {
-            self.firebase.once("value", bind(self.onSnapshotLoaded, self));
-        }
-    },
-
-    onSnapshotLoaded: function(recordsSnapshot) {
-
-
-        var self = this;
-
-        recordsSnapshot.forEach(function(snapshot) {
-            self.add(snapshot, true, true);
-        });
-
-        self.update();
-        self.loaded = true;
-        self.trigger("load", self);
-    },
-
-    onChildAdded: function(snapshot, prevName) {
-        var self = this;
-        if (self.loaded) {
-            var index = self.indexOfId(prevName, true);
-            self.insert(index + 1, snapshot);
-        }
-    },
-
-    onChildRemoved: function(snapshot) {
-        var self = this;
-        if (self.loaded) {
-            self.removeId(snapshot.name());
-        }
-    },
-
-    onChildChanged: function(snapshot, prevName) {
-        var self = this;
-        if (self.loaded) {
-            var old = self.getById(snapshot.name(), true);
-            self.replace(old, snapshot);
-        }
-    },
-
-    onChildMoved: function(snapshot, prevName) {
-        // not yet implemented
-    },
-
-    getRecordId: function(item) {
-        return item.name();
-    },
-
-    getRecordData: function(item) {
-        return item.val();
-    },
-
-    processRawDataItem: function(item) {
-        return item;
-    },
-
-    bindRecord: emptyFn
-
-
-});
+}();
+MetaphorJs['Model'] = Model;
+MetaphorJs['Record'] = Record;
+MetaphorJs['Store'] = Store;
 typeof global != "undefined" ? (global['MetaphorJs'] = MetaphorJs) : (window['MetaphorJs'] = MetaphorJs);
 
 }());

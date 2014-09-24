@@ -1,8 +1,6 @@
 
 var Model   = require("./Model.js"),
     defineClass = require("../../metaphorjs-class/src/func/defineClass.js"),
-    factory = require("../../metaphorjs-class/src/func/factory.js"),
-    isInstanceOf = require("../../metaphorjs-class/src/func/isInstanceOf.js"),
     extend  = require("../../metaphorjs/src/func/extend.js"),
     isString = require("../../metaphorjs/src/func/isString.js"),
     ObservableMixin = require("../../metaphorjs/src/mixin/ObservableMixin.js");

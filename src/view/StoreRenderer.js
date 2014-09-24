@@ -1,16 +1,9 @@
 
-var defineClass = require("../../../metaphorjs-class/src/func/defineClass.js"),
-    createGetter = require("../../../metaphorjs-watchable/src/func/createGetter.js"),
+var createGetter = require("../../../metaphorjs-watchable/src/func/createGetter.js"),
     createWatchable = require("../../../metaphorjs-watchable/src/func/createWatchable.js"),
-    async = require("../../../metaphorjs/src/func/async.js"),
     ns = require("../../../metaphorjs-namespace/src/var/ns.js"),
-    animate = require("../../../metaphorjs-animate/src/metaphorjs.animate.js"),
     bind = require("../../../metaphorjs/src/func/bind.js"),
-    data = require("../../../metaphorjs/src/func/dom/data.js"),
     ListRenderer = require("../../../metaphorjs/src/class/ListRenderer.js"),
-    addListener = require("../../../metaphorjs/src/func/event/addListener.js"),
-    removeListener = require("../../../metaphorjs/src/func/event/removeListener.js"),
-    removeAttr = require("../../../metaphorjs/src/func/dom/removeAttr.js"),
     getNodeConfig = require("../../../metaphorjs/src/func/dom/getNodeConfig.js");
 
 

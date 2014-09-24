@@ -5,11 +5,8 @@ var Model   = require("./Model.js"),
     emptyFn = require("../../metaphorjs/src/func/emptyFn.js"),
     isArray = require("../../metaphorjs/src/func/isArray.js"),
     defineClass = require("../../metaphorjs-class/src/func/defineClass.js"),
-    isInstanceOf = require("../../metaphorjs-class/src/func/isInstanceOf.js"),
     factory = require("../../metaphorjs-class/src/func/factory.js"),
     isString = require("../../metaphorjs/src/func/isString.js"),
-    isNumber = require("../../metaphorjs/src/func/isNumber.js"),
-    isNull = require("../../metaphorjs/src/func/isNull.js"),
     undf = require("../../metaphorjs/src/var/undf.js"),
     nextUid = require("../../metaphorjs/src/func/nextUid.js"),
     filterArray = require("../../metaphorjs/src/func/array/filterArray.js"),
@@ -19,7 +16,7 @@ var Model   = require("./Model.js"),
 require("../../metaphorjs/src/func/array/aIndexOf.js");
 
 
-module.exports = (function(){
+module.exports = function(){
 
     var allStores   = {};
 
@@ -1696,4 +1693,4 @@ module.exports = (function(){
     );
 
 
-}());
+}();

@@ -1,22 +1,61 @@
 {
-    "version": "0.1.11",
+    "version": "0.1.12",
     "push": [
         "github"
     ],
+    "mixin": {
+        "model": {
+            "files": [
+                [
+                    "src/Model.js",
+                    {
+                        "as": "Model"
+                    }
+                ],
+                [
+                    "src/Record.js",
+                    {
+                        "as": "Record"
+                    }
+                ],
+                [
+                    "src/Store.js",
+                    {
+                        "as": "Store"
+                    }
+                ]
+            ]
+        },
+        "all": {
+            "files": [
+                "model",
+                "src/**"
+            ],
+            "omit": [
+                "src/amd/**"
+            ]
+        }
+    },
     "build": {
         "standalone": {
             "wrap": true,
             "global": true,
             "target": "dist/metaphorjs.model.js",
             "files": [
-                "src/*"
+                "../metaphorjs/src/MetaphorJs.js",
+                "model"
+            ],
+            "expose": [
+                "Model",
+                "Record",
+                "Store"
             ]
         },
         "npm": {
             "target": "dist/metaphorjs.model.npm.js",
             "compile": false,
             "files": [
-                "src/*"
+                "model"
             ],
             "omit": [
                 "../metaphorjs-ajax/src/metaphorjs.ajax.js",
@@ -26,7 +65,7 @@
                 "../metaphorjs-namespace/src/metaphorjs.namespace.js",
                 "../metaphorjs-class/src/metaphorjs.class.js"
             ],
-            "exports": "MetaphorJs.data",
+            "exports": "MetaphorJs",
             "require": {
                 "metaphorjs-ajax": "ajax",
                 "metaphorjs-promise": "Promise",
@@ -37,7 +76,7 @@
         "amd": {
             "target": "dist/metaphorjs.model.amd.js",
             "files": [
-                "src/*"
+                "model"
             ],
             "omit": [
                 "../metaphorjs-ajax/src/metaphorjs.ajax.js",
@@ -55,7 +94,7 @@
             ],
             "define": {
                 "name": "metaphorjs-model",
-                "return": "MetaphorJs.data",
+                "return": "MetaphorJs",
                 "deps": {
                     "metaphorjs-ajax": "ajax",
                     "metaphorjs-promise": "Promise",

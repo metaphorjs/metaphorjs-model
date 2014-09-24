@@ -3,38 +3,13 @@ var Promise = require('metaphorjs-promise');
 var Namespace = require('metaphorjs-namespace');
 var Class = require('metaphorjs-class');
 
-var MetaphorJs = {
 
-};
-
-
-
-var ns  = new Namespace(MetaphorJs, "MetaphorJs");
-
-
-var cs = new Class(ns);
-
-
-
-
-var defineClass = cs.define;
-/**
- * @param {Function} fn
- * @param {*} context
- */
-var bind = Function.prototype.bind ?
-              function(fn, context){
-                  return fn.bind(context);
-              } :
-              function(fn, context) {
-                  return function() {
-                      return fn.apply(context, arguments);
-                  };
-              };
-
+var slice = Array.prototype.slice;
 
 var toString = Object.prototype.toString;
+
 var undf = undefined;
+
 
 
 
@@ -93,15 +68,6 @@ var varType = function(){
 }();
 
 
-function isString(value) {
-    return typeof value == "string" || value === ""+value;
-    //return typeof value == "string" || varType(value) === 0;
-};
-
-function emptyFn(){};
-
-var slice = Array.prototype.slice;
-
 
 function isPlainObject(value) {
     // IE < 9 returns [object Object] from toString(htmlElement)
@@ -112,13 +78,10 @@ function isPlainObject(value) {
 
 };
 
-
 function isBool(value) {
     return value === true || value === false;
 };
-function isNull(value) {
-    return value === null;
-};
+
 
 
 /**
@@ -188,11 +151,40 @@ var extend = function(){
     return extend;
 }();
 
+var MetaphorJs = {
+
+};
+
+
+
+
+var ns  = new Namespace(MetaphorJs, "MetaphorJs");
+
+
+
+var cs = new Class(ns);
+
+
+
+
+
+var defineClass = cs.define;
+
+
 
 var factory = cs.factory;
+
+
+
+function isString(value) {
+    return typeof value == "string" || value === ""+value;
+    //return typeof value == "string" || varType(value) === 0;
+};
+
 function isFunction(value) {
     return typeof value == 'function';
 };
+
 
 
 
@@ -793,8 +785,6 @@ var Model = function(){
 
 
 
-var isInstanceOf = cs.isInstanceOf;
-
 
 /**
  * @mixin ObservableMixin
@@ -860,6 +850,7 @@ var ObservableMixin = ns.add("mixin.Observable", {
         self.$$observable = null;
     }
 });
+
 
 
 
@@ -1274,6 +1265,10 @@ var Record = defineClass({
 
 
 
+function emptyFn(){};
+
+
+
 /**
  * @param {*} value
  * @returns {boolean}
@@ -1282,10 +1277,6 @@ function isArray(value) {
     return typeof value == "object" && varType(value) === 5;
 };
 
-
-function isNumber(value) {
-    return varType(value) === 1;
-};
 
 /**
  * @returns {String}
@@ -1319,10 +1310,12 @@ var nextUid = function(){
 
 
 
+
 function isPrimitive(value) {
     var vt = varType(value);
     return vt < 3 && vt > -1;
 };
+
 
 
 
@@ -1413,6 +1406,7 @@ var filterArray = function(){
 }();
 
 
+
 function sortArray(arr, by, dir) {
 
     if (!dir) {
@@ -1457,6 +1451,7 @@ function sortArray(arr, by, dir) {
     return dir == "desc" ? ret.reverse() : ret;
 
 };
+
 var aIndexOf    = Array.prototype.indexOf;
 
 if (!aIndexOf) {
@@ -1530,7 +1525,8 @@ if (!aIndexOf) {
 
 
 
-(function(){
+
+var Store = function(){
 
     var allStores   = {};
 
@@ -3207,102 +3203,5 @@ if (!aIndexOf) {
     );
 
 
-}());
-
-
-
-
-defineClass({
-
-    $class: "MetaphorJs.FirebaseStore",
-    $extends: "MetaphorJs.Store",
-
-    firebase: null,
-
-    $init: function(ref) {
-
-        var self    = this;
-
-        self.firebase = isString(ref) ? new Firebase(ref) : ref;
-
-        self.firebase.on("child_added", bind(self.onChildAdded, self));
-        self.firebase.on("child_removed", bind(self.onChildRemoved, self));
-        self.firebase.on("child_changed", bind(self.onChildChanged, self));
-        self.firebase.on("child_moved", bind(self.onChildMoved, self));
-
-        self.$super();
-    },
-
-    initModel: emptyFn,
-
-    ref: function() {
-        return this.firebase.ref ?
-                this.firebase.ref() :
-                this.firebase;
-    },
-
-    load: function() {
-        var self = this;
-        if (!self.loaded) {
-            self.firebase.once("value", bind(self.onSnapshotLoaded, self));
-        }
-    },
-
-    onSnapshotLoaded: function(recordsSnapshot) {
-
-
-        var self = this;
-
-        recordsSnapshot.forEach(function(snapshot) {
-            self.add(snapshot, true, true);
-        });
-
-        self.update();
-        self.loaded = true;
-        self.trigger("load", self);
-    },
-
-    onChildAdded: function(snapshot, prevName) {
-        var self = this;
-        if (self.loaded) {
-            var index = self.indexOfId(prevName, true);
-            self.insert(index + 1, snapshot);
-        }
-    },
-
-    onChildRemoved: function(snapshot) {
-        var self = this;
-        if (self.loaded) {
-            self.removeId(snapshot.name());
-        }
-    },
-
-    onChildChanged: function(snapshot, prevName) {
-        var self = this;
-        if (self.loaded) {
-            var old = self.getById(snapshot.name(), true);
-            self.replace(old, snapshot);
-        }
-    },
-
-    onChildMoved: function(snapshot, prevName) {
-        // not yet implemented
-    },
-
-    getRecordId: function(item) {
-        return item.name();
-    },
-
-    getRecordData: function(item) {
-        return item.val();
-    },
-
-    processRawDataItem: function(item) {
-        return item;
-    },
-
-    bindRecord: emptyFn
-
-
-});
-module.exports = MetaphorJs.data;
+}();
+module.exports = MetaphorJs;

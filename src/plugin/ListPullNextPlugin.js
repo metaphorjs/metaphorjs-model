@@ -1,7 +1,6 @@
 
 var defineClass = require("../../../metaphorjs-class/src/func/defineClass.js"),
     nsAdd = require("../../../metaphorjs-namespace/src/func/nsAdd.js"),
-    bind = require("../../../metaphorjs/src/func/bind.js"),
     getNodeConfig = require("../../../metaphorjs/src/func/dom/getNodeConfig.js");
 
 require("../../../metaphorjs/src/plugin/ListBufferedPlugin.js");
