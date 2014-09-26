@@ -87,16 +87,17 @@ function isBool(value) {
 
 
 
-/**
- * @param {Object} dst
- * @param {Object} src
- * @param {Object} src2 ... srcN
- * @param {boolean} override = false
- * @param {boolean} deep = false
- * @returns {*}
- */
+
 var extend = function(){
 
+    /**
+     * @param {Object} dst
+     * @param {Object} src
+     * @param {Object} src2 ... srcN
+     * @param {boolean} override = false
+     * @param {boolean} deep = false
+     * @returns {object}
+     */
     var extend = function extend() {
 
 
@@ -165,6 +166,16 @@ function isString(value) {
     //return typeof value == "string" || varType(value) === 0;
 };
 
+
+
+/**
+ * @param {*} value
+ * @returns {boolean}
+ */
+function isArray(value) {
+    return typeof value == "object" && varType(value) === 5;
+};
+
 var strUndef = "undefined";
 
 
@@ -179,58 +190,115 @@ function isObject(value) {
 
 
 
+var Namespace = function(){
 
+    /**
+     * @param {Object} root optional; usually window or global
+     * @param {String} rootName optional. If you want custom object to be root and
+     * this object itself if the first level of namespace:<br>
+     * <pre><code class="language-javascript">
+     * var ns = MetaphorJs.lib.Namespace(window);
+     * ns.register("My.Test", something); // -> window.My.Test
+     * var privateNs = {};
+     * var ns = new MetaphorJs.lib.Namespace(privateNs, "privateNs");
+     * ns.register("privateNs.Test", something); // -> privateNs.Test
+     * </code></pre>
+     * @constructor
+     */
+    var Namespace   = function(root, rootName) {
 
-/**
- * @param {Object} root optional; usually window or global
- * @param {String} rootName optional. If you want custom object to be root and
- * this object itself if the first level of namespace:<br>
- * <pre><code class="language-javascript">
- * var ns = MetaphorJs.lib.Namespace(window);
- * ns.register("My.Test", something); // -> window.My.Test
- * var privateNs = {};
- * var ns = new MetaphorJs.lib.Namespace(privateNs, "privateNs");
- * ns.register("privateNs.Test", something); // -> privateNs.Test
- * </code></pre>
- * @constructor
- */
-var Namespace   = function(root, rootName) {
+        var cache   = {},
+            self    = this;
 
-    var cache   = {},
-        self    = this;
-
-    if (!root) {
-        if (typeof global != strUndef) {
-            root    = global;
-        }
-        else {
-            root    = window;
-        }
-    }
-
-    var normalize   = function(ns) {
-        if (ns && rootName && ns.indexOf(rootName) !== 0) {
-            return rootName + "." + ns;
-        }
-        return ns;
-    };
-
-    var parseNs     = function(ns) {
-
-        var tmp     = ns.split("."),
-            i,
-            last    = tmp.pop(),
-            parent  = tmp.join("."),
-            len     = tmp.length,
-            name,
-            current = root;
-
-
-        if (cache[parent]) {
-            return [cache[parent], last, ns];
+        if (!root) {
+            if (typeof global != strUndef) {
+                root    = global;
+            }
+            else {
+                root    = window;
+            }
         }
 
-        if (len > 0) {
+        var normalize   = function(ns) {
+            if (ns && rootName && ns.indexOf(rootName) !== 0) {
+                return rootName + "." + ns;
+            }
+            return ns;
+        };
+
+        var parseNs     = function(ns) {
+
+            var tmp     = ns.split("."),
+                i,
+                last    = tmp.pop(),
+                parent  = tmp.join("."),
+                len     = tmp.length,
+                name,
+                current = root;
+
+
+            if (cache[parent]) {
+                return [cache[parent], last, ns];
+            }
+
+            if (len > 0) {
+                for (i = 0; i < len; i++) {
+
+                    name    = tmp[i];
+
+                    if (rootName && i == 0) {
+                        if (name == rootName) {
+                            current = root;
+                            continue;
+                        }
+                        else {
+                            ns = rootName + "." + ns;
+                        }
+                    }
+
+                    if (current[name] === undf) {
+                        current[name]   = {};
+                    }
+
+                    current = current[name];
+                }
+            }
+            else {
+                if (rootName) {
+                    ns = rootName + "." + ns;
+                }
+            }
+
+            return [current, last, ns];
+        };
+
+        /**
+         * Get namespace/cache object
+         * @function MetaphorJs.ns.get
+         * @param {string} ns
+         * @param {bool} cacheOnly
+         * @returns {object} constructor
+         */
+        var get       = function(ns, cacheOnly) {
+
+            if (cache[ns] !== undf) {
+                return cache[ns];
+            }
+
+            if (rootName && cache[rootName + "." + ns] !== undf) {
+                return cache[rootName + "." + ns];
+            }
+
+            if (cacheOnly) {
+                return undf;
+            }
+
+            var tmp     = ns.split("."),
+                i,
+                len     = tmp.length,
+                name,
+                current = root;
+
             for (i = 0; i < len; i++) {
 
                 name    = tmp[i];
@@ -240,147 +308,100 @@ var Namespace   = function(root, rootName) {
                         current = root;
                         continue;
                     }
-                    else {
-                        ns = rootName + "." + ns;
-                    }
                 }
 
                 if (current[name] === undf) {
-                    current[name]   = {};
+                    return undf;
                 }
 
                 current = current[name];
             }
-        }
-        else {
-            if (rootName) {
+
+            if (current) {
+                cache[ns] = current;
+            }
+
+            return current;
+        };
+
+        /**
+         * Register class constructor
+         * @function MetaphorJs.ns.register
+         * @param {string} ns
+         * @param {*} value
+         */
+        var register    = function(ns, value) {
+
+            var parse   = parseNs(ns),
+                parent  = parse[0],
+                name    = parse[1];
+
+            if (isObject(parent) && parent[name] === undf) {
+
+                parent[name]        = value;
+                cache[parse[2]]     = value;
+            }
+
+            return value;
+        };
+
+        /**
+         * Class exists
+         * @function MetaphorJs.ns.exists
+         * @param {string} ns
+         * @returns boolean
+         */
+        var exists      = function(ns) {
+            return cache[ns] !== undf;
+        };
+
+        /**
+         * Add constructor to cache
+         * @function MetaphorJs.ns.add
+         * @param {string} ns
+         * @param {*} value
+         */
+        var add = function(ns, value) {
+            if (rootName && ns.indexOf(rootName) !== 0) {
                 ns = rootName + "." + ns;
             }
-        }
-
-        return [current, last, ns];
-    };
-
-    /**
-     * Get namespace/cache object
-     * @function MetaphorJs.ns.get
-     * @param {string} ns
-     * @param {bool} cacheOnly
-     * @returns {object} constructor
-     */
-    var get       = function(ns, cacheOnly) {
-
-        if (cache[ns] !== undf) {
-            return cache[ns];
-        }
-
-        if (rootName && cache[rootName + "." + ns] !== undf) {
-            return cache[rootName + "." + ns];
-        }
-
-        if (cacheOnly) {
-            return undf;
-        }
-
-        var tmp     = ns.split("."),
-            i,
-            len     = tmp.length,
-            name,
-            current = root;
-
-        for (i = 0; i < len; i++) {
-
-            name    = tmp[i];
-
-            if (rootName && i == 0) {
-                if (name == rootName) {
-                    current = root;
-                    continue;
-                }
+            if (cache[ns] === undf) {
+                cache[ns] = value;
             }
+            return value;
+        };
 
-            if (current[name] === undf) {
-                return undf;
-            }
+        var remove = function(ns) {
+            delete cache[ns];
+        };
 
-            current = current[name];
-        }
-
-        if (current) {
-            cache[ns] = current;
-        }
-
-        return current;
+        self.register   = register;
+        self.exists     = exists;
+        self.get        = get;
+        self.add        = add;
+        self.remove     = remove;
+        self.normalize  = normalize;
     };
 
-    /**
-     * Register class constructor
-     * @function MetaphorJs.ns.register
-     * @param {string} ns
-     * @param {*} value
-     */
-    var register    = function(ns, value) {
+    Namespace.prototype.register = null;
+    Namespace.prototype.exists = null;
+    Namespace.prototype.get = null;
+    Namespace.prototype.add = null;
+    Namespace.prototype.remove = null;
+    Namespace.prototype.normalize = null;
 
-        var parse   = parseNs(ns),
-            parent  = parse[0],
-            name    = parse[1];
+    var globalNs;
 
-        if (isObject(parent) && parent[name] === undf) {
-
-            parent[name]        = value;
-            cache[parse[2]]     = value;
+    Namespace.global = function() {
+        if (!globalNs) {
+            globalNs = new Namespace;
         }
-
-        return value;
+        return globalNs;
     };
 
-    /**
-     * Class exists
-     * @function MetaphorJs.ns.exists
-     * @param {string} ns
-     * @returns boolean
-     */
-    var exists      = function(ns) {
-        return cache[ns] !== undf;
-    };
+    return Namespace;
 
-    /**
-     * Add constructor to cache
-     * @function MetaphorJs.ns.add
-     * @param {string} ns
-     * @param {*} value
-     */
-    var add = function(ns, value) {
-        if (rootName && ns.indexOf(rootName) !== 0) {
-            ns = rootName + "." + ns;
-        }
-        if (cache[ns] === undf) {
-            cache[ns] = value;
-        }
-        return value;
-    };
-
-    var remove = function(ns) {
-        delete cache[ns];
-    };
-
-    self.register   = register;
-    self.exists     = exists;
-    self.get        = get;
-    self.add        = add;
-    self.remove     = remove;
-    self.normalize  = normalize;
-};
-
-Namespace.prototype.register = null;
-Namespace.prototype.exists = null;
-Namespace.prototype.get = null;
-Namespace.prototype.add = null;
-Namespace.prototype.remove = null;
-Namespace.prototype.normalize = null;
-
-
-
+}();
 
 
 
@@ -538,6 +559,8 @@ var Class = function(){
                 var self    = this,
                     before  = [],
                     after   = [],
+                    args    = arguments,
+                    newArgs,
                     i, l,
                     plugins, plugin,
                     plCls;
@@ -548,7 +571,11 @@ var Class = function(){
 
                 self.$plugins = [];
 
-                self[constr].apply(self, arguments);
+                newArgs = self[constr].apply(self, arguments);
+
+                if (newArgs && isArray(newArgs)) {
+                    args = newArgs;
+                }
 
                 plugins = self.$plugins;
 
@@ -558,7 +585,7 @@ var Class = function(){
                 for (i = -1, l = self.$afterInit.length; ++i < l;
                      after.push([self.$afterInit[i], self])) {}
 
-                if (plugins.length) {
+                if (plugins && plugins.length) {
 
                     for (i = 0, l = plugins.length; i < l; i++) {
 
@@ -572,7 +599,7 @@ var Class = function(){
                             }
                         }
 
-                        plugin = new plugin(self, arguments);
+                        plugin = new plugin(self, args);
 
                         if (plugin.$beforeHostInit) {
                             before.push([plugin.$beforeHostInit, plugin]);
@@ -586,14 +613,14 @@ var Class = function(){
                 }
 
                 for (i = -1, l = before.length; ++i < l;
-                     before[i][0].apply(before[i][1], arguments)){}
+                     before[i][0].apply(before[i][1], args)){}
 
                 if (self.$init) {
-                    self.$init.apply(self, arguments);
+                    self.$init.apply(self, args);
                 }
 
                 for (i = -1, l = after.length; ++i < l;
-                     after[i][0].apply(after[i][1], arguments)){}
+                     after[i][0].apply(after[i][1], args)){}
 
             };
         };
@@ -782,7 +809,7 @@ var Class = function(){
             definition[constr]  = definition[constr] || $constr;
 
             preparePrototype(prototype, definition, pConstructor);
-            
+
             if (mixins) {
                 for (i = 0, l = mixins.length; i < l; i++) {
                     mixin = mixins[i];
@@ -916,6 +943,15 @@ var Class = function(){
         define: null
     };
 
+    var globalCs;
+
+    Class.global = function() {
+        if (!globalCs) {
+            globalCs = new Class(Namespace.global());
+        }
+        return globalCs;
+    };
+
     return Class;
 
 }();
@@ -954,6 +990,7 @@ var bind = Function.prototype.bind ?
 
 
 /**
+ * @function trim
  * @param {String} value
  */
 var trim = function() {
@@ -1050,7 +1087,8 @@ function getAttr(el, name) {
  */
 
 /**
- * Returns number of nodes or an empty array
+ * Returns array of nodes or an empty array
+ * @function select
  * @param {String} selector
  * @param {Element} root to look into
  */
@@ -1634,16 +1672,6 @@ var select = function() {
     return select;
 }();
 
-
-
-/**
- * @param {*} value
- * @returns {boolean}
- */
-function isArray(value) {
-    return typeof value == "object" && varType(value) === 5;
-};
-
 function addListener(el, event, func) {
     if (el.attachEvent) {
         el.attachEvent('on' + event, func);
@@ -1653,13 +1681,13 @@ function addListener(el, event, func) {
 };
 
 
-/**
- * @returns {String}
- */
 var nextUid = function(){
     var uid = ['0', '0', '0'];
 
     // from AngularJs
+    /**
+     * @returns {String}
+     */
     return function nextUid() {
         var index = uid.length;
         var digit;
@@ -1796,21 +1824,21 @@ extend(Observable.prototype, {
     * }
     * @param {object} context "this" object for the callback function
     * @param {object} options {
-    *       @type bool first {
+    *       @type {bool} first {
     *           True to prepend to the list of handlers
     *           @default false
     *       }
-    *       @type number limit {
+    *       @type {number} limit {
     *           Call handler this number of times; 0 for unlimited
     *           @default 0
     *       }
-    *       @type number start {
+    *       @type {number} start {
     *           Start calling handler after this number of calls. Starts from 1
     *           @default 1
     *       }
-     *      @type [] append Append parameters
-     *      @type [] prepend Prepend parameters
-     *      @type bool allowDupes allow the same handler twice
+     *      @type {[]} append Append parameters
+     *      @type {[]} prepend Prepend parameters
+     *      @type {bool} allowDupes allow the same handler twice
     * }
     */
     on: function(name, fn, context, options) {
@@ -2444,6 +2472,7 @@ var Promise = function(){
          * @param {Function} fn
          * @param {Object} scope
          * @param {[]} args
+         * @ignore
          */
         next        = function(fn, scope, args) {
             args = args || [];
@@ -2465,6 +2494,7 @@ var Promise = function(){
          * @param {Function} fn
          * @param {Promise} promise
          * @returns {Function}
+         * @ignore
          */
         wrapper     = function(fn, promise) {
             return function(value) {
@@ -2859,7 +2889,7 @@ var Promise = function(){
         },
 
         /**
-         * @returns {{then: function, done: function, fail: function, always: function}}
+         * @returns {object} then: function, done: function, fail: function, always: function
          */
         promise: function() {
             var self = this;
@@ -4046,7 +4076,7 @@ var Model = function(){
 
     /**
      * @namespace MetaphorJs
-     * @class MetaphorJs
+     * @class Model
      */
     return defineClass({
 

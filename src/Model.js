@@ -19,7 +19,7 @@ module.exports = function(){
 
     /**
      * @namespace MetaphorJs
-     * @class MetaphorJs
+     * @class Model
      */
     return defineClass({
 
