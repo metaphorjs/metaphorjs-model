@@ -1,21 +1,21 @@
 {
     "name": "metaphorjs-model",
     "version": "0.1.12",
-    "description": "",
+    "description": "MetaphorJs Record/Store/Model",
     "main": "dist/metaphorjs.model.npm.js",
     "scripts": {
         "test": "echo \"Error: no test specified\" && exit 1"
     },
     "repository": {
         "type": "git",
-        "url": "https://github.com/kuindji/metaphorjs-model.git"
+        "url": "https://github.com/metaphorjs/metaphorjs-model.git"
     },
     "author": "kuindji",
     "license": "MIT",
     "bugs": {
-        "url": "https://github.com/kuindji/metaphorjs-model/issues"
+        "url": "https://github.com/metaphorjs/metaphorjs-model/issues"
     },
-    "homepage": "https://github.com/kuindji/metaphorjs-model",
+    "homepage": "https://github.com/metaphorjs/metaphorjs-model",
     "dependencies": {
         "metaphorjs-ajax": "*",
         "metaphorjs-promise": "*",

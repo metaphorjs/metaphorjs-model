@@ -1,5 +1,7 @@
 {
     "version": "0.1.12",
+    "description": "MetaphorJs Record/Store/Model",
+
     "push": [
         "github"
     ],

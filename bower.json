@@ -14,7 +14,7 @@
         "data-store"
     ],
     "license": "MIT",
-    "homepage": "https://github.com/kuindji/metaphorjs-model",
+    "homepage": "https://github.com/metaphorjs/metaphorjs-model",
     "ignore": [
         "node_modules",
         "bower_components",
