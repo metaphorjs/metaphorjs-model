@@ -54,6 +54,11 @@
         "npm": {
             "target": "dist/metaphorjs.model.npm.js",
             "compile": false,
+            "wrap": {
+                "exported": true,
+                "deferred": true,
+                "args": ["window"]
+            },
             "files": [
                 "model"
             ],
@@ -65,9 +70,12 @@
                 "../metaphorjs-namespace/src/metaphorjs.namespace.js",
                 "../metaphorjs-class/src/metaphorjs.class.js"
             ],
-            "exports": "MetaphorJs",
+            "returns": "MetaphorJs",
             "require": {
-                "metaphorjs-ajax": "ajax",
+                "metaphorjs-ajax": {
+                    "as": "ajax",
+                    "args": ["window"]
+                },
                 "metaphorjs-promise": "Promise",
                 "metaphorjs-namespace": "Namespace",
                 "metaphorjs-class": "Class"

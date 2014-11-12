@@ -18,7 +18,6 @@ module.exports = function(){
 
 
     /**
-     * @namespace MetaphorJs
      * @class Model
      */
     return defineClass({
@@ -44,7 +43,6 @@ module.exports = function(){
          *      @type {object} extra Extra params object
          *      @type {string|int|bool} ... other $.ajax({ properties })
          * }
-         * @name atom
          * @md-tmp model-atom
          */
 
@@ -54,7 +52,6 @@ module.exports = function(){
          *      @type {string|object} save { @md-apply model-atom }
          *      @type {string|object} delete { @md-apply model-atom }
          * }
-         * @name group
          * @md-apply model-atom
          * @md-tmp model-group
          */

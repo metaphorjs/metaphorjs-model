@@ -1684,7 +1684,7 @@ module.exports = function(){
                 var id;
 
                 for (id in allStores) {
-                    if (fn.call(fnScope || window, allStores[id]) === false) {
+                    if (fn.call(fnScope, allStores[id]) === false) {
                         break;
                     }
                 }

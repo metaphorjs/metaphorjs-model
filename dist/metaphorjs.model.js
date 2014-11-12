@@ -1,7 +1,9 @@
 (function(){
 "use strict";
 
+
 var MetaphorJs = {
+
 
 };
 
@@ -31,19 +33,21 @@ var varType = function(){
 
 
     /**
-        'string': 0,
-        'number': 1,
-        'boolean': 2,
-        'object': 3,
-        'function': 4,
-        'array': 5,
-        'null': 6,
-        'undefined': 7,
-        'NaN': 8,
-        'regexp': 9,
-        'date': 10
-    */
-
+     * 'string': 0,
+     * 'number': 1,
+     * 'boolean': 2,
+     * 'object': 3,
+     * 'function': 4,
+     * 'array': 5,
+     * 'null': 6,
+     * 'undefined': 7,
+     * 'NaN': 8,
+     * 'regexp': 9,
+     * 'date': 10,
+     * unknown: -1
+     * @param {*} value
+     * @returns {number}
+     */
     return function varType(val) {
 
         if (!val) {
@@ -190,25 +194,182 @@ function isObject(value) {
 
 
 
+var Cache = function(){
+
+    var globalCache;
+
+    /**
+     * @class Cache
+     * @param {bool} cacheRewritable
+     * @constructor
+     */
+    var Cache = function(cacheRewritable) {
+
+        var storage = {},
+
+            finders = [];
+
+        if (arguments.length == 0) {
+            cacheRewritable = true;
+        }
+
+        return {
+
+            /**
+             * @param {function} fn
+             * @param {object} context
+             * @param {bool} prepend
+             */
+            addFinder: function(fn, context, prepend) {
+                finders[prepend? "unshift" : "push"]({fn: fn, context: context});
+            },
+
+            /**
+             * @method
+             * @param {string} name
+             * @param {*} value
+             * @param {bool} rewritable
+             * @returns {*} value
+             */
+            add: function(name, value, rewritable) {
+
+                if (storage[name] && storage[name].rewritable === false) {
+                    return storage[name];
+                }
+
+                storage[name] = {
+                    rewritable: typeof rewritable != strUndef ? rewritable : cacheRewritable,
+                    value: value
+                };
+
+                return value;
+            },
+
+            /**
+             * @method
+             * @param {string} name
+             * @returns {*}
+             */
+            get: function(name) {
+
+                if (!storage[name]) {
+                    if (finders.length) {
+
+                        var i, l, res,
+                            self = this;
+
+                        for (i = 0, l = finders.length; i < l; i++) {
+
+                            res = finders[i].fn.call(finders[i].context, name, self);
+
+                            if (res !== undf) {
+                                return self.add(name, res, true);
+                            }
+                        }
+                    }
+
+                    return undf;
+                }
+
+                return storage[name].value;
+            },
+
+            /**
+             * @method
+             * @param {string} name
+             * @returns {*}
+             */
+            remove: function(name) {
+                var rec = storage[name];
+                if (rec && rec.rewritable === true) {
+                    delete storage[name];
+                }
+                return rec ? rec.value : undf;
+            },
+
+            /**
+             * @method
+             * @param {string} name
+             * @returns {boolean}
+             */
+            exists: function(name) {
+                return !!storage[name];
+            },
+
+            /**
+             * @param {function} fn
+             * @param {object} context
+             */
+            eachEntry: function(fn, context) {
+                var k;
+                for (k in storage) {
+                    fn.call(context, storage[k].value, k);
+                }
+            },
+
+            /**
+             * @method
+             */
+            destroy: function() {
+
+                var self = this;
+
+                if (self === globalCache) {
+                    globalCache = null;
+                }
+
+                storage = null;
+                cacheRewritable = null;
+
+                self.add = null;
+                self.get = null;
+                self.destroy = null;
+                self.exists = null;
+                self.remove = null;
+            }
+        };
+    };
+
+    /**
+     * @method
+     * @static
+     * @returns {Cache}
+     */
+    Cache.global = function() {
+
+        if (!globalCache) {
+            globalCache = new Cache(true);
+        }
+
+        return globalCache;
+    };
+
+    return Cache;
+
+}();
+
+
+
+
+
+/**
+ * @class Namespace
+ */
 var Namespace = function(){
+
 
     /**
      * @param {Object} root optional; usually window or global
      * @param {String} rootName optional. If you want custom object to be root and
-     * this object itself if the first level of namespace:<br>
-     * <pre><code class="language-javascript">
-     * var ns = MetaphorJs.lib.Namespace(window);
-     * ns.register("My.Test", something); // -> window.My.Test
-     * var privateNs = {};
-     * var ns = new MetaphorJs.lib.Namespace(privateNs, "privateNs");
-     * ns.register("privateNs.Test", something); // -> privateNs.Test
-     * </code></pre>
+     * this object itself if the first level of namespace: {@code ../examples/main.js}
+     * @param {Cache} cache optional
      * @constructor
      */
-    var Namespace   = function(root, rootName) {
+    var Namespace   = function(root, rootName, cache) {
 
-        var cache   = {},
-            self    = this;
+        cache       = cache || new Cache(false);
+        var self    = this,
+            rootL   = rootName ? rootName.length : null;
 
         if (!root) {
             if (typeof global != strUndef) {
@@ -220,13 +381,15 @@ var Namespace = function(){
         }
 
         var normalize   = function(ns) {
-            if (ns && rootName && ns.indexOf(rootName) !== 0) {
+            if (ns && rootName && ns.substr(0, rootL) != rootName) {
                 return rootName + "." + ns;
             }
             return ns;
         };
 
         var parseNs     = function(ns) {
+
+            ns = normalize(ns);
 
             var tmp     = ns.split("."),
                 i,
@@ -246,14 +409,9 @@ var Namespace = function(){
 
                     name    = tmp[i];
 
-                    if (rootName && i == 0) {
-                        if (name == rootName) {
-                            current = root;
-                            continue;
-                        }
-                        else {
-                            ns = rootName + "." + ns;
-                        }
+                    if (rootName && i == 0 && name == rootName) {
+                        current = root;
+                        continue;
                     }
 
                     if (current[name] === undf) {
@@ -263,30 +421,23 @@ var Namespace = function(){
                     current = current[name];
                 }
             }
-            else {
-                if (rootName) {
-                    ns = rootName + "." + ns;
-                }
-            }
 
             return [current, last, ns];
         };
 
         /**
          * Get namespace/cache object
-         * @function MetaphorJs.ns.get
+         * @method
          * @param {string} ns
          * @param {bool} cacheOnly
-         * @returns {object} constructor
+         * @returns {*}
          */
         var get       = function(ns, cacheOnly) {
 
-            if (cache[ns] !== undf) {
-                return cache[ns];
-            }
+            ns = normalize(ns);
 
-            if (rootName && cache[rootName + "." + ns] !== undf) {
-                return cache[rootName + "." + ns];
+            if (cache.exists(ns)) {
+                return cache.get(ns);
             }
 
             if (cacheOnly) {
@@ -303,11 +454,9 @@ var Namespace = function(){
 
                 name    = tmp[i];
 
-                if (rootName && i == 0) {
-                    if (name == rootName) {
-                        current = root;
-                        continue;
-                    }
+                if (rootName && i == 0 && name == rootName) {
+                    current = root;
+                    continue;
                 }
 
                 if (current[name] === undf) {
@@ -318,15 +467,15 @@ var Namespace = function(){
             }
 
             if (current) {
-                cache[ns] = current;
+                cache.add(ns, current);
             }
 
             return current;
         };
 
         /**
-         * Register class constructor
-         * @function MetaphorJs.ns.register
+         * Register item
+         * @method
          * @param {string} ns
          * @param {*} value
          */
@@ -339,40 +488,87 @@ var Namespace = function(){
             if (isObject(parent) && parent[name] === undf) {
 
                 parent[name]        = value;
-                cache[parse[2]]     = value;
+                cache.add(parse[2], value);
             }
 
             return value;
         };
 
         /**
-         * Class exists
-         * @function MetaphorJs.ns.exists
+         * Item exists
+         * @method
          * @param {string} ns
          * @returns boolean
          */
         var exists      = function(ns) {
-            return cache[ns] !== undf;
+            return get(ns, true) !== undf;
         };
 
         /**
-         * Add constructor to cache
-         * @function MetaphorJs.ns.add
+         * Add item only to the cache
+         * @function add
          * @param {string} ns
          * @param {*} value
          */
         var add = function(ns, value) {
-            if (rootName && ns.indexOf(rootName) !== 0) {
-                ns = rootName + "." + ns;
-            }
-            if (cache[ns] === undf) {
-                cache[ns] = value;
-            }
+
+            ns = normalize(ns);
+            cache.add(ns, value);
             return value;
         };
 
+        /**
+         * Remove item from cache
+         * @method
+         * @param {string} ns
+         */
         var remove = function(ns) {
-            delete cache[ns];
+            ns = normalize(ns);
+            cache.remove(ns);
+        };
+
+        /**
+         * Make alias in the cache
+         * @method
+         * @param {string} from
+         * @param {string} to
+         */
+        var makeAlias = function(from, to) {
+
+            from = normalize(from);
+            to = normalize(to);
+
+            var value = cache.get(from);
+
+            if (value !== undf) {
+                cache.add(to, value);
+            }
+        };
+
+        /**
+         * Destroy namespace and all classes in it
+         */
+        var destroy     = function() {
+
+            var self = this,
+                k;
+
+            if (self === globalNs) {
+                globalNs = null;
+            }
+
+            cache.eachEntry(function(entry){
+                if (entry && entry.$destroy) {
+                    entry.$destroy();
+                }
+            });
+
+            cache.destroy();
+            cache = null;
+
+            for (k in self) {
+                self[k] = null;
+            }
         };
 
         self.register   = register;
@@ -381,6 +577,8 @@ var Namespace = function(){
         self.add        = add;
         self.remove     = remove;
         self.normalize  = normalize;
+        self.makeAlias  = makeAlias;
+        self.destroy    = destroy;
     };
 
     Namespace.prototype.register = null;
@@ -389,9 +587,17 @@ var Namespace = function(){
     Namespace.prototype.add = null;
     Namespace.prototype.remove = null;
     Namespace.prototype.normalize = null;
+    Namespace.prototype.makeAlias = null;
+    Namespace.prototype.destroy = null;
 
     var globalNs;
 
+    /**
+     * Get global namespace
+     * @method
+     * @static
+     * @returns {*}
+     */
     Namespace.global = function() {
         if (!globalNs) {
             globalNs = new Namespace;
@@ -544,8 +750,6 @@ var Class = function(){
         };
 
 
-
-
     var Class = function(ns){
 
         if (!ns) {
@@ -626,6 +830,10 @@ var Class = function(){
         };
 
 
+        /**
+         * @class BaseClass
+         * @constructor
+         */
         var BaseClass = function() {
 
         };
@@ -646,19 +854,42 @@ var Class = function(){
             $beforeDestroy: [],
             $afterDestroy: [],
 
+            /**
+             * Get class name
+             * @method
+             * @returns {string}
+             */
             $getClass: function() {
                 return this.$class;
             },
 
+            /**
+             * Get parent class name
+             * @method
+             * @returns {null}
+             */
             $getParentClass: function() {
                 return this.$extends;
             },
 
+            /**
+             * Intercept method
+             * @method
+             * @param {string} method Intercepted method name
+             * @param {function} fn function to call before or after intercepted method
+             * @param {object} newContext optional interceptor's "this" object
+             * @param {string} when optional, when to call interceptor before | after | instead; default "before"
+             * @param {bool} replaceValue optional, return interceptor's return value or original method's; default false
+             */
             $intercept: function(method, fn, newContext, when, replaceValue) {
                 var self = this;
                 self[method] = intercept(self[method], fn, newContext || self, self, when, replaceValue);
             },
 
+            /**
+             * Implement new methods or properties on instance
+             * @param {object} methods
+             */
             $implement: function(methods) {
                 var $self = this.constructor;
                 if ($self && $self.$parent) {
@@ -666,6 +897,9 @@ var Class = function(){
                 }
             },
 
+            /**
+             * @method
+             */
             $destroy: function() {
 
                 var self    = this,
@@ -709,11 +943,21 @@ var Class = function(){
                 self.$destroyed = true;
             },
 
+            /**
+             * Implement your destroy actions here
+             * @method
+             */
             destroy: function(){}
         });
 
         BaseClass.$self = BaseClass;
 
+        /**
+         * Create an instance of current class.
+         * @method
+         * @static
+         * @returns {object} class instance
+         */
         BaseClass.$instantiate = function() {
 
             var cls = this,
@@ -739,6 +983,12 @@ var Class = function(){
             }
         };
 
+        /**
+         * Override class methods
+         * @method
+         * @static
+         * @param {object} methods
+         */
         BaseClass.$override = function(methods) {
             var $self = this.$self,
                 $parent = this.$parent;
@@ -748,22 +998,35 @@ var Class = function(){
             }
         };
 
+        /**
+         * Create new class based on current one
+         * @param {object} definition
+         * @param {object} statics
+         * @returns {function}
+         */
         BaseClass.$extend = function(definition, statics) {
             return define(definition, statics, this);
         };
 
-
         /**
-         * @namespace MetaphorJs
+         * Destroy class
          */
+        BaseClass.$destroy = function() {
+            var self = this,
+                k;
+
+            for (k in self) {
+                self[k] = null;
+            }
+        };
 
 
         /**
-         * Define class
-         * @function MetaphorJs.define
+         * @class Class
+         * @method
          * @param {object} definition
-         * @param {object} statics (optional)
-         * @return function New class constructor
+         * @param {object} statics
+         * @param {string|function} $extends
          */
         var define = function(definition, statics, $extends) {
 
@@ -858,11 +1121,12 @@ var Class = function(){
 
 
         /**
-         * Instantiate class
-         * @function MetaphorJs.create
+         * Instantiate class. Pass constructor parameters after "name"
+         * @method
          * @param {string} name Full name of the class
+         * @returns {object} class instance
          */
-        var instantiate = function(name) {
+        var factory = function(name) {
 
             var cls     = ns.get(name),
                 args    = slice.call(arguments, 1);
@@ -878,10 +1142,10 @@ var Class = function(){
 
         /**
          * Is cmp instance of cls
-         * @function MetaphorJs.is
+         * @method
          * @param {object} cmp
          * @param {string|object} cls
-         * @returns boolean
+         * @returns {boolean}
          */
         var isInstanceOf = function(cmp, cls) {
             var _cls    = isString(cls) ? ns.get(cls) : cls;
@@ -892,11 +1156,10 @@ var Class = function(){
 
         /**
          * Is one class subclass of another class
-         * @function MetaphorJs.isSubclass
+         * @method
          * @param {string|object} childClass
          * @param {string|object} parentClass
-         * @return bool
-         * @alias MetaphorJs.iss
+         * @return {bool}
          */
         var isSubclassOf = function(childClass, parentClass) {
 
@@ -927,10 +1190,30 @@ var Class = function(){
 
         var self    = this;
 
-        self.factory = instantiate;
+        self.factory = factory;
         self.isSubclassOf = isSubclassOf;
         self.isInstanceOf = isInstanceOf;
         self.define = define;
+
+        self.destroy = function(){
+
+            if (self === globalCs) {
+                globalCs = null;
+            }
+
+            BaseClass.$destroy();
+            BaseClass = null;
+
+            ns.destroy();
+            ns = null;
+
+            Class = null;
+
+        };
+
+        /**
+         * @type {function} BaseClass reference to the BaseClass class
+         */
         self.BaseClass = BaseClass;
 
     };
@@ -940,11 +1223,18 @@ var Class = function(){
         factory: null,
         isSubclassOf: null,
         isInstanceOf: null,
-        define: null
+        define: null,
+        destroy: null
     };
 
     var globalCs;
 
+    /**
+     * Get default global class manager
+     * @method
+     * @static
+     * @returns {Class}
+     */
     Class.global = function() {
         if (!globalCs) {
             globalCs = new Class(Namespace.global());
@@ -992,6 +1282,7 @@ var bind = Function.prototype.bind ?
 /**
  * @function trim
  * @param {String} value
+ * @returns {string}
  */
 var trim = function() {
     // native trim is way faster: http://jsperf.com/angular-trim-test
@@ -1108,7 +1399,7 @@ var select = function() {
         rRepAftPrn  = /\(.*/,
         rGetSquare  = /\[([^!~^*|$ [:=]+)([$^*|]?=)?([^ :\]]+)?\]/,
 
-        doc         = document,
+        doc         = window.document,
         bcn         = !!doc.getElementsByClassName,
         qsa         = !!doc.querySelectorAll,
 
@@ -1720,15 +2011,13 @@ var nextUid = function(){
  * <p>A javascript event system implementing two patterns - observable and collector.</p>
  *
  * <p>Observable:</p>
- * <pre><code class="language-javascript">
- * var o = new MetaphorJs.lib.Observable;
+ * <pre><code class="language-javascript">var o = new Observable;
  * o.on("event", function(x, y, z){ console.log([x, y, z]) });
  * o.trigger("event", 1, 2, 3); // [1, 2, 3]
  * </code></pre>
  *
  * <p>Collector:</p>
- * <pre><code class="language-javascript">
- * var o = new MetaphorJs.lib.Observable;
+ * <pre><code class="language-javascript">var o = new Observable;
  * o.createEvent("collectStuff", "all");
  * o.on("collectStuff", function(){ return 1; });
  * o.on("collectStuff", function(){ return 2; });
@@ -1737,15 +2026,13 @@ var nextUid = function(){
  *
  * <p>Although all methods are public there is getApi() method that allows you
  * extending your own objects without overriding "destroy" (which you probably have)</p>
- * <pre><code class="language-javascript">
- * var o = new MetaphorJs.lib.Observable;
+ * <pre><code class="language-javascript">var o = new Observable;
  * $.extend(this, o.getApi());
  * this.on("event", function(){ alert("ok") });
  * this.trigger("event");
  * </code></pre>
  *
- * @namespace MetaphorJs
- * @class MetaphorJs.lib.Observable
+ * @class Observable
  * @version 1.1
  * @author johann kuindji
  * @link https://github.com/kuindji/metaphorjs-observable
@@ -1760,13 +2047,11 @@ var Observable = function() {
 extend(Observable.prototype, {
 
     /**
-    * <p>You don't have to call this function unless you want to pass returnResult param.
-    * This function will be automatically called from on() with
-    * <code class="language-javascript">returnResult = false</code>,
-    * so if you want to receive handler's return values, create event first, then call on().</p>
+    * You don't have to call this function unless you want to pass returnResult param.
+    * This function will be automatically called from {@link on} with <code>returnResult = false</code>,
+    * so if you want to receive handler's return values, create event first, then call on().
     *
-    * <pre><code class="language-javascript">
-    * var observable = new MetaphorJs.lib.Observable;
+    * <pre><code class="language-javascript">var observable = new Observable;
     * observable.createEvent("collectStuff", "all");
     * observable.on("collectStuff", function(){ return 1; });
     * observable.on("collectStuff", function(){ return 2; });
@@ -1783,11 +2068,12 @@ extend(Observable.prototype, {
     *   false -- do not return results except if handler returned "false". This is how
     *   normal observables work.<br>
     *   "all" -- return all results as array<br>
+    *   "merge" -- merge all results into one array (each result must be array)<br>
     *   "first" -- return result of the first handler<br>
-    *   "last" -- return result of the last handler
+    *   "last" -- return result of the last handler<br>
     *   @required
     * }
-    * @return MetaphorJs.lib.ObservableEvent
+    * @return {ObservableEvent}
     */
     createEvent: function(name, returnResult) {
         name = name.toLowerCase();
@@ -1802,7 +2088,7 @@ extend(Observable.prototype, {
     * @method
     * @access public
     * @param {string} name Event name
-    * @return MetaphorJs.lib.ObservableEvent|undefined
+    * @return {ObservableEvent|undefined}
     */
     getEvent: function(name) {
         name = name.toLowerCase();
@@ -1813,7 +2099,6 @@ extend(Observable.prototype, {
     * Subscribe to an event or register collector function.
     * @method
     * @access public
-    * @md-save on
     * @param {string} name {
     *       Event name
     *       @required
@@ -1851,9 +2136,8 @@ extend(Observable.prototype, {
     },
 
     /**
-    * Same as on(), but options.limit is forcefully set to 1.
+    * Same as {@link Observable.on}, but options.limit is forcefully set to 1.
     * @method
-    * @md-apply on
     * @access public
     */
     once: function(name, fn, context, options) {
@@ -2016,7 +2300,7 @@ extend(Observable.prototype, {
 
 
     /**
-    * Destroy specific event
+    * Destroy observable
     * @method
     * @md-not-inheritable
     * @access public
@@ -2076,8 +2360,9 @@ extend(Observable.prototype, {
 
 /**
  * This class is private - you can't create an event other than via Observable.
- * See MetaphorJs.lib.Observable reference.
- * @class MetaphorJs.lib.ObservableEvent
+ * See Observable reference.
+ * @class ObservableEvent
+ * @private
  */
 var Event = function(name, returnResult) {
 
@@ -2096,6 +2381,11 @@ var Event = function(name, returnResult) {
 
 extend(Event.prototype, {
 
+    /**
+     * Get event name
+     * @method
+     * @returns {string}
+     */
     getName: function() {
         return this.name;
     },
@@ -2329,7 +2619,8 @@ extend(Event.prototype, {
             return null;
         }
 
-        var ret     = returnResult == "all" ? [] : null,
+        var ret     = returnResult == "all" || returnResult == "merge" ?
+                        [] : null,
             q, l,
             res;
 
@@ -2368,17 +2659,17 @@ extend(Event.prototype, {
             if (returnResult == "all") {
                 ret.push(res);
             }
-
-            if (returnResult == "first") {
+            else if (returnResult == "merge" && res) {
+                ret = ret.concat(res);
+            }
+            else if (returnResult == "first") {
                 return res;
             }
-
-            if (returnResult == "last") {
+            else if (returnResult == "last") {
                 ret = res;
             }
-
-            if (returnResult == false && res === false) {
-                break;
+            else if (returnResult == false && res === false) {
+                return false;
             }
         }
 
@@ -2399,10 +2690,15 @@ extend(Event.prototype, {
  * @returns {Function|boolean}
  */
 function isThenable(any) {
-    if (!any || !any.then) {
+
+    // any.then must only be accessed once
+    // this is a promise/a+ requirement
+
+    if (!any) { //  || !any.then
         return false;
     }
     var then, t;
+
     //if (!any || (!isObject(any) && !isFunction(any))) {
     if (((t = typeof any) != "object" && t != "function")) {
         return false;
@@ -2509,19 +2805,54 @@ var Promise = function(){
 
 
     /**
-     * @param {Function} fn -- function(resolve, reject)
-     * @param {Object} fnScope
+     * @class Promise
+     */
+
+
+    /**
+     * @method Promise
+     * @param {Function} fn {
+     *  @description Function that accepts two parameters: resolve and reject functions.
+     *  @param {function} resolve {
+     *      @param {*} value
+     *  }
+     *  @param {function} reject {
+     *      @param {*} reason
+     *  }
+     * }
+     * @param {Object} context
      * @returns {Promise}
      * @constructor
      */
-    var Promise = function(fn, fnScope) {
+
+    /**
+     * @method Promise
+     * @param {Thenable} thenable
+     * @returns {Promise}
+     * @constructor
+     */
+
+    /**
+     * @method Promise
+     * @param {*} value Value to resolve promise with
+     * @returns {Promise}
+     * @constructor
+     */
+
+
+    /**
+     * @method Promise
+     * @returns {Promise}
+     * @constructor
+     */
+    var Promise = function(fn, context) {
 
         if (fn instanceof Promise) {
             return fn;
         }
 
         if (!(this instanceof Promise)) {
-            return new Promise(fn, fnScope);
+            return new Promise(fn, context);
         }
 
         var self = this,
@@ -2548,7 +2879,7 @@ var Promise = function(){
             }
             else if (isFunction(fn)) {
                 try {
-                    fn.call(fnScope,
+                    fn.call(context,
                             bind(self.resolve, self),
                             bind(self.reject, self));
                 }
@@ -2814,23 +3145,23 @@ var Promise = function(){
 
         /**
          * @param {Function} fn -- function to call when promise is resolved
-         * @param {Object} fnScope -- function's "this" object
+         * @param {Object} context -- function's "this" object
          * @returns {Promise} same promise
          */
-        done: function(fn, fnScope) {
+        done: function(fn, context) {
             var self    = this,
                 state   = self._state;
 
             if (state == FULFILLED && self._wait == 0) {
                 try {
-                    fn.call(fnScope || null, self._value);
+                    fn.call(context || null, self._value);
                 }
                 catch (thrown) {
                     error(thrown);
                 }
             }
             else if (state == PENDING) {
-                self._dones.push([fn, fnScope]);
+                self._dones.push([fn, context]);
             }
 
             return self;
@@ -2854,24 +3185,24 @@ var Promise = function(){
 
         /**
          * @param {Function} fn -- function to call when promise is rejected.
-         * @param {Object} fnScope -- function's "this" object
+         * @param {Object} context -- function's "this" object
          * @returns {Promise} same promise
          */
-        fail: function(fn, fnScope) {
+        fail: function(fn, context) {
 
             var self    = this,
                 state   = self._state;
 
             if (state == REJECTED && self._wait == 0) {
                 try {
-                    fn.call(fnScope || null, self._reason);
+                    fn.call(context || null, self._reason);
                 }
                 catch (thrown) {
                     error(thrown);
                 }
             }
             else if (state == PENDING) {
-                self._fails.push([fn, fnScope]);
+                self._fails.push([fn, context]);
             }
 
             return self;
@@ -2879,12 +3210,12 @@ var Promise = function(){
 
         /**
          * @param {Function} fn -- function to call when promise resolved or rejected
-         * @param {Object} fnScope -- function's "this" object
+         * @param {Object} context -- function's "this" object
          * @return {Promise} same promise
          */
-        always: function(fn, fnScope) {
-            this.done(fn, fnScope);
-            this.fail(fn, fnScope);
+        always: function(fn, context) {
+            this.done(fn, context);
+            this.fail(fn, context);
             return this;
         },
 
@@ -2931,6 +3262,13 @@ var Promise = function(){
     }, true, false);
 
 
+    /**
+     * @param {function} fn
+     * @param {object} context
+     * @param {[]} args
+     * @returns {Promise}
+     * @static
+     */
     Promise.fcall = function(fn, context, args) {
         return Promise.resolve(fn.apply(context, args || []));
     };
@@ -2938,6 +3276,7 @@ var Promise = function(){
     /**
      * @param {*} value
      * @returns {Promise}
+     * @static
      */
     Promise.resolve = function(value) {
         var p = new Promise;
@@ -2949,6 +3288,7 @@ var Promise = function(){
     /**
      * @param {*} reason
      * @returns {Promise}
+     * @static
      */
     Promise.reject = function(reason) {
         var p = new Promise;
@@ -2960,6 +3300,7 @@ var Promise = function(){
     /**
      * @param {[]} promises -- array of promises or resolve values
      * @returns {Promise}
+     * @static
      */
     Promise.all = function(promises) {
 
@@ -3014,6 +3355,7 @@ var Promise = function(){
      * @param {Promise|*} promise2
      * @param {Promise|*} promiseN
      * @returns {Promise}
+     * @static
      */
     Promise.when = function() {
         return Promise.all(arguments);
@@ -3022,6 +3364,7 @@ var Promise = function(){
     /**
      * @param {[]} promises -- array of promises or resolve values
      * @returns {Promise}
+     * @static
      */
     Promise.allResolved = function(promises) {
 
@@ -3066,6 +3409,7 @@ var Promise = function(){
     /**
      * @param {[]} promises -- array of promises or resolve values
      * @returns {Promise}
+     * @static
      */
     Promise.race = function(promises) {
 
@@ -3102,6 +3446,7 @@ var Promise = function(){
     /**
      * @param {[]} functions -- array of promises or resolve values or functions
      * @returns {Promise}
+     * @static
      */
     Promise.waterfall = function(functions) {
 
@@ -4075,7 +4420,6 @@ var Model = function(){
 
 
     /**
-     * @namespace MetaphorJs
      * @class Model
      */
     return defineClass({
@@ -4101,7 +4445,6 @@ var Model = function(){
          *      @type {object} extra Extra params object
          *      @type {string|int|bool} ... other $.ajax({ properties })
          * }
-         * @name atom
          * @md-tmp model-atom
          */
 
@@ -4111,7 +4454,6 @@ var Model = function(){
          *      @type {string|object} save { @md-apply model-atom }
          *      @type {string|object} delete { @md-apply model-atom }
          * }
-         * @name group
          * @md-apply model-atom
          * @md-tmp model-group
          */
@@ -7020,7 +7362,7 @@ var Store = function(){
                 var id;
 
                 for (id in allStores) {
-                    if (fn.call(fnScope || window, allStores[id]) === false) {
+                    if (fn.call(fnScope, allStores[id]) === false) {
                         break;
                     }
                 }

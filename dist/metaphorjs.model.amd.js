@@ -31,19 +31,21 @@ var varType = function(){
 
 
     /**
-        'string': 0,
-        'number': 1,
-        'boolean': 2,
-        'object': 3,
-        'function': 4,
-        'array': 5,
-        'null': 6,
-        'undefined': 7,
-        'NaN': 8,
-        'regexp': 9,
-        'date': 10
-    */
-
+     * 'string': 0,
+     * 'number': 1,
+     * 'boolean': 2,
+     * 'object': 3,
+     * 'function': 4,
+     * 'array': 5,
+     * 'null': 6,
+     * 'undefined': 7,
+     * 'NaN': 8,
+     * 'regexp': 9,
+     * 'date': 10,
+     * unknown: -1
+     * @param {*} value
+     * @returns {number}
+     */
     return function varType(val) {
 
         if (!val) {
@@ -178,7 +180,6 @@ var Model = function(){
 
 
     /**
-     * @namespace MetaphorJs
      * @class Model
      */
     return defineClass({
@@ -204,7 +205,6 @@ var Model = function(){
          *      @type {object} extra Extra params object
          *      @type {string|int|bool} ... other $.ajax({ properties })
          * }
-         * @name atom
          * @md-tmp model-atom
          */
 
@@ -214,7 +214,6 @@ var Model = function(){
          *      @type {string|object} save { @md-apply model-atom }
          *      @type {string|object} delete { @md-apply model-atom }
          * }
-         * @name group
          * @md-apply model-atom
          * @md-tmp model-group
          */
@@ -765,7 +764,9 @@ var Model = function(){
 }();
 
 
+
 var MetaphorJs = {
+
 
 };
 
@@ -3184,7 +3185,7 @@ var Store = function(){
                 var id;
 
                 for (id in allStores) {
-                    if (fn.call(fnScope || window, allStores[id]) === false) {
+                    if (fn.call(fnScope, allStores[id]) === false) {
                         break;
                     }
                 }
