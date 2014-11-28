@@ -21,7 +21,7 @@ module.exports = ListRenderer.$extend({
                     cfg.bufferedPullNext = true;
                     cfg.buffered = false;
                 }
-                this.$plugins.push("ListPullNext");
+                this.$plugins.push("plugin.ListPullNext");
             }
 
             this.$super(scope, node, expr);
