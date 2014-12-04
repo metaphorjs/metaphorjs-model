@@ -289,7 +289,9 @@ var Model = function(){
                 };
 
 
-            self.fields     = {};
+            if (!self.fields) {
+                self.fields = {};
+            }
 
             extend(self, defaults, false, true);
             extend(self, cfg, true, true);

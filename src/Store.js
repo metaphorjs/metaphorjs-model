@@ -1,19 +1,20 @@
 
 var Model   = require("./Model.js"),
     Record  = require("./Record.js"),
-    extend  = require("../../metaphorjs/src/func/extend.js"),
-    emptyFn = require("../../metaphorjs/src/func/emptyFn.js"),
-    isArray = require("../../metaphorjs/src/func/isArray.js"),
-    defineClass = require("../../metaphorjs-class/src/func/defineClass.js"),
-    factory = require("../../metaphorjs-class/src/func/factory.js"),
-    isString = require("../../metaphorjs/src/func/isString.js"),
-    undf = require("../../metaphorjs/src/var/undf.js"),
-    nextUid = require("../../metaphorjs/src/func/nextUid.js"),
-    filterArray = require("../../metaphorjs/src/func/array/filterArray.js"),
-    sortArray = require("../../metaphorjs/src/func/array/sortArray.js"),
-    ObservableMixin = require("../../metaphorjs/src/mixin/ObservableMixin.js");
+    
+    extend  = require("metaphorjs/src/func/extend.js"),
+    emptyFn = require("metaphorjs/src/func/emptyFn.js"),
+    isArray = require("metaphorjs/src/func/isArray.js"),
+    defineClass = require("metaphorjs-class/src/func/defineClass.js"),
+    factory = require("metaphorjs-class/src/func/factory.js"),
+    isString = require("metaphorjs/src/func/isString.js"),
+    undf = require("metaphorjs/src/var/undf.js"),
+    nextUid = require("metaphorjs/src/func/nextUid.js"),
+    filterArray = require("metaphorjs/src/func/array/filterArray.js"),
+    sortArray = require("metaphorjs/src/func/array/sortArray.js"),
+    ObservableMixin = require("metaphorjs/src/mixin/ObservableMixin.js");
 
-require("../../metaphorjs/src/func/array/aIndexOf.js");
+require("metaphorjs/src/func/array/aIndexOf.js");
 
 
 module.exports = function(){
