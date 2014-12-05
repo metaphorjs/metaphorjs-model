@@ -1,10 +1,10 @@
 
-var createGetter = require("../../../metaphorjs-watchable/src/func/createGetter.js"),
-    createWatchable = require("../../../metaphorjs-watchable/src/func/createWatchable.js"),
-    ns = require("../../../metaphorjs-namespace/src/var/ns.js"),
-    bind = require("../../../metaphorjs/src/func/bind.js"),
-    ListRenderer = require("../../../metaphorjs/src/class/ListRenderer.js"),
-    getNodeConfig = require("../../../metaphorjs/src/func/dom/getNodeConfig.js");
+var createGetter = require("metaphorjs-watchable/src/func/createGetter.js"),
+    createWatchable = require("metaphorjs-watchable/src/func/createWatchable.js"),
+    ns = require("metaphorjs-namespace/src/var/ns.js"),
+    bind = require("metaphorjs/src/func/bind.js"),
+    ListRenderer = require("metaphorjs/src/class/ListRenderer.js"),
+    getNodeConfig = require("metaphorjs/src/func/dom/getNodeConfig.js");
 
 
 module.exports = ListRenderer.$extend({
