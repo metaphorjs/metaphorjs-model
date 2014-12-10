@@ -1708,6 +1708,12 @@ var Store = function(){
             idProp: null,
 
             /**
+             * @var {Promise}
+             * @access private
+             */
+            loadingPromise: null,
+
+            /**
              * @constructor
              * @name initialize
              * @param {object} options
@@ -2053,6 +2059,10 @@ var Store = function(){
                     lp      = ms.limit,
                     ps      = self.pageSize;
 
+                if (self.loadingPromise) {
+                    self.loadingPromise.abort();
+                }
+
                 options     = options || {};
 
                 if (self.local) {
@@ -2078,12 +2088,14 @@ var Store = function(){
 
                 self.trigger("loadingstart", self);
 
-                return self.model.loadStore(self, params)
-                    .done(function(response){
+                return self.loadingPromise = self.model.loadStore(self, params)
+                    .done(function(response) {
+                        self.loadingPromise = null;
                         self.ajaxData = self.model.lastAjaxResponse;
                         self._onModelLoadSuccess(response, options);
                     })
                     .fail(function(reason){
+                        self.loadingPromise = null;
                         self.ajaxData = self.model.lastAjaxResponse;
                         self._onModelLoadFail(reason, options);
                     });
