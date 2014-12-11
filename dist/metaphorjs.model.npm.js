@@ -2021,6 +2021,7 @@ var Store = function(){
                     prepend = options.prepend;
 
                 options = options || {};
+                recs = recs || [];
 
                 for (var i = 0; i < recs.length; i++) {
                     if (prepend) {
