@@ -788,6 +788,7 @@ var ObservableMixin = ns.add("mixin.Observable", {
      * @type {Observable}
      */
     $$observable: null,
+    $$callbackContext: null,
 
     $beforeInit: function(cfg) {
 
@@ -797,10 +798,11 @@ var ObservableMixin = ns.add("mixin.Observable", {
 
         if (cfg && cfg.callback) {
             var ls = cfg.callback,
-                context = ls.context,
+                context = ls.context || ls.scope,
                 i;
 
             ls.context = null;
+            ls.scope = null;
 
             for (i in ls) {
                 if (ls[i]) {
@@ -809,6 +811,10 @@ var ObservableMixin = ns.add("mixin.Observable", {
             }
 
             cfg.callback = null;
+
+            if (context) {
+                self.$$callbackContext = context;
+            }
         }
     },
 
@@ -833,7 +839,7 @@ var ObservableMixin = ns.add("mixin.Observable", {
     },
 
     $beforeDestroy: function() {
-        this.$$observable.trigger("beforedestroy", this);
+        this.$$observable.trigger("before-destroy", this);
     },
 
     $afterDestroy: function() {
@@ -843,6 +849,7 @@ var ObservableMixin = ns.add("mixin.Observable", {
         self.$$observable = null;
     }
 });
+
 
 
 
@@ -1036,7 +1043,7 @@ var Record = defineClass({
         var self    = this;
         if (self.dirty != dirty) {
             self.dirty  = !!dirty;
-            self.trigger("dirtychange", self, dirty);
+            self.trigger("dirty-change", self, dirty);
         }
     },
 
@@ -1180,7 +1187,7 @@ var Record = defineClass({
      */
     load: function() {
         var self    = this;
-        self.trigger("beforeload", self);
+        self.trigger("before-load", self);
         return self.model.loadRecord(self.id)
             .done(function(response) {
                 self.setId(response.id);
@@ -1188,7 +1195,7 @@ var Record = defineClass({
                 self.trigger("load", self);
             })
             .fail(function() {
-                self.trigger("failedload", self);
+                self.trigger("failed-load", self);
             });
     },
 
@@ -1200,7 +1207,7 @@ var Record = defineClass({
      */
     save: function(keys, extra) {
         var self    = this;
-        self.trigger("beforesave", self);
+        self.trigger("before-save", self);
         return self.model.saveRecord(self, keys, extra)
             .done(function(response) {
                 self.setId(response.id);
@@ -1208,7 +1215,7 @@ var Record = defineClass({
                 self.trigger("save", self);
             })
             .fail(function(response) {
-                self.trigger("failedsave", self);
+                self.trigger("failed-save", self);
             });
     },
 
@@ -1218,14 +1225,14 @@ var Record = defineClass({
      */
     "delete": function() {
         var self    = this;
-        self.trigger("beforedelete", self);
+        self.trigger("before-delete", self);
         return self.model.deleteRecord(self)
             .done(function() {
                 self.trigger("delete", self);
                 self.$destroy();
             }).
             fail(function() {
-                self.trigger("faileddelete", self);
+                self.trigger("failed-delete", self);
             });
     },
 
@@ -1958,7 +1965,7 @@ var Store = function(){
 
                 options = options || {};
 
-                if (!options.silent && self.trigger("beforeload", self) === false) {
+                if (!options.silent && self.trigger("before-load", self) === false) {
                     return;
                 }
 
@@ -1985,7 +1992,7 @@ var Store = function(){
 
                 options = options || {};
 
-                if (!options.silent && self.trigger("beforeload", self) === false) {
+                if (!options.silent && self.trigger("before-load", self) === false) {
                     return;
                 }
 
@@ -2022,7 +2029,7 @@ var Store = function(){
                 self.loaded     = true;
                 self.loading    = false;
 
-                self.trigger("loadingend", self);
+                self.trigger("loading-end", self);
                 self.onLoad();
 
                 if (!options.skipUpdate) {
@@ -2068,13 +2075,13 @@ var Store = function(){
                     }
                 }
 
-                if (!options.silent && self.trigger("beforeload", self) === false) {
+                if (!options.silent && self.trigger("before-load", self) === false) {
                     return null;
                 }
 
                 self.loading = true;
 
-                self.trigger("loadingstart", self);
+                self.trigger("loading-start", self);
 
                 return self.loadingPromise = self.model.loadStore(self, params)
                     .done(function(response) {
@@ -2110,7 +2117,7 @@ var Store = function(){
                 var self = this;
                 self.onFailedLoad();
                 if (!options.silent) {
-                    self.trigger("failedload", self, reason);
+                    self.trigger("failed-load", self, reason);
                 }
             },
 
@@ -2145,7 +2152,7 @@ var Store = function(){
                     throw new Error("Nothing to save");
                 }
 
-                if (!silent && self.trigger("beforesave", self, recs) === false) {
+                if (!silent && self.trigger("before-save", self, recs) === false) {
                     return null;
                 }
 
@@ -2188,7 +2195,7 @@ var Store = function(){
                 var self = this;
                 self.onFailedSave(reason);
                 if (!silent) {
-                    self.trigger("failedsave", self);
+                    self.trigger("failed-save", self);
                 }
             },
 
@@ -2227,7 +2234,7 @@ var Store = function(){
                     }
                 }
 
-                if (!silent && self.trigger("beforedelete", self, ids) === false) {
+                if (!silent && self.trigger("before-delete", self, ids) === false) {
                     return null;
                 }
 
@@ -2242,7 +2249,7 @@ var Store = function(){
                     .fail(function() {
                         self.onFailedDelete();
                         if (!silent) {
-                            self.trigger("faileddelete", self, ids);
+                            self.trigger("failed-delete", self, ids);
                         }
                     });
             },
@@ -2453,7 +2460,7 @@ var Store = function(){
                 var self = this;
                 rec[mode]("change", self.onRecordChange, self);
                 rec[mode]("destroy", self.onRecordDestroy, self);
-                rec[mode]("dirtychange", self.onRecordDirtyChange, self);
+                rec[mode]("dirty-change", self.onRecordDirtyChange, self);
                 return rec;
             },
 

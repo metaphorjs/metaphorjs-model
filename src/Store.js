@@ -456,7 +456,7 @@ module.exports = function(){
 
                 options = options || {};
 
-                if (!options.silent && self.trigger("beforeload", self) === false) {
+                if (!options.silent && self.trigger("before-load", self) === false) {
                     return;
                 }
 
@@ -483,7 +483,7 @@ module.exports = function(){
 
                 options = options || {};
 
-                if (!options.silent && self.trigger("beforeload", self) === false) {
+                if (!options.silent && self.trigger("before-load", self) === false) {
                     return;
                 }
 
@@ -520,7 +520,7 @@ module.exports = function(){
                 self.loaded     = true;
                 self.loading    = false;
 
-                self.trigger("loadingend", self);
+                self.trigger("loading-end", self);
                 self.onLoad();
 
                 if (!options.skipUpdate) {
@@ -566,13 +566,13 @@ module.exports = function(){
                     }
                 }
 
-                if (!options.silent && self.trigger("beforeload", self) === false) {
+                if (!options.silent && self.trigger("before-load", self) === false) {
                     return null;
                 }
 
                 self.loading = true;
 
-                self.trigger("loadingstart", self);
+                self.trigger("loading-start", self);
 
                 return self.loadingPromise = self.model.loadStore(self, params)
                     .done(function(response) {
@@ -608,7 +608,7 @@ module.exports = function(){
                 var self = this;
                 self.onFailedLoad();
                 if (!options.silent) {
-                    self.trigger("failedload", self, reason);
+                    self.trigger("failed-load", self, reason);
                 }
             },
 
@@ -643,7 +643,7 @@ module.exports = function(){
                     throw new Error("Nothing to save");
                 }
 
-                if (!silent && self.trigger("beforesave", self, recs) === false) {
+                if (!silent && self.trigger("before-save", self, recs) === false) {
                     return null;
                 }
 
@@ -686,7 +686,7 @@ module.exports = function(){
                 var self = this;
                 self.onFailedSave(reason);
                 if (!silent) {
-                    self.trigger("failedsave", self);
+                    self.trigger("failed-save", self);
                 }
             },
 
@@ -725,7 +725,7 @@ module.exports = function(){
                     }
                 }
 
-                if (!silent && self.trigger("beforedelete", self, ids) === false) {
+                if (!silent && self.trigger("before-delete", self, ids) === false) {
                     return null;
                 }
 
@@ -740,7 +740,7 @@ module.exports = function(){
                     .fail(function() {
                         self.onFailedDelete();
                         if (!silent) {
-                            self.trigger("faileddelete", self, ids);
+                            self.trigger("failed-delete", self, ids);
                         }
                     });
             },
@@ -951,7 +951,7 @@ module.exports = function(){
                 var self = this;
                 rec[mode]("change", self.onRecordChange, self);
                 rec[mode]("destroy", self.onRecordDestroy, self);
-                rec[mode]("dirtychange", self.onRecordDirtyChange, self);
+                rec[mode]("dirty-change", self.onRecordDirtyChange, self);
                 return rec;
             },
 

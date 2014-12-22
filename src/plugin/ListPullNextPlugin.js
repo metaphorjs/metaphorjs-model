@@ -41,7 +41,7 @@ module.exports = nsAdd("plugin.ListPullNext", defineClass({
                 bs      = self.getBufferState();
 
             if (!prev || bs.first != prev.first || bs.last != prev.last) {
-                self.trigger("bufferchange", self, bs, prev);
+                self.trigger("buffer-change", self, bs, prev);
                 self.onBufferStateChange(bs, prev);
             }
         }

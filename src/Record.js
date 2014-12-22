@@ -195,7 +195,7 @@ module.exports = defineClass({
         var self    = this;
         if (self.dirty != dirty) {
             self.dirty  = !!dirty;
-            self.trigger("dirtychange", self, dirty);
+            self.trigger("dirty-change", self, dirty);
         }
     },
 
@@ -339,7 +339,7 @@ module.exports = defineClass({
      */
     load: function() {
         var self    = this;
-        self.trigger("beforeload", self);
+        self.trigger("before-load", self);
         return self.model.loadRecord(self.id)
             .done(function(response) {
                 self.setId(response.id);
@@ -347,7 +347,7 @@ module.exports = defineClass({
                 self.trigger("load", self);
             })
             .fail(function() {
-                self.trigger("failedload", self);
+                self.trigger("failed-load", self);
             });
     },
 
@@ -359,7 +359,7 @@ module.exports = defineClass({
      */
     save: function(keys, extra) {
         var self    = this;
-        self.trigger("beforesave", self);
+        self.trigger("before-save", self);
         return self.model.saveRecord(self, keys, extra)
             .done(function(response) {
                 self.setId(response.id);
@@ -367,7 +367,7 @@ module.exports = defineClass({
                 self.trigger("save", self);
             })
             .fail(function(response) {
-                self.trigger("failedsave", self);
+                self.trigger("failed-save", self);
             });
     },
 
@@ -377,14 +377,14 @@ module.exports = defineClass({
      */
     "delete": function() {
         var self    = this;
-        self.trigger("beforedelete", self);
+        self.trigger("before-delete", self);
         return self.model.deleteRecord(self)
             .done(function() {
                 self.trigger("delete", self);
                 self.$destroy();
             }).
             fail(function() {
-                self.trigger("faileddelete", self);
+                self.trigger("failed-delete", self);
             });
     },
 
