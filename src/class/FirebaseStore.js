@@ -1,15 +1,15 @@
 
-var defineClass = require("../../metaphorjs-class/src/func/defineClass.js"),
-    bind = require("../../metaphorjs/src/func/bind.js"),
-    isString = require("../../metaphorjs/src/func/isString.js"),
-    emptyFn = require("../../metaphorjs/src/func/emptyFn.js");
+var defineClass = require("metaphorjs-class/src/func/defineClass.js"),
+    bind = require("metaphorjs/src/func/bind.js"),
+    isString = require("metaphorjs/src/func/isString.js"),
+    emptyFn = require("metaphorjs/src/func/emptyFn.js");
 
 require("./Store.js");
 
 defineClass({
 
-    $class: "MetaphorJs.FirebaseStore",
-    $extends: "MetaphorJs.Store",
+    $class: "FirebaseStore",
+    $extends: "Store",
 
     firebase: null,
 

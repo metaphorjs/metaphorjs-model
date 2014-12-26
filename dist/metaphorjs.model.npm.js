@@ -195,7 +195,6 @@ function isFunction(value) {
 
 
 
-
 var Model = function(){
 
     
@@ -208,7 +207,7 @@ var Model = function(){
      */
     return defineClass({
 
-        $class:         "MetaphorJs.Model",
+        $class:         "Model",
 
         type:           null,
         fields:         null,
@@ -873,7 +872,7 @@ var ObservableMixin = ns.add("mixin.Observable", {
  */
 var Record = defineClass({
 
-    $class: "MetaphorJs.Record",
+    $class: "Record",
     $mixins: [ObservableMixin],
 
     /**

@@ -1,9 +1,9 @@
 
 var Model   = require("./Model.js"),
-    defineClass = require("../../metaphorjs-class/src/func/defineClass.js"),
-    extend  = require("../../metaphorjs/src/func/extend.js"),
-    isString = require("../../metaphorjs/src/func/isString.js"),
-    ObservableMixin = require("../../metaphorjs/src/mixin/ObservableMixin.js");
+    defineClass = require("metaphorjs-class/src/func/defineClass.js"),
+    extend  = require("metaphorjs/src/func/extend.js"),
+    isString = require("metaphorjs/src/func/isString.js"),
+    ObservableMixin = require("metaphorjs/src/mixin/ObservableMixin.js");
 
 
 /**
@@ -12,7 +12,7 @@ var Model   = require("./Model.js"),
  */
 module.exports = defineClass({
 
-    $class: "MetaphorJs.Record",
+    $class: "Record",
     $mixins: [ObservableMixin],
 
     /**

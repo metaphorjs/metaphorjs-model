@@ -1,13 +1,12 @@
 
-var extend  = require("../../metaphorjs/src/func/extend.js"),
-    defineClass = require("../../metaphorjs-class/src/func/defineClass.js"),
-    ajax = require("../../metaphorjs-ajax/src/metaphorjs.ajax.js"),
-    factory = require("../../metaphorjs-class/src/func/factory.js"),
-    Promise = require("../../metaphorjs-promise/src/metaphorjs.promise.js"),
-    isString = require("../../metaphorjs/src/func/isString.js"),
-    isFunction = require("../../metaphorjs/src/func/isFunction.js"),
-    undf = require("../../metaphorjs/src/var/undf.js");
-
+var extend  = require("metaphorjs/src/func/extend.js"),
+    defineClass = require("metaphorjs-class/src/func/defineClass.js"),
+    ajax = require("metaphorjs-ajax/src/func/ajax.js"),
+    factory = require("metaphorjs-class/src/func/factory.js"),
+    Promise = require("metaphorjs-promise/src/lib/Promise.js"),
+    isString = require("metaphorjs/src/func/isString.js"),
+    isFunction = require("metaphorjs/src/func/isFunction.js"),
+    undf = require("metaphorjs/src/var/undf.js");
 
 
 module.exports = function(){
@@ -22,7 +21,7 @@ module.exports = function(){
      */
     return defineClass({
 
-        $class:         "MetaphorJs.Model",
+        $class:         "Model",
 
         type:           null,
         fields:         null,
