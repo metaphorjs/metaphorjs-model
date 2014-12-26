@@ -1,12 +1,12 @@
 
-var defineClass = require("../../../metaphorjs-class/src/func/defineClass.js"),
-    nsAdd = require("../../../metaphorjs-namespace/src/func/nsAdd.js"),
-    getNodeConfig = require("../../../metaphorjs/src/func/dom/getNodeConfig.js");
+var defineClass = require("metaphorjs-class/src/func/defineClass.js"),
+    getNodeConfig = require("metaphorjs/src/func/dom/getNodeConfig.js");
 
-require("../../../metaphorjs/src/plugin/ListBufferedPlugin.js");
+require("metaphorjs/src/plugin/ListBuffered.js");
 
-module.exports = nsAdd("plugin.ListPullNext", defineClass({
+module.exports = defineClass({
 
+    $class: "plugin.ListPullNext",
     $extends: "plugin.ListBuffered",
 
     buffered: false,
@@ -62,4 +62,4 @@ module.exports = nsAdd("plugin.ListPullNext", defineClass({
     }
 
 
-}));
+});

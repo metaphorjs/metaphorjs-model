@@ -9,6 +9,7 @@ var createGetter = require("metaphorjs-watchable/src/func/createGetter.js"),
 
 module.exports = ListRenderer.$extend({
 
+        $class: "StoreRenderer",
         store: null,
 
         $constructor: function(scope, node, expr) {

@@ -11,11 +11,10 @@ var Model   = require("./Model.js"),
     undf = require("metaphorjs/src/var/undf.js"),
     nextUid = require("metaphorjs/src/func/nextUid.js"),
     filterArray = require("metaphorjs/src/func/array/filterArray.js"),
-    sortArray = require("metaphorjs/src/func/array/sortArray.js"),
-    ObservableMixin = require("metaphorjs/src/mixin/ObservableMixin.js");
+    sortArray = require("metaphorjs/src/func/array/sortArray.js");
 
 require("metaphorjs/src/func/array/aIndexOf.js");
-
+require("metaphorjs-observable/src/mixin/Observable.js");
 
 module.exports = function(){
 
@@ -29,8 +28,8 @@ module.exports = function(){
      */
     return defineClass({
 
-            $class:         "MetaphorJs.Store",
-            $mixins:        [ObservableMixin],
+            $class:         "Store",
+            $mixins:        ["mixin.Observable"],
 
             /**
              * @var {string}

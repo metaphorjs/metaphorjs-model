@@ -792,9 +792,9 @@ var Model = function(){
 
 
 /**
- * @mixin ObservableMixin
+ * @mixin Observable
  */
-var ObservableMixin = ns.add("mixin.Observable", {
+ns.register("mixin.Observable", {
 
     /**
      * @type {Observable}
@@ -866,6 +866,7 @@ var ObservableMixin = ns.add("mixin.Observable", {
 
 
 
+
 /**
  * @namespace MetaphorJs
  * @class Record
@@ -873,7 +874,7 @@ var ObservableMixin = ns.add("mixin.Observable", {
 var Record = defineClass({
 
     $class: "Record",
-    $mixins: [ObservableMixin],
+    $mixins: ["mixin.Observable"],
 
     /**
      * @var mixed
@@ -1550,8 +1551,8 @@ var Store = function(){
      */
     return defineClass({
 
-            $class:         "MetaphorJs.Store",
-            $mixins:        [ObservableMixin],
+            $class:         "Store",
+            $mixins:        ["mixin.Observable"],
 
             /**
              * @var {string}

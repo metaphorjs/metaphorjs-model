@@ -1138,7 +1138,7 @@ var Class = function(){
                 for (i = 0, l = mixins.length; i < l; i++) {
                     mixin = mixins[i];
                     if (isString(mixin)) {
-                        mixin = ns.get("mixin." + mixin, true);
+                        mixin = ns.get(mixin, true);
                     }
                     mixinToPrototype(prototype, mixin);
                 }
@@ -5460,9 +5460,9 @@ var Model = function(){
 
 
 /**
- * @mixin ObservableMixin
+ * @mixin Observable
  */
-var ObservableMixin = ns.add("mixin.Observable", {
+ns.register("mixin.Observable", {
 
     /**
      * @type {Observable}
@@ -5534,6 +5534,7 @@ var ObservableMixin = ns.add("mixin.Observable", {
 
 
 
+
 /**
  * @namespace MetaphorJs
  * @class Record
@@ -5541,7 +5542,7 @@ var ObservableMixin = ns.add("mixin.Observable", {
 var Record = defineClass({
 
     $class: "Record",
-    $mixins: [ObservableMixin],
+    $mixins: ["mixin.Observable"],
 
     /**
      * @var mixed
@@ -6166,8 +6167,8 @@ var Store = function(){
      */
     return defineClass({
 
-            $class:         "MetaphorJs.Store",
-            $mixins:        [ObservableMixin],
+            $class:         "Store",
+            $mixins:        ["mixin.Observable"],
 
             /**
              * @var {string}
