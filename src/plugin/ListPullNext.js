@@ -38,7 +38,7 @@ module.exports = defineClass({
         }
         else {
             var prev    = self.bufferState,
-                bs      = self.getBufferState();
+                bs      = self.getBufferState(self.dynamicOffset);
 
             if (!prev || bs.first != prev.first || bs.last != prev.last) {
                 self.list.trigger("buffer-change", self, bs, prev);
@@ -55,7 +55,7 @@ module.exports = defineClass({
 
         self.$super(bs, prev);
 
-        if (cnt - bs.last < (bs.last - bs.first) / 3 && !list.store.loading) {
+        if (cnt - bs.last < (bs.last - bs.first) / 3 && !list.store.loading && !list.store.$destroyed) {
             list.store.addNextPage();
             list.trigger("pull", self);
         }
