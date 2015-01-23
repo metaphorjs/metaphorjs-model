@@ -120,7 +120,8 @@ var extend = function(){
         }
 
         while (args.length) {
-            if (src = args.shift()) {
+            // IE < 9 fix: check for hasOwnProperty presence
+            if ((src = args.shift()) && src.hasOwnProperty) {
                 for (k in src) {
 
                     if (src.hasOwnProperty(k) && (value = src[k]) !== undf) {
@@ -795,6 +796,13 @@ ns.register("mixin.Observable", {
 
         self.$$observable = new Observable;
 
+        self.$initObservable(cfg);
+    },
+
+    $initObservable: function(cfg) {
+
+        var self = this;
+
         if (cfg && cfg.callback) {
             var ls = cfg.callback,
                 context = ls.context || ls.scope,
@@ -1343,10 +1351,10 @@ var filterArray = function(){
                 return ""+value === ""+to;
             }
             else if (opt === true || opt === null || opt === undf) {
-                return ""+value.indexOf(to) != -1;
+                return (""+value).toLowerCase().indexOf((""+to).toLowerCase()) != -1;
             }
             else if (opt === false) {
-                return ""+value.indexOf(to) == -1;
+                return (""+value).toLowerCase().indexOf((""+to).toLowerCase()) == -1;
             }
             return false;
         },
@@ -1452,74 +1460,78 @@ function sortArray(arr, by, dir) {
 
 };
 
-var aIndexOf    = Array.prototype.indexOf;
 
-if (!aIndexOf) {
-    aIndexOf = Array.prototype.indexOf = function (searchElement, fromIndex) {
+var aIndexOf = (function(){
 
-        var k;
+    var aIndexOf    = Array.prototype.indexOf;
 
-        // 1. Let O be the result of calling ToObject passing
-        //    the this value as the argument.
-        if (this == null) {
-            throw new TypeError('"this" is null or not defined');
-        }
+    if (!aIndexOf) {
+        aIndexOf = Array.prototype.indexOf = function (searchElement, fromIndex) {
 
-        var O = Object(this);
+            var k;
 
-        // 2. Let lenValue be the result of calling the Get
-        //    internal method of O with the argument "length".
-        // 3. Let len be ToUint32(lenValue).
-        var len = O.length >>> 0;
-
-        // 4. If len is 0, return -1.
-        if (len === 0) {
-            return -1;
-        }
-
-        // 5. If argument fromIndex was passed let n be
-        //    ToInteger(fromIndex); else let n be 0.
-        var n = +fromIndex || 0;
-
-        if (Math.abs(n) === Infinity) {
-            n = 0;
-        }
-
-        // 6. If n >= len, return -1.
-        if (n >= len) {
-            return -1;
-        }
-
-        // 7. If n >= 0, then Let k be n.
-        // 8. Else, n<0, Let k be len - abs(n).
-        //    If k is less than 0, then let k be 0.
-        k = Math.max(n >= 0 ? n : len - Math.abs(n), 0);
-
-        // 9. Repeat, while k < len
-        while (k < len) {
-            var kValue;
-            // a. Let Pk be ToString(k).
-            //   This is implicit for LHS operands of the in operator
-            // b. Let kPresent be the result of calling the
-            //    HasProperty internal method of O with argument Pk.
-            //   This step can be combined with c
-            // c. If kPresent is true, then
-            //    i.  Let elementK be the result of calling the Get
-            //        internal method of O with the argument ToString(k).
-            //   ii.  Let same be the result of applying the
-            //        Strict Equality Comparison Algorithm to
-            //        searchElement and elementK.
-            //  iii.  If same is true, return k.
-            if (k in O && O[k] === searchElement) {
-                return k;
+            // 1. Let O be the result of calling ToObject passing
+            //    the this value as the argument.
+            if (this == null) {
+                throw new TypeError('"this" is null or not defined');
             }
-            k++;
-        }
-        return -1;
-    };
-}
 
+            var O = Object(this);
 
+            // 2. Let lenValue be the result of calling the Get
+            //    internal method of O with the argument "length".
+            // 3. Let len be ToUint32(lenValue).
+            var len = O.length >>> 0;
+
+            // 4. If len is 0, return -1.
+            if (len === 0) {
+                return -1;
+            }
+
+            // 5. If argument fromIndex was passed let n be
+            //    ToInteger(fromIndex); else let n be 0.
+            var n = +fromIndex || 0;
+
+            if (Math.abs(n) === Infinity) {
+                n = 0;
+            }
+
+            // 6. If n >= len, return -1.
+            if (n >= len) {
+                return -1;
+            }
+
+            // 7. If n >= 0, then Let k be n.
+            // 8. Else, n<0, Let k be len - abs(n).
+            //    If k is less than 0, then let k be 0.
+            k = Math.max(n >= 0 ? n : len - Math.abs(n), 0);
+
+            // 9. Repeat, while k < len
+            while (k < len) {
+                var kValue;
+                // a. Let Pk be ToString(k).
+                //   This is implicit for LHS operands of the in operator
+                // b. Let kPresent be the result of calling the
+                //    HasProperty internal method of O with argument Pk.
+                //   This step can be combined with c
+                // c. If kPresent is true, then
+                //    i.  Let elementK be the result of calling the Get
+                //        internal method of O with the argument ToString(k).
+                //   ii.  Let same be the result of applying the
+                //        Strict Equality Comparison Algorithm to
+                //        searchElement and elementK.
+                //  iii.  If same is true, return k.
+                if (k in O && O[k] === searchElement) {
+                    return k;
+                }
+                k++;
+            }
+            return -1;
+        };
+    }
+
+    return aIndexOf;
+}());
 
 
 

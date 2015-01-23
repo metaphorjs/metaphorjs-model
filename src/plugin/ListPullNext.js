@@ -41,7 +41,7 @@ module.exports = defineClass({
                 bs      = self.getBufferState();
 
             if (!prev || bs.first != prev.first || bs.last != prev.last) {
-                self.trigger("buffer-change", self, bs, prev);
+                self.list.trigger("buffer-change", self, bs, prev);
                 self.onBufferStateChange(bs, prev);
             }
         }

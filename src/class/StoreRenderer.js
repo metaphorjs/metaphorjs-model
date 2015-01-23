@@ -14,7 +14,6 @@ module.exports = ListRenderer.$extend({
 
         $constructor: function(scope, node, expr) {
 
-
             var cfg = getNodeConfig(node, scope);
 
             if (cfg.pullNext) {
@@ -22,7 +21,7 @@ module.exports = ListRenderer.$extend({
                     cfg.bufferedPullNext = true;
                     cfg.buffered = false;
                 }
-                this.$plugins.push("plugin.ListPullNext");
+                this.$plugins.push(typeof cfg.pullNext == "string" ? cfg.pullNext : "plugin.ListPullNext");
             }
 
             this.$super(scope, node, expr);

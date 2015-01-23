@@ -122,7 +122,8 @@ var extend = function(){
         }
 
         while (args.length) {
-            if (src = args.shift()) {
+            // IE < 9 fix: check for hasOwnProperty presence
+            if ((src = args.shift()) && src.hasOwnProperty) {
                 for (k in src) {
 
                     if (src.hasOwnProperty(k) && (value = src[k]) !== undf) {
@@ -696,6 +697,10 @@ var Class = function(){
                 ret             = fn.apply(self, arguments);
                 self.$super     = prev;
 
+                if (self.$destroyed) {
+                    self.$super = null;
+                }
+
                 return ret;
             };
         },
@@ -865,6 +870,7 @@ var Class = function(){
             $mixins: null,
 
             $destroyed: false,
+            $destroying: false,
 
             $constructor: emptyFn,
             $init: emptyFn,
@@ -948,11 +954,11 @@ var Class = function(){
                     plugins = self.$plugins,
                     i, l, res;
 
-                if (self.$destroyed) {
+                if (self.$destroying || self.$destroyed) {
                     return;
                 }
 
-                self.$destroyed = true;
+                self.$destroying = true;
 
                 for (i = -1, l = before.length; ++i < l;
                      before[i].apply(self, arguments)){}
@@ -980,6 +986,7 @@ var Class = function(){
                     }
                 }
 
+                self.$destroying = false;
                 self.$destroyed = true;
             },
 
@@ -1329,6 +1336,10 @@ var cs = new Class(ns);
 
 var defineClass = cs.define;
 
+function getAttr(el, name) {
+    return el.getAttribute ? el.getAttribute(name) : null;
+};
+
 /**
  * @param {Function} fn
  * @param {*} context
@@ -1433,10 +1444,6 @@ function toArray(list) {
     else {
         return [];
     }
-};
-
-function getAttr(el, name) {
-    return el.getAttribute ? el.getAttribute(name) : null;
 };
 
 
@@ -2029,311 +2036,6 @@ var select = function() {
     };
 
     return select;
-}();
-
-function returnFalse() {
-    return false;
-};
-
-
-function returnTrue() {
-    return true;
-};
-
-function isNull(value) {
-    return value === null;
-};
-
-
-
-// from jQuery
-
-var DomEvent = function(src) {
-
-    if (src instanceof DomEvent) {
-        return src;
-    }
-
-    // Allow instantiation without the 'new' keyword
-    if (!(this instanceof DomEvent)) {
-        return new DomEvent(src);
-    }
-
-
-    var self    = this;
-
-    for (var i in src) {
-        if (!self[i]) {
-            try {
-                self[i] = src[i];
-            }
-            catch (thrownError){}
-        }
-    }
-
-
-    // Event object
-    self.originalEvent = src;
-    self.type = src.type;
-
-    if (!self.target && src.srcElement) {
-        self.target = src.srcElement;
-    }
-
-
-    var eventDoc, doc, body,
-        button = src.button;
-
-    // Calculate pageX/Y if missing and clientX/Y available
-    if (self.pageX === undf && !isNull(src.clientX)) {
-        eventDoc = self.target ? self.target.ownerDocument || window.document : window.document;
-        doc = eventDoc.documentElement;
-        body = eventDoc.body;
-
-        self.pageX = src.clientX +
-                      ( doc && doc.scrollLeft || body && body.scrollLeft || 0 ) -
-                      ( doc && doc.clientLeft || body && body.clientLeft || 0 );
-        self.pageY = src.clientY +
-                      ( doc && doc.scrollTop  || body && body.scrollTop  || 0 ) -
-                      ( doc && doc.clientTop  || body && body.clientTop  || 0 );
-    }
-
-    // Add which for click: 1 === left; 2 === middle; 3 === right
-    // Note: button is not normalized, so don't use it
-    if ( !self.which && button !== undf ) {
-        self.which = ( button & 1 ? 1 : ( button & 2 ? 3 : ( button & 4 ? 2 : 0 ) ) );
-    }
-
-    // Events bubbling up the document may have been marked as prevented
-    // by a handler lower down the tree; reflect the correct value.
-    self.isDefaultPrevented = src.defaultPrevented ||
-                              src.defaultPrevented === undf &&
-                                  // Support: Android<4.0
-                              src.returnValue === false ?
-                              returnTrue :
-                              returnFalse;
-
-
-    // Create a timestamp if incoming event doesn't have one
-    self.timeStamp = src && src.timeStamp || (new Date).getTime();
-};
-
-// Event is based on DOM3 Events as specified by the ECMAScript Language Binding
-// http://www.w3.org/TR/2003/WD-DOM-Level-3-Events-20030331/ecma-script-binding.html
-extend(DomEvent.prototype, {
-
-    isDefaultPrevented: returnFalse,
-    isPropagationStopped: returnFalse,
-    isImmediatePropagationStopped: returnFalse,
-
-    preventDefault: function() {
-        var e = this.originalEvent;
-
-        this.isDefaultPrevented = returnTrue;
-        e.returnValue = false;
-
-        if ( e && e.preventDefault ) {
-            e.preventDefault();
-        }
-    },
-    stopPropagation: function() {
-        var e = this.originalEvent;
-
-        this.isPropagationStopped = returnTrue;
-
-        if ( e && e.stopPropagation ) {
-            e.stopPropagation();
-        }
-    },
-    stopImmediatePropagation: function() {
-        var e = this.originalEvent;
-
-        this.isImmediatePropagationStopped = returnTrue;
-
-        if ( e && e.stopImmediatePropagation ) {
-            e.stopImmediatePropagation();
-        }
-
-        this.stopPropagation();
-    }
-}, true, false);
-
-
-
-
-function normalizeEvent(originalEvent) {
-    return new DomEvent(originalEvent);
-};
-
-
-// from jquery.mousewheel plugin
-
-
-
-var mousewheelHandler = function(e) {
-
-    function shouldAdjustOldDeltas(orgEvent, absDelta) {
-        // If this is an older event and the delta is divisable by 120,
-        // then we are assuming that the browser is treating this as an
-        // older mouse wheel event and that we should divide the deltas
-        // by 40 to try and get a more usable deltaFactor.
-        // Side note, this actually impacts the reported scroll distance
-        // in older browsers and can cause scrolling to be slower than native.
-        // Turn this off by setting $.event.special.mousewheel.settings.adjustOldDeltas to false.
-        return orgEvent.type === 'mousewheel' && absDelta % 120 === 0;
-    }
-
-    function nullLowestDelta() {
-        lowestDelta = null;
-    }
-
-    var toBind = ( 'onwheel' in window.document || window.document.documentMode >= 9 ) ?
-                 ['wheel'] : ['mousewheel', 'DomMouseScroll', 'MozMousePixelScroll'],
-        nullLowestDeltaTimeout, lowestDelta;
-
-    var mousewheelHandler = function(fn) {
-
-        return function(e) {
-
-            var event = normalizeEvent(e || window.event),
-                args = slice.call(arguments, 1),
-                delta = 0,
-                deltaX = 0,
-                deltaY = 0,
-                absDelta = 0,
-                offsetX = 0,
-                offsetY = 0;
-
-
-            event.type = 'mousewheel';
-
-            // Old school scrollwheel delta
-            if ('detail'      in event) { deltaY = event.detail * -1; }
-            if ('wheelDelta'  in event) { deltaY = event.wheelDelta; }
-            if ('wheelDeltaY' in event) { deltaY = event.wheelDeltaY; }
-            if ('wheelDeltaX' in event) { deltaX = event.wheelDeltaX * -1; }
-
-            // Firefox < 17 horizontal scrolling related to DOMMouseScroll event
-            if ('axis' in event && event.axis === event.HORIZONTAL_AXIS) {
-                deltaX = deltaY * -1;
-                deltaY = 0;
-            }
-
-            // Set delta to be deltaY or deltaX if deltaY is 0 for backwards compatabilitiy
-            delta = deltaY === 0 ? deltaX : deltaY;
-
-            // New school wheel delta (wheel event)
-            if ('deltaY' in event) {
-                deltaY = event.deltaY * -1;
-                delta = deltaY;
-            }
-            if ('deltaX' in event) {
-                deltaX = event.deltaX;
-                if (deltaY === 0) { delta = deltaX * -1; }
-            }
-
-            // No change actually happened, no reason to go any further
-            if (deltaY === 0 && deltaX === 0) { return; }
-
-            // Store lowest absolute delta to normalize the delta values
-            absDelta = Math.max(Math.abs(deltaY), Math.abs(deltaX));
-
-            if (!lowestDelta || absDelta < lowestDelta) {
-                lowestDelta = absDelta;
-
-                // Adjust older deltas if necessary
-                if (shouldAdjustOldDeltas(event, absDelta)) {
-                    lowestDelta /= 40;
-                }
-            }
-
-            // Adjust older deltas if necessary
-            if (shouldAdjustOldDeltas(event, absDelta)) {
-                // Divide all the things by 40!
-                delta /= 40;
-                deltaX /= 40;
-                deltaY /= 40;
-            }
-
-            // Get a whole, normalized value for the deltas
-            delta = Math[delta >= 1 ? 'floor' : 'ceil'](delta / lowestDelta);
-            deltaX = Math[deltaX >= 1 ? 'floor' : 'ceil'](deltaX / lowestDelta);
-            deltaY = Math[deltaY >= 1 ? 'floor' : 'ceil'](deltaY / lowestDelta);
-
-            // Normalise offsetX and offsetY properties
-            if (this.getBoundingClientRect) {
-                var boundingRect = this.getBoundingClientRect();
-                offsetX = event.clientX - boundingRect.left;
-                offsetY = event.clientY - boundingRect.top;
-            }
-
-            // Add information to the event object
-            event.deltaX = deltaX;
-            event.deltaY = deltaY;
-            event.deltaFactor = lowestDelta;
-            event.offsetX = offsetX;
-            event.offsetY = offsetY;
-            // Go ahead and set deltaMode to 0 since we converted to pixels
-            // Although this is a little odd since we overwrite the deltaX/Y
-            // properties with normalized deltas.
-            event.deltaMode = 0;
-
-            // Add event and delta to the front of the arguments
-            args.unshift(event, delta, deltaX, deltaY);
-
-            // Clearout lowestDelta after sometime to better
-            // handle multiple device types that give different
-            // a different lowestDelta
-            // Ex: trackpad = 3 and mouse wheel = 120
-            if (nullLowestDeltaTimeout) { clearTimeout(nullLowestDeltaTimeout); }
-            nullLowestDeltaTimeout = setTimeout(nullLowestDelta, 200);
-
-
-
-            return fn.apply(this, args);
-        }
-    };
-
-    mousewheelHandler.events = function() {
-        var doc = window.document;
-        return ( 'onwheel' in doc || doc.documentMode >= 9 ) ?
-               ['wheel'] : ['mousewheel', 'DomMouseScroll', 'MozMousePixelScroll'];
-    };
-
-    return mousewheelHandler;
-
-}();
-
-
-
-var addListener = function(){
-
-    var fn = null,
-        prefix = null;
-
-    return function addListener(el, event, func) {
-
-        if (fn === null) {
-            fn = el.attachEvent ? "attachEvent" : "addEventListener";
-            prefix = el.attachEvent ? "on" : "";
-        }
-
-
-        if (event == "mousewheel") {
-            func = mousewheelHandler(func);
-            var events = mousewheelHandler.events(),
-                i, l;
-            for (i = 0, l = events.length; i < l; i++) {
-                el[fn](prefix + events[i], func, false);
-            }
-        }
-        else {
-            el[fn](prefix + event, func, false);
-        }
-
-        return func;
-    }
-
 }();
 
 
@@ -3159,22 +2861,52 @@ function isThenable(any) {
 
 
 
-function error(e) {
+var error = (function(){
 
-    var stack = e.stack || (new Error).stack;
+    var listeners = [];
 
-    if (typeof console != strUndef && console.log) {
-        async(function(){
-            console.log(e);
-            if (stack) {
-                console.log(stack);
+    var error = function error(e) {
+
+        var i, l;
+
+        for (i = 0, l = listeners.length; i < l; i++) {
+            listeners[i][0].call(listeners[i][1], e);
+        }
+
+        var stack = e.stack || (new Error).stack;
+
+        if (typeof console != strUndef && console.log) {
+            async(function(){
+                console.log(e);
+                if (stack) {
+                    console.log(stack);
+                }
+            });
+        }
+        else {
+            throw e;
+        }
+    };
+
+    error.on = function(fn, context) {
+        error.un(fn, context);
+        listeners.push([fn, context]);
+    };
+
+    error.un = function(fn, context) {
+        var i, l;
+        for (i = 0, l = listeners.length; i < l; i++) {
+            if (listeners[i][0] === fn && listeners[i][1] === context) {
+                listeners.splice(i, 1);
+                break;
             }
-        });
-    }
-    else {
-        throw e;
-    }
-};
+        }
+    };
+
+    return error;
+}());
+
+
 
 
 
@@ -3958,83 +3690,360 @@ function setAttr(el, name, value) {
 };
 
 
+/**
+ * @mixin Promise
+ */
+ns.register("mixin.Promise", {
+
+    $$promise: null,
+
+    $beforeInit: function() {
+        this.$$promise = new Promise;
+    },
+
+    then: function(){
+        return this.$$promise.then.apply(this.$$promise, arguments);
+    },
+
+    done: function() {
+        this.$$promise.done.apply(this.$$promise, arguments);
+        return this;
+    },
+
+    always: function() {
+        this.$$promise.always.apply(this.$$promise, arguments);
+        return this;
+    },
+
+    fail: function() {
+        this.$$promise.fail.apply(this.$$promise, arguments);
+        return this;
+    }
+
+});
+
+function returnFalse() {
+    return false;
+};
+
+
+function returnTrue() {
+    return true;
+};
+
+function isNull(value) {
+    return value === null;
+};
 
 
 
-/*
-* Contents of this file are partially taken from jQuery
-*/
+// from jQuery
 
-var ajax = function(){
+var DomEvent = function(src) {
 
-    
+    if (src instanceof DomEvent) {
+        return src;
+    }
 
-    var rhash       = /#.*$/,
+    // Allow instantiation without the 'new' keyword
+    if (!(this instanceof DomEvent)) {
+        return new DomEvent(src);
+    }
 
-        rts         = /([?&])_=[^&]*/,
 
-        rquery      = /\?/,
+    var self    = this;
 
-        rurl        = /^([\w.+-]+:)(?:\/\/(?:[^\/?#]*@|)([^\/?#:]*)(?::(\d+)|)|)/,
-
-        rgethead    = /^(?:GET|HEAD)$/i,
-
-        buildParams     = function(data, params, name) {
-
-            var i, len;
-
-            if (isPrimitive(data) && name) {
-                params.push(encodeURIComponent(name) + "=" + encodeURIComponent(""+data));
+    for (var i in src) {
+        if (!self[i]) {
+            try {
+                self[i] = src[i];
             }
-            else if (isArray(data) && name) {
-                for (i = 0, len = data.length; i < len; i++) {
-                    buildParams(data[i], params, name + "["+i+"]");
+            catch (thrownError){}
+        }
+    }
+
+
+    // Event object
+    self.originalEvent = src;
+    self.type = src.type;
+
+    if (!self.target && src.srcElement) {
+        self.target = src.srcElement;
+    }
+
+
+    var eventDoc, doc, body,
+        button = src.button;
+
+    // Calculate pageX/Y if missing and clientX/Y available
+    if (self.pageX === undf && !isNull(src.clientX)) {
+        eventDoc = self.target ? self.target.ownerDocument || window.document : window.document;
+        doc = eventDoc.documentElement;
+        body = eventDoc.body;
+
+        self.pageX = src.clientX +
+                      ( doc && doc.scrollLeft || body && body.scrollLeft || 0 ) -
+                      ( doc && doc.clientLeft || body && body.clientLeft || 0 );
+        self.pageY = src.clientY +
+                      ( doc && doc.scrollTop  || body && body.scrollTop  || 0 ) -
+                      ( doc && doc.clientTop  || body && body.clientTop  || 0 );
+    }
+
+    // Add which for click: 1 === left; 2 === middle; 3 === right
+    // Note: button is not normalized, so don't use it
+    if ( !self.which && button !== undf ) {
+        self.which = ( button & 1 ? 1 : ( button & 2 ? 3 : ( button & 4 ? 2 : 0 ) ) );
+    }
+
+    // Events bubbling up the document may have been marked as prevented
+    // by a handler lower down the tree; reflect the correct value.
+    self.isDefaultPrevented = src.defaultPrevented ||
+                              src.defaultPrevented === undf &&
+                                  // Support: Android<4.0
+                              src.returnValue === false ?
+                              returnTrue :
+                              returnFalse;
+
+
+    // Create a timestamp if incoming event doesn't have one
+    self.timeStamp = src && src.timeStamp || (new Date).getTime();
+};
+
+// Event is based on DOM3 Events as specified by the ECMAScript Language Binding
+// http://www.w3.org/TR/2003/WD-DOM-Level-3-Events-20030331/ecma-script-binding.html
+extend(DomEvent.prototype, {
+
+    isDefaultPrevented: returnFalse,
+    isPropagationStopped: returnFalse,
+    isImmediatePropagationStopped: returnFalse,
+
+    preventDefault: function() {
+        var e = this.originalEvent;
+
+        this.isDefaultPrevented = returnTrue;
+        e.returnValue = false;
+
+        if ( e && e.preventDefault ) {
+            e.preventDefault();
+        }
+    },
+    stopPropagation: function() {
+        var e = this.originalEvent;
+
+        this.isPropagationStopped = returnTrue;
+        e.cancelBubble = true;
+
+        if ( e && e.stopPropagation ) {
+            e.stopPropagation();
+        }
+    },
+    stopImmediatePropagation: function() {
+        var e = this.originalEvent;
+
+        this.isImmediatePropagationStopped = returnTrue;
+
+        if ( e && e.stopImmediatePropagation ) {
+            e.stopImmediatePropagation();
+        }
+
+        this.stopPropagation();
+    }
+}, true, false);
+
+
+
+
+function normalizeEvent(originalEvent) {
+    return new DomEvent(originalEvent);
+};
+
+
+// from jquery.mousewheel plugin
+
+
+
+var mousewheelHandler = function(e) {
+
+    function shouldAdjustOldDeltas(orgEvent, absDelta) {
+        // If this is an older event and the delta is divisable by 120,
+        // then we are assuming that the browser is treating this as an
+        // older mouse wheel event and that we should divide the deltas
+        // by 40 to try and get a more usable deltaFactor.
+        // Side note, this actually impacts the reported scroll distance
+        // in older browsers and can cause scrolling to be slower than native.
+        // Turn this off by setting $.event.special.mousewheel.settings.adjustOldDeltas to false.
+        return orgEvent.type === 'mousewheel' && absDelta % 120 === 0;
+    }
+
+    function nullLowestDelta() {
+        lowestDelta = null;
+    }
+
+    var toBind = ( 'onwheel' in window.document || window.document.documentMode >= 9 ) ?
+                 ['wheel'] : ['mousewheel', 'DomMouseScroll', 'MozMousePixelScroll'],
+        nullLowestDeltaTimeout, lowestDelta;
+
+    var mousewheelHandler = function(fn) {
+
+        return function(e) {
+
+            var event = normalizeEvent(e || window.event),
+                args = slice.call(arguments, 1),
+                delta = 0,
+                deltaX = 0,
+                deltaY = 0,
+                absDelta = 0,
+                offsetX = 0,
+                offsetY = 0;
+
+
+            event.type = 'mousewheel';
+
+            // Old school scrollwheel delta
+            if ('detail'      in event) { deltaY = event.detail * -1; }
+            if ('wheelDelta'  in event) { deltaY = event.wheelDelta; }
+            if ('wheelDeltaY' in event) { deltaY = event.wheelDeltaY; }
+            if ('wheelDeltaX' in event) { deltaX = event.wheelDeltaX * -1; }
+
+            // Firefox < 17 horizontal scrolling related to DOMMouseScroll event
+            if ('axis' in event && event.axis === event.HORIZONTAL_AXIS) {
+                deltaX = deltaY * -1;
+                deltaY = 0;
+            }
+
+            // Set delta to be deltaY or deltaX if deltaY is 0 for backwards compatabilitiy
+            delta = deltaY === 0 ? deltaX : deltaY;
+
+            // New school wheel delta (wheel event)
+            if ('deltaY' in event) {
+                deltaY = event.deltaY * -1;
+                delta = deltaY;
+            }
+            if ('deltaX' in event) {
+                deltaX = event.deltaX;
+                if (deltaY === 0) { delta = deltaX * -1; }
+            }
+
+            // No change actually happened, no reason to go any further
+            if (deltaY === 0 && deltaX === 0) { return; }
+
+            // Store lowest absolute delta to normalize the delta values
+            absDelta = Math.max(Math.abs(deltaY), Math.abs(deltaX));
+
+            if (!lowestDelta || absDelta < lowestDelta) {
+                lowestDelta = absDelta;
+
+                // Adjust older deltas if necessary
+                if (shouldAdjustOldDeltas(event, absDelta)) {
+                    lowestDelta /= 40;
                 }
             }
-            else if (isObject(data)) {
-                for (i in data) {
-                    if (data.hasOwnProperty(i)) {
-                        buildParams(data[i], params, name ? name + "["+i+"]" : i);
-                    }
-                }
-            }
-        },
 
-        prepareParams   = function(data) {
-            var params = [];
-            buildParams(data, params, null);
-            return params.join("&").replace(/%20/g, "+");
-        },
-
-        prepareUrl  = function(url, opt) {
-
-            url.replace(rhash, "");
-
-            if (opt.cache === false) {
-
-                var stamp   = (new Date).getTime();
-
-                url = rts.test(url) ?
-                    // If there is already a '_' parameter, set its value
-                       url.replace(rts, "$1_=" + stamp) :
-                    // Otherwise add one to the end
-                       url + (rquery.test(url) ? "&" : "?" ) + "_=" + stamp;
+            // Adjust older deltas if necessary
+            if (shouldAdjustOldDeltas(event, absDelta)) {
+                // Divide all the things by 40!
+                delta /= 40;
+                deltaX /= 40;
+                deltaY /= 40;
             }
 
-            if (opt.data && (!window.FormData || !(opt.data instanceof window.FormData))) {
+            // Get a whole, normalized value for the deltas
+            delta = Math[delta >= 1 ? 'floor' : 'ceil'](delta / lowestDelta);
+            deltaX = Math[deltaX >= 1 ? 'floor' : 'ceil'](deltaX / lowestDelta);
+            deltaY = Math[deltaY >= 1 ? 'floor' : 'ceil'](deltaY / lowestDelta);
 
-                opt.data = !isString(opt.data) ? prepareParams(opt.data) : opt.data;
-
-                if (rgethead.test(opt.method)) {
-                    url += (rquery.test(url) ? "&" : "?") + opt.data;
-                    opt.data = null;
-                }
+            // Normalise offsetX and offsetY properties
+            if (this.getBoundingClientRect) {
+                var boundingRect = this.getBoundingClientRect();
+                offsetX = event.clientX - boundingRect.left;
+                offsetY = event.clientY - boundingRect.top;
             }
 
-            return url;
-        },
+            // Add information to the event object
+            event.deltaX = deltaX;
+            event.deltaY = deltaY;
+            event.deltaFactor = lowestDelta;
+            event.offsetX = offsetX;
+            event.offsetY = offsetY;
+            // Go ahead and set deltaMode to 0 since we converted to pixels
+            // Although this is a little odd since we overwrite the deltaX/Y
+            // properties with normalized deltas.
+            event.deltaMode = 0;
 
-        accepts     = {
+            // Add event and delta to the front of the arguments
+            args.unshift(event, delta, deltaX, deltaY);
+
+            // Clearout lowestDelta after sometime to better
+            // handle multiple device types that give different
+            // a different lowestDelta
+            // Ex: trackpad = 3 and mouse wheel = 120
+            if (nullLowestDeltaTimeout) { clearTimeout(nullLowestDeltaTimeout); }
+            nullLowestDeltaTimeout = setTimeout(nullLowestDelta, 200);
+
+
+
+            return fn.apply(this, args);
+        }
+    };
+
+    mousewheelHandler.events = function() {
+        var doc = window.document;
+        return ( 'onwheel' in doc || doc.documentMode >= 9 ) ?
+               ['wheel'] : ['mousewheel', 'DomMouseScroll', 'MozMousePixelScroll'];
+    };
+
+    return mousewheelHandler;
+
+}();
+
+
+
+var addListener = function(){
+
+    var fn = null,
+        prefix = null;
+
+    return function addListener(el, event, func) {
+
+        if (fn === null) {
+            if (el.addEventListener) {
+                fn = "addEventListener";
+                prefix = "";
+            }
+            else {
+                fn = "attachEvent";
+                prefix = "on";
+            }
+            //fn = el.attachEvent ? "attachEvent" : "addEventListener";
+            //prefix = el.attachEvent ? "on" : "";
+        }
+
+
+        if (event == "mousewheel") {
+            func = mousewheelHandler(func);
+            var events = mousewheelHandler.events(),
+                i, l;
+            for (i = 0, l = events.length; i < l; i++) {
+                el[fn](prefix + events[i], func, false);
+            }
+        }
+        else {
+            el[fn](prefix + event, func, false);
+        }
+
+        return func;
+    }
+
+}();
+
+
+
+
+(function(){
+
+
+
+    var accepts     = {
             xml:        "application/xml, text/xml",
             html:       "text/html",
             script:     "text/javascript, application/javascript",
@@ -4042,36 +4051,6 @@ var ajax = function(){
             text:       "text/plain",
             _default:   "*/*"
         },
-
-        defaults    = {
-            url:            null,
-            data:           null,
-            method:         "GET",
-            headers:        null,
-            username:       null,
-            password:       null,
-            cache:          null,
-            dataType:       null,
-            timeout:        0,
-            contentType:    "application/x-www-form-urlencoded",
-            xhrFields:      null,
-            jsonp:          false,
-            jsonpParam:     null,
-            jsonpCallback:  null,
-            transport:      null,
-            replace:        false,
-            selector:       null,
-            form:           null,
-            beforeSend:     null,
-            progress:       null,
-            uploadProgress: null,
-            processResponse:null,
-            callbackScope:  null
-        },
-
-        defaultSetup    = {},
-
-        globalEvents    = new Observable,
 
         createXHR       = function() {
 
@@ -4088,518 +4067,56 @@ var ajax = function(){
             return xhr;
         },
 
-        globalEval      = function(code){
-            var script, indirect = eval;
-            if (code) {
-                if (/^[^\S]*use strict/.test(code)) {
-                    script = document.createElement("script");
-                    script.text = code;
-                    document.head.appendChild(script)
-                        .parentNode.removeChild(script);
-                } else {
-                    indirect(code);
-                }
-            }
-        },
-
-        data2form       = function(data, form, name) {
-
-            var i, input, len;
-
-            if (!isObject(data) && !isFunction(data) && name) {
-                input   = document.createElement("input");
-                setAttr(input, "type", "hidden");
-                setAttr(input, "name", name);
-                setAttr(input, "value", data);
-                form.appendChild(input);
-            }
-            else if (isArray(data) && name) {
-                for (i = 0, len = data.length; i < len; i++) {
-                    data2form(data[i], form, name + "["+i+"]");
-                }
-            }
-            else if (isObject(data)) {
-                for (i in data) {
-                    if (data.hasOwnProperty(i)) {
-                        data2form(data[i], form, name ? name + "["+i+"]" : i);
-                    }
-                }
-            }
-        },
-
-        // https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/Using_XMLHttpRequest
-        serializeForm   = function(form) {
-
-            var oField, sFieldType, nFile, sSearch = "";
-
-            for (var nItem = 0; nItem < form.elements.length; nItem++) {
-
-                oField = form.elements[nItem];
-
-                if (getAttr(oField, "name") === null) {
-                    continue;
-                }
-
-                sFieldType = oField.nodeName.toUpperCase() === "INPUT" ?
-                             getAttr(oField, "type").toUpperCase() : "TEXT";
-
-                if (sFieldType === "FILE") {
-                    for (nFile = 0;
-                         nFile < oField.files.length;
-                         sSearch += "&" + encodeURIComponent(oField.name) + "=" +
-                                    encodeURIComponent(oField.files[nFile++].name)){}
-
-                } else if ((sFieldType !== "RADIO" && sFieldType !== "CHECKBOX") || oField.checked) {
-                    sSearch += "&" + encodeURIComponent(oField.name) + "=" + encodeURIComponent(oField.value);
-                }
-            }
-
-            return sSearch;
-        },
-
         httpSuccess     = function(r) {
             try {
                 return (!r.status && location && location.protocol == "file:")
-                           || (r.status >= 200 && r.status < 300)
-                           || r.status === 304 || r.status === 1223; // || r.status === 0;
+                       || (r.status >= 200 && r.status < 300)
+                       || r.status === 304 || r.status === 1223; // || r.status === 0;
             } catch(thrownError){}
             return false;
-        },
-
-        processData     = function(data, opt, ct) {
-
-            var type        = opt ? opt.dataType : null,
-                selector    = opt ? opt.selector : null,
-                doc;
-
-            if (!isString(data)) {
-                return data;
-            }
-
-            ct = ct || "";
-
-            if (type === "xml" || !type && ct.indexOf("xml") >= 0) {
-                doc = parseXML(trim(data));
-                return selector ? select(selector, doc) : doc;
-            }
-            else if (type === "html") {
-                doc = parseXML(data, "text/html");
-                return selector ? select(selector, doc) : doc;
-            }
-            else if (type == "fragment") {
-                var fragment    = document.createDocumentFragment(),
-                    div         = document.createElement("div");
-
-                div.innerHTML   = data;
-
-                while (div.firstChild) {
-                    fragment.appendChild(div.firstChild);
-                }
-
-                return fragment;
-            }
-            else if (type === "json" || !type && ct.indexOf("json") >= 0) {
-                return parseJSON(trim(data));
-            }
-            else if (type === "script" || !type && ct.indexOf("javascript") >= 0) {
-                globalEval(data);
-            }
-
-            return data + "";
         };
 
+    return defineClass({
 
+        $class: "ajax.transport.XHR",
 
-
-    var AJAX    = function(opt) {
-
-        var self        = this,
-            href        = window ? window.location.href : "",
-            local       = rurl.exec(href.toLowerCase()) || [],
-            parts       = rurl.exec(opt.url.toLowerCase());
-
-        self._opt       = opt;
-
-        if (opt.crossDomain !== true) {
-            opt.crossDomain = !!(parts &&
-                                 (parts[1] !== local[1] || parts[2] !== local[2] ||
-                                  (parts[3] || (parts[1] === "http:" ? "80" : "443")) !==
-                                  (local[3] || (local[1] === "http:" ? "80" : "443"))));
-        }
-
-        var deferred    = new Promise,
-            transport;
-
-        if (opt.transport == "iframe" && !opt.form) {
-            self.createForm();
-            opt.form = self._form;
-        }
-        else if (opt.form) {
-            self._form = opt.form;
-            if (opt.method == "POST" && (!window || !window.FormData)) {
-                opt.transport = "iframe";
-            }
-        }
-
-        if (opt.form && opt.transport != "iframe") {
-            if (opt.method == "POST") {
-                opt.data = new FormData(opt.form);
-            }
-            else {
-                opt.data = serializeForm(opt.form);
-            }
-        }
-
-        opt.url = prepareUrl(opt.url, opt);
-
-        if ((opt.crossDomain || opt.transport == "script") && !opt.form) {
-            transport   = new ScriptTransport(opt, deferred, self);
-        }
-        else if (opt.transport == "iframe") {
-            transport   = new IframeTransport(opt, deferred, self);
-        }
-        else {
-            transport   = new XHRTransport(opt, deferred, self);
-        }
-
-        self._deferred      = deferred;
-        self._transport     = transport;
-
-        deferred.done(function(value) {
-            globalEvents.trigger("success", value);
-        });
-        deferred.fail(function(reason) {
-            globalEvents.trigger("error", reason);
-        });
-        deferred.always(function(){
-            globalEvents.trigger("end");
-        });
-
-        globalEvents.trigger("start");
-
-
-        if (opt.timeout) {
-            self._timeout = setTimeout(bind(self.onTimeout, self), opt.timeout);
-        }
-
-        if (opt.jsonp) {
-            self.createJsonp();
-        }
-
-        if (globalEvents.trigger("before-send", opt, transport) === false) {
-            self._promise = Promise.reject();
-        }
-        if (opt.beforeSend && opt.beforeSend.call(opt.callbackScope, opt, transport) === false) {
-            self._promise = Promise.reject();
-        }
-
-        if (!self._promise) {
-            async(transport.send, transport);
-
-            deferred.abort = bind(self.abort, self);
-            deferred.always(self.destroy, self);
-
-            self._promise = deferred;
-        }
-    };
-
-    extend(AJAX.prototype, {
-
-        _jsonpName: null,
-        _transport: null,
-        _opt: null,
-        _deferred: null,
-        _promise: null,
-        _timeout: null,
-        _form: null,
-        _removeForm: false,
-
-        promise: function() {
-            return this._promise;
-        },
-
-        abort: function(reason) {
-            this._transport.abort();
-            this._deferred.reject(reason || "abort");
-        },
-
-        onTimeout: function() {
-            this.abort("timeout");
-        },
-
-        createForm: function() {
-
-            var self    = this,
-                form    = document.createElement("form");
-
-            form.style.display = "none";
-            setAttr(form, "method", self._opt.method);
-
-            data2form(self._opt.data, form, null);
-
-            document.body.appendChild(form);
-
-            self._form = form;
-            self._removeForm = true;
-        },
-
-        createJsonp: function() {
-
-            var self        = this,
-                opt         = self._opt,
-                paramName   = opt.jsonpParam || "callback",
-                cbName      = opt.jsonpCallback || "jsonp_" + nextUid();
-
-            opt.url += (rquery.test(opt.url) ? "&" : "?") + paramName + "=" + cbName;
-
-            self._jsonpName = cbName;
-
-            if (typeof window != strUndef) {
-                window[cbName] = bind(self.jsonpCallback, self);
-            }
-            if (typeof global != strUndef) {
-                global[cbName] = bind(self.jsonpCallback, self);
-            }
-
-            return cbName;
-        },
-
-        jsonpCallback: function(data) {
-
-            var self    = this,
-                res;
-
-            try {
-                res = self.processResponseData(data);
-            }
-            catch (thrownError) {
-                if (self._deferred) {
-                    self._deferred.reject(thrownError);
-                }
-                else {
-                    error(thrownError);
-                }
-            }
-
-            if (self._deferred) {
-                self._deferred.resolve(res);
-            }
-        },
-
-        processResponseData: function(data, contentType) {
-
-            var self    = this,
-                opt     = self._opt;
-
-            data    = processData(data, opt, contentType);
-
-            if (globalEvents.hasListener("process-response")) {
-                data    = globalEvents.trigger("process-response", data, self._deferred);
-            }
-
-            if (opt.processResponse) {
-                data    = opt.processResponse.call(opt.callbackScope, data, self._deferred);
-            }
-
-            return data;
-        },
-
-        processResponse: function(data, contentType) {
-
-            var self        = this,
-                deferred    = self._deferred,
-                result;
-
-            if (!self._opt.jsonp) {
-                try {
-                    result = self.processResponseData(data, contentType)
-                }
-                catch (thrownError) {
-                    deferred.reject(thrownError);
-                }
-
-                deferred.resolve(result);
-            }
-            else {
-                if (!data) {
-                    deferred.reject("jsonp script is empty");
-                    return;
-                }
-
-                try {
-                    globalEval(data);
-                }
-                catch (thrownError) {
-                    deferred.reject(thrownError);
-                }
-
-                if (deferred.isPending()) {
-                    deferred.reject("jsonp script didn't invoke callback");
-                }
-            }
-        },
-
-        destroy: function() {
-
-            var self    = this;
-
-            if (self._timeout) {
-                clearTimeout(self._timeout);
-            }
-
-            if (self._form && self._form.parentNode && self._removeForm) {
-                self._form.parentNode.removeChild(self._form);
-            }
-
-            self._transport.destroy();
-
-            self._transport = null;
-            self._opt = null;
-            self._deferred = null;
-            self._promise = null;
-            self._timeout = null;
-            self._form = null;
-
-            if (self._jsonpName) {
-                if (typeof window != strUndef) {
-                    delete window[self._jsonpName];
-                }
-                if (typeof global != strUndef) {
-                    delete global[self._jsonpName];
-                }
-            }
-        }
-    }, true, false);
-
-
-
-    var ajax    = function(url, opt) {
-
-        opt = opt || {};
-
-        if (url && !isString(url)) {
-            opt = url;
-        }
-        else {
-            opt.url = url;
-        }
-
-        if (!opt.url) {
-            if (opt.form) {
-                opt.url = getAttr(opt.form, "action");
-            }
-            if (!opt.url) {
-                throw "Must provide url";
-            }
-        }
-
-        extend(opt, defaultSetup, false, true);
-        extend(opt, defaults, false, true);
-
-        if (!opt.method) {
-            if (opt.form) {
-                opt.method = getAttr(opt.form, "method").toUpperCase() || "GET";
-            }
-            else {
-                opt.method = "GET";
-            }
-        }
-        else {
-            opt.method = opt.method.toUpperCase();
-        }
-
-        return (new AJAX(opt)).promise();
-    };
-
-    ajax.setup  = function(opt) {
-        extend(defaultSetup, opt, true, true);
-    };
-
-    ajax.on     = function() {
-        globalEvents.on.apply(globalEvents, arguments);
-    };
-
-    ajax.un     = function() {
-        globalEvents.un.apply(globalEvents, arguments);
-    };
-
-    ajax.get    = function(url, opt) {
-        opt = opt || {};
-        opt.method = "GET";
-        return ajax(url, opt);
-    };
-
-    ajax.post   = function(url, opt) {
-        opt = opt || {};
-        opt.method = "POST";
-        return ajax(url, opt);
-    };
-
-    ajax.load   = function(el, url, opt) {
-
-        opt = opt || {};
-
-        if (!isString(url)) {
-            opt = url;
-        }
-
-        opt.dataType = "fragment";
-
-        return ajax(url, opt).done(function(fragment){
-            if (opt.replace) {
-                while (el.firstChild) {
-                    el.removeChild(el.firstChild);
-                }
-            }
-            el.appendChild(fragment);
-        });
-    };
-
-    ajax.loadScript = function(url) {
-        return ajax(url, {transport: "script"});
-    };
-
-    ajax.submit = function(form, opt) {
-
-        opt = opt || {};
-        opt.form = form;
-
-        return ajax(null, opt);
-    };
-
-
-
-
-
-
-
-
-
-    var XHRTransport     = function(opt, deferred, ajax) {
-
-        var self    = this,
-            xhr;
-
-        self._xhr = xhr     = createXHR();
-        self._deferred      = deferred;
-        self._opt           = opt;
-        self._ajax          = ajax;
-
-        if (opt.progress) {
-            addListener(xhr, "progress", bind(opt.progress, opt.callbackScope));
-        }
-        if (opt.uploadProgress && xhr.upload) {
-            addListener(xhr.upload, "progress", bind(opt.uploadProgress, opt.callbackScope));
-        }
-
-        xhr.onreadystatechange = bind(self.onReadyStateChange, self);
-    };
-
-    extend(XHRTransport.prototype, {
-
+        type: "xhr",
         _xhr: null,
         _deferred: null,
         _ajax: null,
+
+        $init: function(opt, deferred, ajax) {
+
+            var self    = this,
+                xhr;
+
+            self._xhr = xhr     = createXHR();
+            self._deferred      = deferred;
+            self._opt           = opt;
+            self._ajax          = ajax;
+
+            if (opt.progress) {
+                /*if (xhr.addEventListener) {
+                    xhr.addEventListener("progress", bind(opt.progress, opt.context));
+                }
+                else {
+                    addListener(xhr, "progress", bind(opt.progress, opt.context));
+                }*/
+                xhr.onprogress = bind(opt.progress, opt.context);
+            }
+            if (opt.uploadProgress && xhr.upload) {
+                /*if (xhr.addEventListener) {
+                    xhr.upload.addEventListener("progress", bind(opt.uploadProgress, opt.context));
+                }
+                else {
+                    addListener(xhr.upload, "progress", bind(opt.uploadProgress, opt.context));
+                }*/
+
+                xhr.upload.onprogress = bind(opt.uploadProgress, opt.context);
+            }
+
+            xhr.onreadystatechange = bind(self.onReadyStateChange, self);
+        },
 
         setHeaders: function() {
 
@@ -4677,178 +4194,881 @@ var ajax = function(){
                     self._deferred.reject(thrownError);
                 }
             }
-        },
-
-        destroy: function() {
-            var self    = this;
-
-            self._xhr = null;
-            self._deferred = null;
-            self._opt = null;
-            self._ajax = null;
-
         }
+    });
 
-    }, true, false);
-
-
-
-    var ScriptTransport  = function(opt, deferred, ajax) {
+}());
 
 
+
+
+
+
+
+defineClass({
+    $class: "ajax.transport.Script",
+
+    type: "script",
+    _opt: null,
+    _deferred: null,
+    _ajax: null,
+    _el: null,
+
+    $init: function(opt, deferred, ajax) {
         var self        = this;
 
         self._opt       = opt;
         self._ajax      = ajax;
         self._deferred  = deferred;
+    },
 
-    };
+    send: function() {
 
-    extend(ScriptTransport.prototype, {
+        var self    = this,
+            script  = document.createElement("script");
 
-        _opt: null,
-        _deferred: null,
-        _ajax: null,
-        _el: null,
+        setAttr(script, "async", "async");
+        setAttr(script, "charset", "utf-8");
+        setAttr(script, "src", self._opt.url);
 
-        send: function() {
+        addListener(script, "load", bind(self.onLoad, self));
+        addListener(script, "error", bind(self.onError, self));
 
-            var self    = this,
-                script  = document.createElement("script");
+        document.head.appendChild(script);
 
-            setAttr(script, "async", "async");
-            setAttr(script, "charset", "utf-8");
-            setAttr(script, "src", self._opt.url);
+        self._el = script;
+    },
 
-            addListener(script, "load", bind(self.onLoad, self));
-            addListener(script, "error", bind(self.onError, self));
-
-            document.head.appendChild(script);
-
-            self._el = script;
-        },
-
-        onLoad: function(evt) {
-            if (this._deferred) { // haven't been destroyed yet
-                this._deferred.resolve(evt);
-            }
-        },
-
-        onError: function(evt) {
-            this._deferred.reject(evt);
-        },
-
-        abort: function() {
-            var self    = this;
-
-            if (self._el.parentNode) {
-                self._el.parentNode.removeChild(self._el);
-            }
-        },
-
-        destroy: function() {
-
-            var self    = this;
-
-            if (self._el.parentNode) {
-                self._el.parentNode.removeChild(self._el);
-            }
-
-            self._el = null;
-            self._opt = null;
-            self._ajax = null;
-            self._deferred = null;
-
+    onLoad: function(evt) {
+        if (this._deferred) { // haven't been destroyed yet
+            this._deferred.resolve(evt);
         }
+    },
 
-    }, true, false);
+    onError: function(evt) {
+        this._deferred.reject(evt);
+    },
+
+    abort: function() {
+        var self    = this;
+
+        if (self._el.parentNode) {
+            self._el.parentNode.removeChild(self._el);
+        }
+    },
+
+    destroy: function() {
+
+        var self    = this;
+
+        if (self._el.parentNode) {
+            self._el.parentNode.removeChild(self._el);
+        }
+    }
+});
 
 
 
-    var IframeTransport = function(opt, deferred, ajax) {
+
+
+defineClass({
+
+    $class: "ajax.transport.IFrame",
+
+    type: "iframe",
+    _opt: null,
+    _deferred: null,
+    _ajax: null,
+    _el: null,
+    _sent: false,
+
+    $init: function(opt, deferred, ajax) {
         var self        = this;
 
         self._opt       = opt;
         self._ajax      = ajax;
         self._deferred  = deferred;
-    };
+    },
 
-    extend(IframeTransport.prototype, {
+    send: function() {
 
-        _opt: null,
-        _deferred: null,
-        _ajax: null,
-        _el: null,
+        var self    = this,
+            frame   = document.createElement("iframe"),
+            id      = "frame-" + nextUid(),
+            form    = self._opt.form;
 
-        send: function() {
+        setAttr(frame, "id", id);
+        setAttr(frame, "name", id);
+        frame.style.display = "none";
+        document.body.appendChild(frame);
 
-            var self    = this,
-                frame   = document.createElement("iframe"),
-                id      = "frame-" + nextUid(),
-                form    = self._opt.form;
+        setAttr(form, "action", self._opt.url);
+        setAttr(form, "target", id);
 
-            setAttr(frame, "id", id);
-            setAttr(frame, "name", id);
-            frame.style.display = "none";
-            document.body.appendChild(frame);
+        addListener(frame, "load", bind(self.onLoad, self));
+        addListener(frame, "error", bind(self.onError, self));
 
-            setAttr(form, "action", self._opt.url);
-            setAttr(form, "target", id);
+        self._el = frame;
 
-            addListener(frame, "load", bind(self.onLoad, self));
-            addListener(frame, "error", bind(self.onError, self));
+        var tries = 0;
 
-            self._el = frame;
+        var submit = function() {
+
+            tries++;
 
             try {
                 form.submit();
+                self._sent = true;
+            }
+            catch (thrownError) {
+                if (tries > 2) {
+                    self._deferred.reject(thrownError);
+                }
+                else {
+                    async(submit, null, [], 1000);
+                }
+            }
+        };
+
+        submit();
+    },
+
+    onLoad: function() {
+
+        var self    = this,
+            frame   = self._el,
+            doc,
+            data;
+
+        if (!self._sent) {
+            return;
+        }
+
+        if (self._opt && !self._opt.jsonp) {
+
+            try {
+                doc = frame.contentDocument || frame.contentWindow.document;
+                data = doc.body.innerHTML;
+                self._ajax.processResponse(data);
             }
             catch (thrownError) {
                 self._deferred.reject(thrownError);
             }
+        }
+    },
+
+    onError: function(evt) {
+
+        if (!this._sent) {
+            return;
+        }
+
+        this._deferred.reject(evt);
+    },
+
+    abort: function() {
+        var self    = this;
+
+        if (self._el.parentNode) {
+            self._el.parentNode.removeChild(self._el);
+        }
+    },
+
+    destroy: function() {
+        var self    = this;
+
+        if (self._el.parentNode) {
+            self._el.parentNode.removeChild(self._el);
+        }
+    }
+
+});
+
+
+
+
+
+
+
+
+
+(function(){
+
+    var rquery          = /\?/,
+        rurl            = /^([\w.+-]+:)(?:\/\/(?:[^\/?#]*@|)([^\/?#:]*)(?::(\d+)|)|)/,
+        rhash           = /#.*$/,
+        rts             = /([?&])_=[^&]*/,
+        rgethead        = /^(?:GET|HEAD)$/i,
+
+        globalEvents    = new Observable,
+
+        formDataSupport = !!(window && window.FormData),
+
+        processData     = function(data, opt, ct) {
+
+            var type        = opt ? opt.dataType : null,
+                selector    = opt ? opt.selector : null,
+                doc;
+
+            if (!isString(data)) {
+                return data;
+            }
+
+            ct = ct || "";
+
+            if (type === "xml" || !type && ct.indexOf("xml") >= 0) {
+                doc = parseXML(trim(data));
+                return selector ? select(selector, doc) : doc;
+            }
+            else if (type === "html") {
+                doc = parseXML(data, "text/html");
+                return selector ? select(selector, doc) : doc;
+            }
+            else if (type == "fragment") {
+                var fragment    = document.createDocumentFragment(),
+                    div         = document.createElement("div");
+
+                div.innerHTML   = data;
+
+                while (div.firstChild) {
+                    fragment.appendChild(div.firstChild);
+                }
+
+                return fragment;
+            }
+            else if (type === "json" || !type && ct.indexOf("json") >= 0) {
+                return parseJSON(trim(data));
+            }
+            else if (type === "script" || !type && ct.indexOf("javascript") >= 0) {
+                globalEval(data);
+            }
+
+            return data + "";
         },
 
-        onLoad: function() {
+        buildParams     = function(data, params, name) {
 
-            var self    = this,
-                frame   = self._el,
-                doc,
-                data;
+            var i, len;
 
-            if (self._opt && !self._opt.jsonp) {
-                doc		= frame.contentDocument || frame.contentWindow.document;
-                data    = doc.body.innerHTML;
-                self._ajax.processResponse(data);
+            if (isPrimitive(data) && name) {
+                params.push(encodeURIComponent(name) + "=" + encodeURIComponent(""+data));
+            }
+            else if (isArray(data) && name) {
+                for (i = 0, len = data.length; i < len; i++) {
+                    buildParams(data[i], params, name + "["+i+"]");
+                }
+            }
+            else if (isObject(data)) {
+                for (i in data) {
+                    if (data.hasOwnProperty(i)) {
+                        buildParams(data[i], params, name ? name + "["+i+"]" : i);
+                    }
+                }
             }
         },
 
-        onError: function(evt) {
-            this._deferred.reject(evt);
+        prepareParams   = function(data) {
+            var params = [];
+            buildParams(data, params, null);
+            return params.join("&").replace(/%20/g, "+");
         },
 
-        abort: function() {
-            var self    = this;
+        fixUrlDomain    = function(url) {
 
-            if (self._el.parentNode) {
-                self._el.parentNode.removeChild(self._el);
+            if (url.substr(0,1) == "/") {
+                return location.protocol + "//" + location.host + url;
+            }
+            else {
+                return url;
+            }
+        },
+
+        prepareUrl  = function(url, opt) {
+
+            url.replace(rhash, "");
+
+            if (opt.cache === false) {
+
+                var stamp   = (new Date).getTime();
+
+                url = rts.test(url) ?
+                    // If there is already a '_' parameter, set its value
+                      url.replace(rts, "$1_=" + stamp) :
+                    // Otherwise add one to the end
+                      url + (rquery.test(url) ? "&" : "?" ) + "_=" + stamp;
+            }
+
+            if (opt.data && (!formDataSupport || !(opt.data instanceof window.FormData))) {
+
+                opt.data = !isString(opt.data) ? prepareParams(opt.data) : opt.data;
+
+                if (rgethead.test(opt.method)) {
+                    url += (rquery.test(url) ? "&" : "?") + opt.data;
+                    opt.data = null;
+                }
+            }
+
+            return url;
+        },
+
+        data2form       = function(data, form, name) {
+
+            var i, input, len;
+
+            if (!isObject(data) && !isFunction(data) && name) {
+                input   = document.createElement("input");
+                setAttr(input, "type", "hidden");
+                setAttr(input, "name", name);
+                setAttr(input, "value", data);
+                form.appendChild(input);
+            }
+            else if (isArray(data) && name) {
+                for (i = 0, len = data.length; i < len; i++) {
+                    data2form(data[i], form, name + "["+i+"]");
+                }
+            }
+            else if (isObject(data)) {
+                for (i in data) {
+                    if (data.hasOwnProperty(i)) {
+                        data2form(data[i], form, name ? name + "["+i+"]" : i);
+                    }
+                }
+            }
+        },
+
+        // https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/Using_XMLHttpRequest
+        serializeForm   = function(form) {
+
+            var oField, sFieldType, nFile, sSearch = "";
+
+            for (var nItem = 0; nItem < form.elements.length; nItem++) {
+
+                oField = form.elements[nItem];
+
+                if (getAttr(oField, "name") === null) {
+                    continue;
+                }
+
+                sFieldType = oField.nodeName.toUpperCase() === "INPUT" ?
+                             getAttr(oField, "type").toUpperCase() : "TEXT";
+
+                if (sFieldType === "FILE") {
+                    for (nFile = 0;
+                         nFile < oField.files.length;
+                         sSearch += "&" + encodeURIComponent(oField.name) + "=" +
+                                    encodeURIComponent(oField.files[nFile++].name)){}
+
+                } else if ((sFieldType !== "RADIO" && sFieldType !== "CHECKBOX") || oField.checked) {
+                    sSearch += "&" + encodeURIComponent(oField.name) + "=" + encodeURIComponent(oField.value);
+                }
+            }
+
+            return sSearch;
+        },
+
+        globalEval = function(code){
+            var script, indirect = eval;
+            if (code) {
+                if (/^[^\S]*use strict/.test(code)) {
+                    script = document.createElement("script");
+                    script.text = code;
+                    document.head.appendChild(script)
+                        .parentNode.removeChild(script);
+                } else {
+                    indirect(code);
+                }
+            }
+        };
+
+    defineClass({
+
+        $class: "Ajax",
+        $mixins: ["mixin.Promise"],
+
+        _jsonpName: null,
+        _transport: null,
+        _opt: null,
+        _deferred: null,
+        _promise: null,
+        _timeout: null,
+        _form: null,
+        _removeForm: false,
+
+        $init: function(opt) {
+
+            if (opt.url) {
+                opt.url = fixUrlDomain(opt.url);
+            }
+
+            var self        = this,
+                href        = window ? window.location.href : "",
+                local       = rurl.exec(href.toLowerCase()) || [],
+                parts       = rurl.exec(opt.url.toLowerCase());
+
+            self._opt       = opt;
+
+            if (opt.crossDomain !== true) {
+                opt.crossDomain = !!(parts &&
+                                     (parts[1] !== local[1] || parts[2] !== local[2] ||
+                                      (parts[3] || (parts[1] === "http:" ? "80" : "443")) !==
+                                      (local[3] || (local[1] === "http:" ? "80" : "443"))));
+            }
+
+            //deferred    = new Promise,
+            var transport;
+
+            if (opt.files) {
+                if (!formDataSupport) {
+                    opt.transport = "iframe";
+                }
+            }
+
+            if (opt.transport == "iframe" && !opt.form) {
+                self.createForm();
+                opt.form = self._form;
+            }
+            else if (opt.form) {
+                self._form = opt.form;
+                if (opt.method == "POST" && !formDataSupport) {
+                    opt.transport = "iframe";
+                }
+            }
+
+            if (opt.form && opt.transport != "iframe") {
+                if (opt.method == "POST") {
+                    opt.data = new FormData(opt.form);
+                }
+                else {
+                    opt.data = serializeForm(opt.form);
+                }
+            }
+            else if (opt.method == "POST" && formDataSupport) {
+                var d = opt.data,
+                    k;
+                opt.data = new FormData;
+
+                if (isPlainObject(d)) {
+                    for (k in d) {
+                        opt.data.append(k, d[k]);
+                    }
+                }
+            }
+
+            if (opt.files) {
+                self.importFiles();
+            }
+
+            opt.url = prepareUrl(opt.url, opt);
+
+            if ((opt.crossDomain || opt.transport == "script") && !opt.form) {
+                transport   = new MetaphorJs.ajax.transport.Script(opt, self.$$promise, self);
+            }
+            else if (opt.transport == "iframe") {
+                transport   = new MetaphorJs.ajax.transport.IFrame(opt, self.$$promise, self);
+            }
+            else {
+                transport   = new MetaphorJs.ajax.transport.XHR(opt, self.$$promise, self);
+            }
+
+            //self._deferred      = deferred;
+            self._transport     = transport;
+
+            self.$$promise.done(function(value) {
+                globalEvents.trigger("success", value);
+            });
+            self.$$promise.fail(function(reason) {
+                globalEvents.trigger("error", reason);
+            });
+            self.$$promise.always(function(){
+                globalEvents.trigger("end");
+            });
+
+            globalEvents.trigger("start");
+
+
+            if (opt.timeout) {
+                self._timeout = setTimeout(bind(self.onTimeout, self), opt.timeout);
+            }
+
+            if (opt.jsonp) {
+                self.createJsonp();
+            }
+
+            if (globalEvents.trigger("before-send", opt, transport) === false) {
+                self._promise = Promise.reject();
+            }
+            if (opt.beforeSend && opt.beforeSend.call(opt.context, opt, transport) === false) {
+                self._promise = Promise.reject();
+            }
+
+            if (!self._promise) {
+                async(transport.send, transport);
+
+                //deferred.abort = bind(self.abort, self);
+                self.$$promise.always(self.$destroy, self);
+
+                //self._promise = deferred;
+            }
+        },
+
+
+        /*promise: function() {
+            return this._promise;
+        },*/
+
+        abort: function(reason) {
+            this._transport.abort();
+            this.$$promise.reject(reason || "abort");
+            //this._deferred.reject(reason || "abort");
+        },
+
+        onTimeout: function() {
+            this.abort("timeout");
+        },
+
+        getTransport: function() {
+            return this._transport;
+        },
+
+        createForm: function() {
+
+            var self    = this,
+                form    = document.createElement("form");
+
+            form.style.display = "none";
+            setAttr(form, "method", self._opt.method);
+            setAttr(form, "enctype", "multipart/form-data");
+
+            data2form(self._opt.data, form, null);
+
+            document.body.appendChild(form);
+
+            self._form = form;
+            self._removeForm = true;
+        },
+
+        importFiles: function() {
+
+            var self    = this,
+                opt     = self._opt,
+                files   = opt.files,
+                tr      = opt.transport,
+                form    = self._form,
+                data    = opt.data,
+                i, l,
+                j, jl,
+                name,
+                input,
+                file,
+                item;
+
+            for (i = 0, l = files.length; i < l; i++) {
+
+                item = files[i];
+
+                if (isArray(item)) {
+                    name = item[0];
+                    file = item[1];
+                }
+                else {
+                    if (window.File && item instanceof File) {
+                        name = "upload" + (l > 1 ? "[]" : "");
+                    }
+                    else {
+                        name = item.name || "upload" + (l > 1 ? "[]" : "");
+                    }
+                    file = item;
+                }
+
+                if (!window.File || !(file instanceof File)) {
+                    input = file;
+                    file = null;
+                }
+
+                if (form) {
+                    if (input) {
+                        form.appendChild(input);
+                    }
+                }
+                else {
+                    if (file) {
+                        data.append(name, file);
+                    }
+                    else if (input.files && input.files.length) {
+                        for (j = 0, jl = input.files.length; j < jl; j++) {
+                            data.append(name, input.files[j]);
+                        }
+                    }
+                }
+            }
+        },
+
+        createJsonp: function() {
+
+            var self        = this,
+                opt         = self._opt,
+                paramName   = opt.jsonpParam || "callback",
+                cbName      = opt.jsonpCallback || "jsonp_" + nextUid();
+
+            opt.url += (rquery.test(opt.url) ? "&" : "?") + paramName + "=" + cbName;
+
+            self._jsonpName = cbName;
+
+            if (typeof window != strUndef) {
+                window[cbName] = bind(self.jsonpCallback, self);
+            }
+            if (typeof global != strUndef) {
+                global[cbName] = bind(self.jsonpCallback, self);
+            }
+
+            return cbName;
+        },
+
+        jsonpCallback: function(data) {
+
+            var self    = this,
+                res;
+
+            try {
+                res = self.processResponseData(data);
+            }
+            catch (thrownError) {
+                if (self.$$promise) {
+                    self.$$promise.reject(thrownError);
+                }
+                else {
+                    error(thrownError);
+                }
+            }
+
+            if (self.$$promise) {
+                self.$$promise.resolve(res);
+            }
+        },
+
+        processResponseData: function(data, contentType) {
+
+            var self    = this,
+                opt     = self._opt;
+
+            data    = processData(data, opt, contentType);
+
+            if (globalEvents.hasListener("process-response")) {
+                data    = globalEvents.trigger("process-response", data, self.$$promise);
+            }
+
+            if (opt.processResponse) {
+                data    = opt.processResponse.call(opt.context, data, self.$$promise);
+            }
+
+            return data;
+        },
+
+        processResponse: function(data, contentType) {
+
+            var self        = this,
+                deferred    = self.$$promise,
+                result;
+
+            if (!self._opt.jsonp) {
+                try {
+                    result = self.processResponseData(data, contentType)
+                }
+                catch (thrownError) {
+                    deferred.reject(thrownError);
+                }
+
+                deferred.resolve(result);
+            }
+            else {
+                if (!data) {
+                    deferred.reject("jsonp script is empty");
+                    return;
+                }
+
+                try {
+                    globalEval(data);
+                }
+                catch (thrownError) {
+                    deferred.reject(thrownError);
+                }
+
+                if (deferred.isPending()) {
+                    deferred.reject("jsonp script didn't invoke callback");
+                }
             }
         },
 
         destroy: function() {
+
             var self    = this;
 
-            if (self._el.parentNode) {
-                self._el.parentNode.removeChild(self._el);
+            if (self._timeout) {
+                clearTimeout(self._timeout);
             }
 
-            self._el = null;
-            self._opt = null;
-            self._ajax = null;
-            self._deferred = null;
+            if (self._form && self._form.parentNode && self._removeForm) {
+                self._form.parentNode.removeChild(self._form);
+            }
 
+            self._transport.$destroy();
+
+            if (self._jsonpName) {
+                if (typeof window != strUndef) {
+                    delete window[self._jsonpName];
+                }
+                if (typeof global != strUndef) {
+                    delete global[self._jsonpName];
+                }
+            }
         }
 
-    }, true, false);
+    }, {
+
+
+        global: globalEvents
+    });
+
+
+}());
+
+
+
+
+
+
+
+/*
+* Contents of this file are partially taken from jQuery
+*/
+
+var ajax = function(){
+
+    
+
+    var defaults    = {
+            url:            null,
+            data:           null,
+            method:         "GET",
+            headers:        null,
+            username:       null,
+            password:       null,
+            cache:          null,
+            dataType:       null,
+            timeout:        0,
+            contentType:    "application/x-www-form-urlencoded",
+            xhrFields:      null,
+            jsonp:          false,
+            jsonpParam:     null,
+            jsonpCallback:  null,
+            transport:      null,
+            replace:        false,
+            selector:       null,
+            form:           null,
+            beforeSend:     null,
+            progress:       null,
+            uploadProgress: null,
+            processResponse:null,
+            context:        null
+        },
+
+        defaultSetup    = {};
+
+
+    var ajax    = function(url, opt) {
+
+        opt = opt || {};
+
+        if (url && !isString(url)) {
+            opt = url;
+        }
+        else {
+            opt.url = url;
+        }
+
+        if (!opt.url) {
+            if (opt.form) {
+                opt.url = getAttr(opt.form, "action");
+            }
+            if (!opt.url) {
+                throw "Must provide url";
+            }
+        }
+
+        extend(opt, defaultSetup, false, true);
+        extend(opt, defaults, false, true);
+
+        if (!opt.method) {
+            if (opt.form) {
+                opt.method = getAttr(opt.form, "method").toUpperCase() || "GET";
+            }
+            else {
+                opt.method = "GET";
+            }
+        }
+        else {
+            opt.method = opt.method.toUpperCase();
+        }
+
+        return new MetaphorJs.Ajax(opt);
+    };
+
+    ajax.setup  = function(opt) {
+        extend(defaultSetup, opt, true, true);
+    };
+
+    ajax.on     = function() {
+        MetaphorJs.Ajax.global.on.apply(globalEvents, arguments);
+    };
+
+    ajax.un     = function() {
+        MetaphorJs.Ajax.global.un.apply(globalEvents, arguments);
+    };
+
+    ajax.get    = function(url, opt) {
+        opt = opt || {};
+        opt.method = "GET";
+        return ajax(url, opt);
+    };
+
+    ajax.post   = function(url, opt) {
+        opt = opt || {};
+        opt.method = "POST";
+        return ajax(url, opt);
+    };
+
+    ajax.load   = function(el, url, opt) {
+
+        opt = opt || {};
+
+        if (!isString(url)) {
+            opt = url;
+        }
+
+        opt.dataType = "fragment";
+
+        return ajax(url, opt).done(function(fragment){
+            if (opt.replace) {
+                while (el.firstChild) {
+                    el.removeChild(el.firstChild);
+                }
+            }
+            el.appendChild(fragment);
+        });
+    };
+
+    ajax.loadScript = function(url) {
+        return ajax(url, {transport: "script"});
+    };
+
+    ajax.submit = function(form, opt) {
+
+        opt = opt || {};
+        opt.form = form;
+
+        return ajax(null, opt);
+    };
+
 
     return ajax;
 }();
@@ -5476,6 +5696,13 @@ ns.register("mixin.Observable", {
 
         self.$$observable = new Observable;
 
+        self.$initObservable(cfg);
+    },
+
+    $initObservable: function(cfg) {
+
+        var self = this;
+
         if (cfg && cfg.callback) {
             var ls = cfg.callback,
                 context = ls.context || ls.scope,
@@ -5972,10 +6199,10 @@ var filterArray = function(){
                 return ""+value === ""+to;
             }
             else if (opt === true || opt === null || opt === undf) {
-                return ""+value.indexOf(to) != -1;
+                return (""+value).toLowerCase().indexOf((""+to).toLowerCase()) != -1;
             }
             else if (opt === false) {
-                return ""+value.indexOf(to) == -1;
+                return (""+value).toLowerCase().indexOf((""+to).toLowerCase()) == -1;
             }
             return false;
         },
@@ -6081,74 +6308,78 @@ function sortArray(arr, by, dir) {
 
 };
 
-var aIndexOf    = Array.prototype.indexOf;
 
-if (!aIndexOf) {
-    aIndexOf = Array.prototype.indexOf = function (searchElement, fromIndex) {
+var aIndexOf = (function(){
 
-        var k;
+    var aIndexOf    = Array.prototype.indexOf;
 
-        // 1. Let O be the result of calling ToObject passing
-        //    the this value as the argument.
-        if (this == null) {
-            throw new TypeError('"this" is null or not defined');
-        }
+    if (!aIndexOf) {
+        aIndexOf = Array.prototype.indexOf = function (searchElement, fromIndex) {
 
-        var O = Object(this);
+            var k;
 
-        // 2. Let lenValue be the result of calling the Get
-        //    internal method of O with the argument "length".
-        // 3. Let len be ToUint32(lenValue).
-        var len = O.length >>> 0;
-
-        // 4. If len is 0, return -1.
-        if (len === 0) {
-            return -1;
-        }
-
-        // 5. If argument fromIndex was passed let n be
-        //    ToInteger(fromIndex); else let n be 0.
-        var n = +fromIndex || 0;
-
-        if (Math.abs(n) === Infinity) {
-            n = 0;
-        }
-
-        // 6. If n >= len, return -1.
-        if (n >= len) {
-            return -1;
-        }
-
-        // 7. If n >= 0, then Let k be n.
-        // 8. Else, n<0, Let k be len - abs(n).
-        //    If k is less than 0, then let k be 0.
-        k = Math.max(n >= 0 ? n : len - Math.abs(n), 0);
-
-        // 9. Repeat, while k < len
-        while (k < len) {
-            var kValue;
-            // a. Let Pk be ToString(k).
-            //   This is implicit for LHS operands of the in operator
-            // b. Let kPresent be the result of calling the
-            //    HasProperty internal method of O with argument Pk.
-            //   This step can be combined with c
-            // c. If kPresent is true, then
-            //    i.  Let elementK be the result of calling the Get
-            //        internal method of O with the argument ToString(k).
-            //   ii.  Let same be the result of applying the
-            //        Strict Equality Comparison Algorithm to
-            //        searchElement and elementK.
-            //  iii.  If same is true, return k.
-            if (k in O && O[k] === searchElement) {
-                return k;
+            // 1. Let O be the result of calling ToObject passing
+            //    the this value as the argument.
+            if (this == null) {
+                throw new TypeError('"this" is null or not defined');
             }
-            k++;
-        }
-        return -1;
-    };
-}
 
+            var O = Object(this);
 
+            // 2. Let lenValue be the result of calling the Get
+            //    internal method of O with the argument "length".
+            // 3. Let len be ToUint32(lenValue).
+            var len = O.length >>> 0;
+
+            // 4. If len is 0, return -1.
+            if (len === 0) {
+                return -1;
+            }
+
+            // 5. If argument fromIndex was passed let n be
+            //    ToInteger(fromIndex); else let n be 0.
+            var n = +fromIndex || 0;
+
+            if (Math.abs(n) === Infinity) {
+                n = 0;
+            }
+
+            // 6. If n >= len, return -1.
+            if (n >= len) {
+                return -1;
+            }
+
+            // 7. If n >= 0, then Let k be n.
+            // 8. Else, n<0, Let k be len - abs(n).
+            //    If k is less than 0, then let k be 0.
+            k = Math.max(n >= 0 ? n : len - Math.abs(n), 0);
+
+            // 9. Repeat, while k < len
+            while (k < len) {
+                var kValue;
+                // a. Let Pk be ToString(k).
+                //   This is implicit for LHS operands of the in operator
+                // b. Let kPresent be the result of calling the
+                //    HasProperty internal method of O with argument Pk.
+                //   This step can be combined with c
+                // c. If kPresent is true, then
+                //    i.  Let elementK be the result of calling the Get
+                //        internal method of O with the argument ToString(k).
+                //   ii.  Let same be the result of applying the
+                //        Strict Equality Comparison Algorithm to
+                //        searchElement and elementK.
+                //  iii.  If same is true, return k.
+                if (k in O && O[k] === searchElement) {
+                    return k;
+                }
+                k++;
+            }
+            return -1;
+        };
+    }
+
+    return aIndexOf;
+}());
 
 
 
