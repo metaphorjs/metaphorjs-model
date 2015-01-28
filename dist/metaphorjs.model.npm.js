@@ -460,6 +460,13 @@ var Model = function(){
             return ajax(cfg);
         },
 
+        extendPlainRecord: function(rec) {
+            var self    = this,
+                ext     = self.getRecordProp(null, "extend");
+
+            return ext ? extend(rec, ext, false, false) : rec;
+        },
+
         _processRecordResponse: function(type, response, df) {
             var self        = this,
                 idProp      = self.getRecordProp(type, "id"),
@@ -472,7 +479,7 @@ var Model = function(){
             }
             else {
                 //df.resolve(id, data);
-                df.resolve({id: id, data: data});
+                df.resolve({id: id, data: self.extendPlainRecord(data)});
             }
         },
 
@@ -2458,7 +2465,7 @@ var Store = function(){
                 }
 
                 if (self.model.isPlain()) {
-                    return item;
+                    return self.model.extendPlainRecord(item);
                 }
                 else {
 

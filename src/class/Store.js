@@ -923,7 +923,7 @@ module.exports = function(){
                 }
 
                 if (self.model.isPlain()) {
-                    return item;
+                    return self.model.extendPlainRecord(item);
                 }
                 else {
 
