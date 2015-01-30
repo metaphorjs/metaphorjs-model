@@ -6316,7 +6316,7 @@ function sortArray(arr, by, dir) {
 };
 
 
-var aIndexOf = (function(){
+(function(){
 
     var aIndexOf    = Array.prototype.indexOf;
 
@@ -6720,6 +6720,13 @@ var Store = function(){
              */
             getTotalLength: function() {
                 return this.totalLength || this.currentLength;
+            },
+
+            /**
+             * @returns {boolean}
+             */
+            isEmpty: function() {
+                return this.length == 0;
             },
 
             /**

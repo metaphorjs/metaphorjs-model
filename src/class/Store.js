@@ -346,6 +346,13 @@ module.exports = function(){
             },
 
             /**
+             * @returns {boolean}
+             */
+            isEmpty: function() {
+                return this.length == 0;
+            },
+
+            /**
              * @returns number
              */
             getPagesCount: function() {
