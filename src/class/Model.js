@@ -252,7 +252,8 @@ module.exports = function(){
             }
 
             if (isJson && cfg.data && cfg.method != 'GET') { // && cfg.type != 'GET') {
-                cfg.data    = JSON.stringify(cfg.data);
+                cfg.contentType = "text/plain";
+                cfg.data        = JSON.stringify(cfg.data);
             }
 
             cfg.callbackScope = self;
@@ -269,6 +270,7 @@ module.exports = function(){
                     self._processStoreResponse(type, response, deferred);
                 };
             }
+
 
             return ajax(cfg);
         },

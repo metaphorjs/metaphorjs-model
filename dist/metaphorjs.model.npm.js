@@ -439,7 +439,8 @@ var Model = function(){
             }
 
             if (isJson && cfg.data && cfg.method != 'GET') { // && cfg.type != 'GET') {
-                cfg.data    = JSON.stringify(cfg.data);
+                cfg.contentType = "text/plain";
+                cfg.data        = JSON.stringify(cfg.data);
             }
 
             cfg.callbackScope = self;
@@ -456,6 +457,7 @@ var Model = function(){
                     self._processStoreResponse(type, response, deferred);
                 };
             }
+
 
             return ajax(cfg);
         },
@@ -925,6 +927,12 @@ var Record = defineClass({
      * @var bool
      * @access protected
      */
+    loading:        false,
+
+    /**
+     * @var bool
+     * @access protected
+     */
     dirty:          false,
 
     /**
@@ -944,6 +952,18 @@ var Record = defineClass({
      * @access protected
      */
     stores:         null,
+
+    /**
+     * @var bool
+     * @access protected
+     */
+    importUponSave: false,
+
+    /**
+     * @var bool
+     * @access protected
+     */
+    importUponCreate: false,
 
     /**
      * @constructor
@@ -1012,6 +1032,13 @@ var Record = defineClass({
      */
     isLoaded: function() {
         return this.loaded;
+    },
+
+    /**
+     * @returns bool
+     */
+    isLoading: function() {
+        return this.loading;
     },
 
     /**
@@ -1215,8 +1242,12 @@ var Record = defineClass({
      */
     load: function() {
         var self    = this;
+        self.loading = true;
         self.trigger("before-load", self);
         return self.model.loadRecord(self.id)
+            .always(function(){
+                self.loading = false;
+            })
             .done(function(response) {
                 self.setId(response.id);
                 self.importData(response.data);
@@ -1236,10 +1267,18 @@ var Record = defineClass({
     save: function(keys, extra) {
         var self    = this;
         self.trigger("before-save", self);
+
+        var create  = !self.getId(),
+            imprt   = create ? self.importUponCreate : self.importUponSave;
+
         return self.model.saveRecord(self, keys, extra)
             .done(function(response) {
-                self.setId(response.id);
-                self.importData(response.data);
+                if (response.id) {
+                    self.setId(response.id);
+                }
+                if (imprt) {
+                    self.importData(response.data);
+                }
                 self.trigger("save", self);
             })
             .fail(function(response) {
@@ -1481,7 +1520,7 @@ function sortArray(arr, by, dir) {
 };
 
 
-(function(){
+var aIndexOf = (function(){
 
     var aIndexOf    = Array.prototype.indexOf;
 
