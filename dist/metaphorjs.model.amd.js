@@ -338,6 +338,29 @@ var Model = function(){
             return this[prop] = value;
         },
 
+        _prepareRequestUrl: function(url, data) {
+
+            url = url.replace(/:([a-z0-9_\-]+)/gi, function(match, name){
+
+                var value = data[name];
+
+                if (value != undefined) {
+                    delete data[name];
+                    return value;
+                }
+                else {
+                    return match;
+                }
+
+            });
+
+            if (/:([a-z0-9_\-]+)/.test(url)) {
+                return null;
+            }
+
+            return url;
+        },
+
         _makeRequest: function(what, type, id, data, extra) {
 
             var self        = this,
@@ -348,7 +371,7 @@ var Model = function(){
                                         profile[type]
                                     ),
                 idProp      = self.getProp(what, type, "id"),
-                dataProp    = self.getProp(what, type, "data"),
+                dataProp    = self.getProp(what, type, "root"),
                 url         = self.getProp(what, type, "url"),
                 isJson      = self.getProp(what, type, "json");
 
@@ -396,6 +419,12 @@ var Model = function(){
                 });
 
                 return promise;
+            }
+
+            cfg.url = self._prepareRequestUrl(cfg.url, cfg.data);
+
+            if (!cfg.url) {
+                return Promise.reject();
             }
 
             if (!cfg.method) {
@@ -448,7 +477,7 @@ var Model = function(){
         _processRecordResponse: function(type, response, df) {
             var self        = this,
                 idProp      = self.getRecordProp(type, "id"),
-                dataProp    = self.getRecordProp(type, "data"),
+                dataProp    = self.getRecordProp(type, "root"),
                 data        = dataProp ? response[dataProp] : response,
                 id          = (data && data[idProp]) || response[idProp];
 
@@ -463,7 +492,7 @@ var Model = function(){
 
         _processStoreResponse: function(type, response, df) {
             var self        = this,
-                dataProp    = self.getStoreProp(type, "data"),
+                dataProp    = self.getStoreProp(type, "root"),
                 totalProp   = self.getStoreProp(type, "total"),
                 data        = dataProp ? response[dataProp] : response,
                 total       = totalProp ? response[totalProp] : null;
@@ -2016,7 +2045,12 @@ var Store = function(){
             },
 
 
-
+            /**
+             * @returns []
+             */
+            toArray: function() {
+                return this.current;
+            },
 
 
 
@@ -2119,7 +2153,7 @@ var Store = function(){
                     lp      = ms.limit,
                     ps      = self.pageSize;
 
-                if (self.loadingPromise) {
+                if (self.loadingPromise && self.loadingPromise.abort) {
                     self.loadingPromise.abort();
                 }
 

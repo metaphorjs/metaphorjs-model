@@ -448,7 +448,12 @@ module.exports = function(){
             },
 
 
-
+            /**
+             * @returns []
+             */
+            toArray: function() {
+                return this.current;
+            },
 
 
 
@@ -551,7 +556,7 @@ module.exports = function(){
                     lp      = ms.limit,
                     ps      = self.pageSize;
 
-                if (self.loadingPromise) {
+                if (self.loadingPromise && self.loadingPromise.abort) {
                     self.loadingPromise.abort();
                 }
 
