@@ -6436,7 +6436,7 @@ function sortArray(arr, by, dir) {
 };
 
 
-(function(){
+var aIndexOf = (function(){
 
     var aIndexOf    = Array.prototype.indexOf;
 
@@ -7656,9 +7656,9 @@ var Store = function(){
                 id      = self.getRecordId(rec);
 
                 if(self.map[id]){
-                    self.suspendAllEvents();
+                    self.$$observable.suspendAllEvents();
                     self.removeId(id);
-                    self.resumeAllEvents();
+                    self.$$observable.resumeAllEvents();
                 }
 
                 if(index >= self.length){

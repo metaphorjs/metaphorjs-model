@@ -1159,9 +1159,9 @@ module.exports = function(){
                 id      = self.getRecordId(rec);
 
                 if(self.map[id]){
-                    self.suspendAllEvents();
+                    self.$$observable.suspendAllEvents();
                     self.removeId(id);
-                    self.resumeAllEvents();
+                    self.$$observable.resumeAllEvents();
                 }
 
                 if(index >= self.length){
