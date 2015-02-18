@@ -5546,6 +5546,15 @@ var Model = function(){
         },
 
         /**
+         * @param {object} rec
+         * @returns {*|null}
+         */
+        getRecordId: function(rec) {
+            var idProp = this.getRecordProp("load", "id");
+            return rec[idProp] || null;
+        },
+
+        /**
          * Convert field's value from database state to app state
          * @param {MetaphorJs.Record} rec
          * @param {string} name
@@ -6427,7 +6436,7 @@ function sortArray(arr, by, dir) {
 };
 
 
-var aIndexOf = (function(){
+(function(){
 
     var aIndexOf    = Array.prototype.indexOf;
 
@@ -6749,6 +6758,11 @@ var Store = function(){
                 if (self.local) {
                     self.loaded     = true;
                 }
+            },
+
+            setModel: function(model) {
+                this.model = model;
+                this.initModel({});
             },
 
             initModel: function(options) {
@@ -7399,6 +7413,9 @@ var Store = function(){
             getRecordId: function(rec) {
                 if (rec instanceof Record) {
                     return rec.getId();
+                }
+                else if (this.model) {
+                    return this.model.getRecordId(rec) || rec[this.idProp] || null;
                 }
                 else {
                     return rec[this.idProp] || null;

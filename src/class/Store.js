@@ -263,6 +263,11 @@ module.exports = function(){
                 }
             },
 
+            setModel: function(model) {
+                this.model = model;
+                this.initModel({});
+            },
+
             initModel: function(options) {
 
                 var self = this;
@@ -911,6 +916,9 @@ module.exports = function(){
             getRecordId: function(rec) {
                 if (rec instanceof Record) {
                     return rec.getId();
+                }
+                else if (this.model) {
+                    return this.model.getRecordId(rec) || rec[this.idProp] || null;
                 }
                 else {
                     return rec[this.idProp] || null;

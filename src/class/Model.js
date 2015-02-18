@@ -429,6 +429,15 @@ module.exports = function(){
         },
 
         /**
+         * @param {object} rec
+         * @returns {*|null}
+         */
+        getRecordId: function(rec) {
+            var idProp = this.getRecordProp("load", "id");
+            return rec[idProp] || null;
+        },
+
+        /**
          * Convert field's value from database state to app state
          * @param {MetaphorJs.Record} rec
          * @param {string} name
