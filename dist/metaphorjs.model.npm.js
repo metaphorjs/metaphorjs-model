@@ -195,6 +195,31 @@ function isFunction(value) {
 
 
 
+/**
+ * Returns 'then' function or false
+ * @param {*} any
+ * @returns {Function|boolean}
+ */
+function isThenable(any) {
+
+    // any.then must only be accessed once
+    // this is a promise/a+ requirement
+
+    if (!any) { //  || !any.then
+        return false;
+    }
+    var then, t;
+
+    //if (!any || (!isObject(any) && !isFunction(any))) {
+    if (((t = typeof any) != "object" && t != "function")) {
+        return false;
+    }
+    return isFunction((then = any.then)) ?
+           then : false;
+};
+
+
+
 
 var Model = function(){
 
@@ -385,19 +410,20 @@ var Model = function(){
             return url;
         },
 
-        _makeRequest: function(what, type, id, data, extra) {
+        _makeRequest: function(what, type, id, data) {
 
             var self        = this,
                 profile     = self[what],
                 cfg         = extend({},
                                     isString(profile[type]) || isFunction(profile[type]) ?
                                         {url: profile[type]} :
-                                        profile[type]
+                                        (profile[type].ajax || profile[type])
                                     ),
                 idProp      = self.getProp(what, type, "id"),
                 dataProp    = self.getProp(what, type, "root"),
                 url         = self.getProp(what, type, "url"),
-                isJson      = self.getProp(what, type, "json");
+                isJson      = self.getProp(what, type, "json"),
+                res;
 
             if (!cfg) {
                 if (url) {
@@ -418,13 +444,30 @@ var Model = function(){
                 cfg.url     = url;
             }
 
+            if (profile.validate) {
+                res = profile.validate.call(self, id, data);
+                if (res !== true) {
+                    return Promise.reject(res);
+                }
+            }
+
+            if (profile.resolve) {
+                res = profile.resolve.call(self, id, data);
+                if (res && isThenable(res)){
+                    return res;
+                }
+                else if (res) {
+                    return Promise.resolve(res);
+                }
+            }
+
             cfg.data        = extend(
                 {},
                 cfg.data,
                 self.extra,
                 profile.extra,
                 profile[type] ? profile[type].extra : {},
-                extra,
+                data,
                 true,
                 true
             );
@@ -445,6 +488,14 @@ var Model = function(){
                 return promise;
             }
 
+            if (id && idProp) {
+                cfg.data[idProp] = id;
+            }
+
+            if (data && dataProp) {
+                cfg.data[dataProp] = data;
+            }
+
             cfg.url = self._prepareRequestUrl(cfg.url, cfg.data);
 
             if (!cfg.url) {
@@ -452,18 +503,11 @@ var Model = function(){
             }
 
             if (!cfg.method) {
-                cfg.method = type == "load" ? "GET" : "POST";
-            }
-
-            if (id) {
-                cfg.data[idProp] = id;
-            }
-            if (data) {
-                if (dataProp) {
-                    cfg.data[dataProp] = data;
+                if (what != "controller") {
+                    cfg.method = type == "load" ? "GET" : "POST";
                 }
                 else {
-                    cfg.data = data;
+                    cfg.method = "GET";
                 }
             }
 
@@ -478,24 +522,27 @@ var Model = function(){
                 cfg.processResponse = function(response, deferred) {
                     self.lastAjaxResponse = response;
                     self._processRecordResponse(type, response, deferred);
-                }
+                };
+                return self._processRecordRequest(ajax(cfg), type, id, data);
             }
             else if (what == "store") {
                 cfg.processResponse = function(response, deferred) {
                     self.lastAjaxResponse = response;
                     self._processStoreResponse(type, response, deferred);
                 };
+                return self._processStoreRequest(ajax(cfg), type, id, data);
             }
-
-
-            return ajax(cfg);
+            else if (what == "controller") {
+                cfg.processResponse = function(response, deferred) {
+                    self.lastAjaxResponse = response;
+                    self._processControllerResponse(type, response, deferred);
+                };
+                return self._processControllerRequest(ajax(cfg), type, id, data);
+            }
         },
 
-        extendPlainRecord: function(rec) {
-            var self    = this,
-                ext     = self.getRecordProp(null, "extend");
-
-            return ext ? extend(rec, ext, false, false) : rec;
+        _processRecordRequest: function(promise, type, id, data) {
+            return promise;
         },
 
         _processRecordResponse: function(type, response, df) {
@@ -514,6 +561,10 @@ var Model = function(){
             }
         },
 
+        _processStoreRequest: function(promise, type, id, data) {
+            return promise;
+        },
+
         _processStoreResponse: function(type, response, df) {
             var self        = this,
                 dataProp    = self.getStoreProp(type, "root"),
@@ -530,9 +581,29 @@ var Model = function(){
             }
         },
 
+        _processControllerRequest: function(promise, type, id, data) {
+            return promise;
+        },
+
+        _processControllerResponse: function(type, response, df) {
+
+            var self    = this;
+
+            if (!self._getSuccess("controller", type, response)) {
+                df.reject(response);
+            }
+            else {
+                df.resolve(response);
+            }
+        },
+
         _getSuccess: function(what, type, response) {
             var self    = this,
                 sucProp = self.getProp(what, type, "success");
+
+            if (typeof sucProp == "function") {
+                return sucProp(response);
+            }
 
             if (sucProp && response[sucProp] != undf) {
                 return response[sucProp];
@@ -540,6 +611,10 @@ var Model = function(){
             else {
                 return true;
             }
+        },
+
+        runController: function(name, id, data) {
+            return this._makeRequest("controller", name, id, data);
         },
 
 
@@ -584,7 +659,7 @@ var Model = function(){
          * @returns MetaphorJs.lib.Promise
          */
         loadStore: function(store, params) {
-            return this._makeRequest("store", "load", null, null, params);
+            return this._makeRequest("store", "load", null, params);
         },
 
         /**
@@ -607,6 +682,17 @@ var Model = function(){
             return this._makeRequest("store", "delete", ids);
         },
 
+
+
+        /**
+         * @returns object
+         */
+        extendPlainRecord: function(rec) {
+            var self    = this,
+                ext     = self.getRecordProp(null, "extend");
+
+            return ext ? extend(rec, ext, false, false) : rec;
+        },
 
         /**
          * @returns object
@@ -1558,7 +1644,7 @@ function sortArray(arr, by, dir) {
 };
 
 
-var aIndexOf = (function(){
+(function(){
 
     var aIndexOf    = Array.prototype.indexOf;
 
