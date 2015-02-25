@@ -281,7 +281,7 @@ module.exports = function(){
                 cfg.data[idProp] = id;
             }
 
-            if (data && dataProp) {
+            if (data && dataProp && type != "load") {
                 cfg.data[dataProp] = data;
             }
 

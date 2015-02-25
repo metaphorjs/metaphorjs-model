@@ -468,7 +468,7 @@ var Model = function(){
                 cfg.data[idProp] = id;
             }
 
-            if (data && dataProp) {
+            if (data && dataProp && type != "load") {
                 cfg.data[dataProp] = data;
             }
 
@@ -1631,7 +1631,7 @@ function sortArray(arr, by, dir) {
 };
 
 
-(function(){
+var aIndexOf = (function(){
 
     var aIndexOf    = Array.prototype.indexOf;
 
@@ -3227,7 +3227,7 @@ var Store = function(){
                     rt      = !self.model.isPlain(),
                     v;
 
-                return self.findIndexBy(function(rec) {
+                var inx = self.findIndexBy(function(rec) {
 
                     v = rt ? rec.get(property) : rec[property];
 
@@ -3239,6 +3239,8 @@ var Store = function(){
                     }
 
                 }, self, 0, unfiltered);
+
+                return inx != -1 ? self.getAt(inx, unfiltered) : null;
             },
 
             /**

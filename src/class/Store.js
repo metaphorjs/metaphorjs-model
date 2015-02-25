@@ -1535,7 +1535,7 @@ module.exports = function(){
                     rt      = !self.model.isPlain(),
                     v;
 
-                return self.findIndexBy(function(rec) {
+                var inx = self.findIndexBy(function(rec) {
 
                     v = rt ? rec.get(property) : rec[property];
 
@@ -1547,6 +1547,8 @@ module.exports = function(){
                     }
 
                 }, self, 0, unfiltered);
+
+                return inx != -1 ? self.getAt(inx, unfiltered) : null;
             },
 
             /**
