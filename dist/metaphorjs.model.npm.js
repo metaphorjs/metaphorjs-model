@@ -1280,8 +1280,12 @@ var Record = defineClass({
      * @returns object
      */
     getData: function(keys) {
+
+        var data = {},
+            i;
+
         if (keys) {
-            var data = {}, i, len,
+            var len,
                 self    = this;
 
             keys = isString(keys) ? [keys] : keys;
@@ -1292,7 +1296,16 @@ var Record = defineClass({
             return data;
         }
         else {
-            return extend({}, this.data);
+            var sdata = this.data;
+
+            for (i in sdata) {
+                if (i.substr(0, 1) == "$") {
+                    continue;
+                }
+                data[i] = sdata[i];
+            }
+
+            return data;
         }
     },
 
@@ -1648,7 +1661,7 @@ function sortArray(arr, by, dir) {
 };
 
 
-var aIndexOf = (function(){
+(function(){
 
     var aIndexOf    = Array.prototype.indexOf;
 
