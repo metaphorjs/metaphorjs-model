@@ -261,6 +261,10 @@ module.exports = function(){
                 if (self.local) {
                     self.loaded     = true;
                 }
+
+                if (self.sourceStore) {
+                    self.initSourceStore(self.sourceStore, "on");
+                }
             },
 
             setModel: function(model) {
@@ -284,6 +288,26 @@ module.exports = function(){
                 }
 
                 self.idProp = self.model.getStoreProp("load", "id");
+            },
+
+
+            initSourceStore: function(sourceStore, mode) {
+
+                var self = this;
+                sourceStore[mode]("update", self.onSourceStoreUpdate, self);
+
+            },
+
+            onSourceStoreUpdate: function() {
+
+                var self    = this;
+                self.$$observable.suspendAllEvents();
+
+                self.clear();
+                self.addMany(self.sourceStore.toArray());
+
+                self.$$observable.resumeAllEvents();
+                self.trigger("update", self);
             },
 
             /**
@@ -1602,7 +1626,8 @@ module.exports = function(){
 
                 var self        = this,
                     filtered    = self.filtered,
-                    sorted      = self.sorted;
+                    sorted      = self.sorted,
+                    isPlain     = self.model.isPlain();
 
                 self.currentLength  = self.length;
                 self.currentMap     = self.map;
@@ -1619,7 +1644,7 @@ module.exports = function(){
                     self.currentMap     = map = {};
 
                     self.each(function(rec){
-                        if (filterArray.compare(rec.data, by, opt)) {
+                        if (filterArray.compare(isPlain ? rec : rec.data, by, opt)) {
                             current.push(rec);
                             map[self.getRecordId(rec)] = rec;
                         }
@@ -1696,6 +1721,10 @@ module.exports = function(){
                 var self    = this;
 
                 delete allStores[self.id];
+
+                if (self.sourceStore) {
+                    self.initSourceStore(self.sourceStore, "un");
+                }
 
                 self.clear();
                 self.$super();

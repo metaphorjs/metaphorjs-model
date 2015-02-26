@@ -6401,6 +6401,10 @@ var filterArray = function(){
 
         compare = function(value, by, opt) {
 
+            if (isFunction(by)) {
+                return by(value, opt);
+            }
+
             if (isPrimitive(value)) {
                 if (by.$ === undf) {
                     return true;
@@ -6431,7 +6435,7 @@ var filterArray = function(){
 
     var filterArray = function filterArray(a, by, opt) {
 
-        if (!isPlainObject(by)) {
+        if (!isPlainObject(by) && !isFunction(by)) {
             by = {$: by};
         }
 
@@ -6823,6 +6827,10 @@ var Store = function(){
                 if (self.local) {
                     self.loaded     = true;
                 }
+
+                if (self.sourceStore) {
+                    self.initSourceStore(self.sourceStore, "on");
+                }
             },
 
             setModel: function(model) {
@@ -6846,6 +6854,26 @@ var Store = function(){
                 }
 
                 self.idProp = self.model.getStoreProp("load", "id");
+            },
+
+
+            initSourceStore: function(sourceStore, mode) {
+
+                var self = this;
+                sourceStore[mode]("update", self.onSourceStoreUpdate, self);
+
+            },
+
+            onSourceStoreUpdate: function() {
+
+                var self    = this;
+                self.$$observable.suspendAllEvents();
+
+                self.clear();
+                self.addMany(self.sourceStore.toArray());
+
+                self.$$observable.resumeAllEvents();
+                self.trigger("update", self);
             },
 
             /**
@@ -8164,7 +8192,8 @@ var Store = function(){
 
                 var self        = this,
                     filtered    = self.filtered,
-                    sorted      = self.sorted;
+                    sorted      = self.sorted,
+                    isPlain     = self.model.isPlain();
 
                 self.currentLength  = self.length;
                 self.currentMap     = self.map;
@@ -8181,7 +8210,7 @@ var Store = function(){
                     self.currentMap     = map = {};
 
                     self.each(function(rec){
-                        if (filterArray.compare(rec.data, by, opt)) {
+                        if (filterArray.compare(isPlain ? rec : rec.data, by, opt)) {
                             current.push(rec);
                             map[self.getRecordId(rec)] = rec;
                         }
@@ -8258,6 +8287,10 @@ var Store = function(){
                 var self    = this;
 
                 delete allStores[self.id];
+
+                if (self.sourceStore) {
+                    self.initSourceStore(self.sourceStore, "un");
+                }
 
                 self.clear();
                 self.$super();
