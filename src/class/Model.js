@@ -9,6 +9,7 @@ var extend  = require("metaphorjs/src/func/extend.js"),
     isThenable = require("metaphorjs/src/func/isThenable.js"),
     undf = require("metaphorjs/src/var/undf.js");
 
+require("metaphorjs-observable/src/mixin/Observable.js");
 
 module.exports = function(){
 
@@ -23,6 +24,7 @@ module.exports = function(){
     return defineClass({
 
         $class:         "Model",
+        $mixins:        ["mixin.Observable"],
 
         type:           null,
         fields:         null,
