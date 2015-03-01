@@ -3684,13 +3684,6 @@ var Promise = function(){
 
 
 
-
-
-function isPrimitive(value) {
-    var vt = varType(value);
-    return vt < 3 && vt > -1;
-};
-
 function setAttr(el, name, value) {
     return el.setAttribute(name, value);
 };
@@ -6395,6 +6388,13 @@ var Record = defineClass({
 
 
 
+function isPrimitive(value) {
+    var vt = varType(value);
+    return vt < 3 && vt > -1;
+};
+
+
+
 
 var filterArray = function(){
 
@@ -6534,7 +6534,7 @@ function sortArray(arr, by, dir) {
 };
 
 
-(function(){
+var aIndexOf = (function(){
 
     var aIndexOf    = Array.prototype.indexOf;
 

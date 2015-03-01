@@ -66,7 +66,9 @@ module.exports = ListRenderer.$extend({
 
         destroy: function() {
             var self = this;
-            self.bindStore(self.store, "un");
+            if (!self.store.$destroyed) {
+                self.bindStore(self.store, "un");
+            }
             self.$super();
         }
 
