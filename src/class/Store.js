@@ -1256,6 +1256,16 @@ module.exports = function(){
                 return rec;
             },
 
+
+            replaceId: function(id, rec, silent, skipUpdate) {
+                var self    = this,
+                    index;
+
+                index = self.indexOfId(id);
+
+                return self.replace(self.getAt(index), rec);
+            },
+
             onReplace: emptyFn,
 
             /**
