@@ -616,11 +616,17 @@ module.exports = function(){
 
                 return self.loadingPromise = self.model.loadStore(self, params)
                     .done(function(response) {
+                        if (self.$destroyed) {
+                            return;
+                        }
                         self.loadingPromise = null;
                         self.ajaxData = self.model.lastAjaxResponse;
                         self._onModelLoadSuccess(response, options);
                     })
                     .fail(function(reason){
+                        if (self.$destroyed) {
+                            return;
+                        }
                         self.loadingPromise = null;
                         self.ajaxData = self.model.lastAjaxResponse;
                         self._onModelLoadFail(reason, options);

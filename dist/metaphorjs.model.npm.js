@@ -242,19 +242,25 @@ ns.register("mixin.Observable", {
 
     $initObservable: function(cfg) {
 
-        var self = this;
+        var self    = this,
+            obs     = self.$$observable;
 
         if (cfg && cfg.callback) {
             var ls = cfg.callback,
-                context = ls.context || ls.scope,
+                context = ls.context || ls.scope || ls.$context,
+                events = extend({}, self.$$events, ls.$events, true, false),
                 i;
+
+            for (i in events) {
+                obs.createEvent(i, events[i]);
+            }
 
             ls.context = null;
             ls.scope = null;
 
             for (i in ls) {
                 if (ls[i]) {
-                    self.$$observable.on(i, ls[i], context || self);
+                    obs.on(i, ls[i], context || self);
                 }
             }
 
@@ -1679,7 +1685,7 @@ function sortArray(arr, by, dir) {
 };
 
 
-var aIndexOf = (function(){
+(function(){
 
     var aIndexOf    = Array.prototype.indexOf;
 
@@ -2356,11 +2362,17 @@ var Store = function(){
 
                 return self.loadingPromise = self.model.loadStore(self, params)
                     .done(function(response) {
+                        if (self.$destroyed) {
+                            return;
+                        }
                         self.loadingPromise = null;
                         self.ajaxData = self.model.lastAjaxResponse;
                         self._onModelLoadSuccess(response, options);
                     })
                     .fail(function(reason){
+                        if (self.$destroyed) {
+                            return;
+                        }
                         self.loadingPromise = null;
                         self.ajaxData = self.model.lastAjaxResponse;
                         self._onModelLoadFail(reason, options);
