@@ -1685,7 +1685,7 @@ function sortArray(arr, by, dir) {
 };
 
 
-(function(){
+var aIndexOf = (function(){
 
     var aIndexOf    = Array.prototype.indexOf;
 
@@ -2294,14 +2294,21 @@ var Store = function(){
                 options = options || {};
                 recs = recs || [];
 
-                for (var i = 0; i < recs.length; i++) {
+                if (prepend) {
+                    self.insertMany(0, recs, true, true)
+                }
+                else {
+                    self.addMany(recs, true, true);
+                }
+
+                /*for (var i = 0; i < recs.length; i++) {
                     if (prepend) {
                         self.insert(i, recs[i], true, true);
                     }
                     else {
                         self.add(recs[i], true, true);
                     }
-                }
+                }*/
 
                 self.loaded     = true;
                 self.loading    = false;
