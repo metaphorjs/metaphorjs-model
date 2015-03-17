@@ -4812,7 +4812,7 @@ defineClass({
                 }
                 else {
                     if (window.File && item instanceof File) {
-                        name = "upload" + (l > 1 ? "[]" : "");
+                        name = item.uploadName || ("upload" + (l > 1 ? "[]" : ""));
                     }
                     else {
                         name = item.name || "upload" + (l > 1 ? "[]" : "");
@@ -7004,7 +7004,12 @@ var Store = function(){
              * @param {string|int|null} v
              */
             setParam: function(k, v) {
-                this.extraParams[k] = v;
+                if (v === null) {
+                    delete this.extraParams[k];
+                }
+                else {
+                    this.extraParams[k] = v;
+                }
             },
 
             /**
@@ -8353,6 +8358,9 @@ var Store = function(){
                 }
 
                 self.clear();
+
+                self.trigger("destroy", self);
+
                 self.$super();
             }
 
