@@ -59,7 +59,7 @@ module.exports = ListRenderer.$extend({
 
         onStoreDestroy: function() {
             var self = this;
-            if (!self.$destroyed) {
+            if (self.watcher) {
                 self.onStoreUpdate();
                 self.watcher.unsubscribeAndDestroy(self.onChange, self);
                 self.watcher = null;

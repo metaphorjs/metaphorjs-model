@@ -4525,7 +4525,7 @@ defineClass({
 
             url.replace(rhash, "");
 
-            if (opt.cache === false) {
+            if (!opt.allowCache) {
 
                 var stamp   = (new Date).getTime();
 
@@ -6542,7 +6542,7 @@ function sortArray(arr, by, dir) {
 };
 
 
-(function(){
+var aIndexOf = (function(){
 
     var aIndexOf    = Array.prototype.indexOf;
 
