@@ -59,9 +59,11 @@ module.exports = ListRenderer.$extend({
 
         onStoreDestroy: function() {
             var self = this;
-            self.onStoreUpdate();
-            self.watcher.unsubscribeAndDestroy(self.onChange, self);
-            self.watcher = null;
+            if (!self.$destroyed) {
+                self.onStoreUpdate();
+                self.watcher.unsubscribeAndDestroy(self.onChange, self);
+                self.watcher = null;
+            }
         },
 
         destroy: function() {

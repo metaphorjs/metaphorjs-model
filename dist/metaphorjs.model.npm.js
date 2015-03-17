@@ -1685,7 +1685,7 @@ function sortArray(arr, by, dir) {
 };
 
 
-var aIndexOf = (function(){
+(function(){
 
     var aIndexOf    = Array.prototype.indexOf;
 
