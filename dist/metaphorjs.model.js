@@ -693,13 +693,14 @@ var Class = function(){
                     self    = this,
                     prev    = self.$super;
 
+                if (self.$destroyed) {
+                    self.$super = null;
+                    return null;
+                }
+
                 self.$super     = $super;
                 ret             = fn.apply(self, arguments);
                 self.$super     = prev;
-
-                if (self.$destroyed) {
-                    self.$super = null;
-                }
 
                 return ret;
             };
@@ -910,8 +911,8 @@ var Class = function(){
             $intercept: function(method, fn, newContext, when, replaceValue) {
                 var self = this,
                     orig = self[method];
-                self[method] = intercept(orig, fn, newContext || self, self, when, replaceValue);
-                return orig;
+                self[method] = intercept(orig || emptyFn, fn, newContext || self, self, when, replaceValue);
+                return orig || emptyFn;
             },
 
             /**
@@ -921,7 +922,7 @@ var Class = function(){
             $implement: function(methods) {
                 var $self = this.constructor;
                 if ($self && $self.$parent) {
-                    preparePrototype(this, methods, $self.$parent);
+                    preparePrototype(this, methods, $self.$parent, true);
                 }
             },
 
@@ -940,6 +941,27 @@ var Class = function(){
              */
             $getPlugin: function(cls) {
                 return this.$pluginMap[ns.normalize(cls)] || null;
+            },
+
+            /**
+             * @param {function} fn
+             * @returns {Function}
+             */
+            $bind: function(fn) {
+                var self = this;
+                return function() {
+                    if (self.$isDestroyed()) {
+                        return;
+                    }
+                    return fn.apply(self, arguments);
+                };
+            },
+
+            /**
+             * @return bool
+             */
+            $isDestroyed: function() {
+                return self.$destroying || self.$destroyed;
             },
 
             /**
@@ -5176,22 +5198,22 @@ ns.register("mixin.Observable", {
 
     on: function() {
         var o = this.$$observable;
-        return o.on.apply(o, arguments);
+        return o ? o.on.apply(o, arguments) : null;
     },
 
     un: function() {
         var o = this.$$observable;
-        return o.un.apply(o, arguments);
+        return o ? o.un.apply(o, arguments) : null;
     },
 
     once: function() {
         var o = this.$$observable;
-        return o.once.apply(o, arguments);
+        return o ? o.once.apply(o, arguments) : null;
     },
 
     trigger: function() {
         var o = this.$$observable;
-        return o.trigger.apply(o, arguments);
+        return o ? o.trigger.apply(o, arguments) : null;
     },
 
     $beforeDestroy: function() {
@@ -7657,7 +7679,7 @@ var Store = function(){
              * @returns {MetaphorJs.Record|Object|null}
              */
             shift: function(silent, skipUpdate, unfiltered) {
-                return this.removeAt(0, silent, skipUpdate, unfiltered);
+                return this.removeAt(0, 1, silent, skipUpdate, unfiltered);
             },
 
             /**
@@ -7678,7 +7700,7 @@ var Store = function(){
              * @returns {MetaphorJs.Record|Object|null}
              */
             pop: function(silent, skipUpdate, unfiltered) {
-                return this.removeAt(this.length - 1, silent, skipUpdate, unfiltered);
+                return this.removeAt(this.length - 1, 1, silent, skipUpdate, unfiltered);
             },
 
             /**
@@ -7718,29 +7740,50 @@ var Store = function(){
             /**
              * Works with both filtered and unfiltered
              * @param {number} index
+             * @param {number} length = 1
              * @param {boolean} silent
              * @param {boolean} skipUpdate
              * @param {boolean} unfiltered -- index from unfiltered item list
              * @returns MetaphorJs.Record|Object|null
              */
-            removeAt: function(index, silent, skipUpdate, unfiltered) {
+            removeAt: function(index, length, silent, skipUpdate, unfiltered) {
 
-                var self    = this;
+                var self    = this,
+                    i       = 0,
+                    l       = self.length;
+
+                if (l == 0) {
+                    return;
+                }
+
+                if (index == null) {
+                    index   = 0;
+                }
+                while (index < 0) {
+                    index   = l + index;
+                }
+
+                if (length == null) {
+                    length = 1;
+                }
 
                 if (!unfiltered) {
                     index   = self.items.indexOf(self.current[index]);
                 }
 
-                if(index < self.length && index >= 0) {
+                while (index < self.length && index >= 0 && i < length) {
 
                     self.length--;
-                    var rec = self.items[index];
+                    var rec     = self.items[index];
                     self.items.splice(index, 1);
-                    var id = self.getRecordId(rec);
-                    if(id != undf){
+
+                    var id      = self.getRecordId(rec);
+
+                    if (id != undf){
                         delete self.map[id];
                         delete self.currentMap[id];
                     }
+
                     self.onRemove(rec, id);
 
                     if (!skipUpdate) {
@@ -7754,14 +7797,55 @@ var Store = function(){
                     if (rec instanceof Record) {
                         self.bindRecord("un", rec);
                         rec.detachStore(self);
-                        return rec.$destroyed ? undf : rec;
+
+                        if (length == 1) {
+                            return rec.$destroyed ? undf : rec;
+                        }
                     }
                     else {
-                        return rec;
+                        if (length == 1) {
+                            return rec;
+                        }
                     }
+
+                    i++;
                 }
 
                 return undf;
+            },
+
+            /**
+             * @param {int} start
+             * @param {int} end
+             * @param {boolean} silent
+             * @param {boolean} skipUpdate
+             * @param {boolean} unfiltered
+             */
+            removeRange: function(start, end, silent, skipUpdate, unfiltered) {
+                var l       = this.length;
+
+                if (l === 0) {
+                    return;
+                }
+
+                if (start == null && end == null) {
+                    return this.clear(silent);
+                }
+
+                if (start == null) {
+                    start   = 0;
+                }
+                while (start < 0) {
+                    start   = l + start;
+                }
+                if (end == null) {
+                    end     = l - 1;
+                }
+                while (end < 0) {
+                    end     = l + start;
+                }
+
+                return this.removeAt(start, (end - start) + 1, silent, skipUpdate, unfiltered);
             },
 
             onRemove: emptyFn,
@@ -7863,7 +7947,7 @@ var Store = function(){
 
                 index   = self.items.indexOf(old);
 
-                self.removeAt(index, true, true, true);
+                self.removeAt(index, 1, true, true, true);
                 self.insert(index, rec, true, true);
 
                 if (!skipUpdate) {
@@ -7896,7 +7980,7 @@ var Store = function(){
              * @returns MetaphorJs.Record|Object|null
              */
             remove: function(rec, silent, skipUpdate) {
-                return this.removeAt(this.indexOf(rec, true), silent, skipUpdate, true);
+                return this.removeAt(this.indexOf(rec, true), 1, silent, skipUpdate, true);
             },
 
             /**
@@ -7906,8 +7990,10 @@ var Store = function(){
              * @returns MetaphorJs.Record|Object|null
              */
             removeId: function(id, silent, skipUpdate) {
-                return this.removeAt(this.indexOfId(id, true), silent, skipUpdate, true);
+                return this.removeAt(this.indexOfId(id, true), 1, silent, skipUpdate, true);
             },
+
+
 
             /**
              * @param {MetaphorJs.Record|Object} rec
