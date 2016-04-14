@@ -29,7 +29,7 @@ var varType = function(){
     };
 
 
-    /**
+    /*
      * 'string': 0,
      * 'number': 1,
      * 'boolean': 2,
@@ -45,6 +45,9 @@ var varType = function(){
      * @param {*} value
      * @returns {number}
      */
+
+
+
     return function varType(val) {
 
         if (!val) {
@@ -1685,7 +1688,7 @@ function sortArray(arr, by, dir) {
 };
 
 
-var aIndexOf = (function(){
+(function(){
 
     var aIndexOf    = Array.prototype.indexOf;
 
@@ -2878,7 +2881,8 @@ var Store = function(){
                 }
 
                 if (index == null) {
-                    index   = 0;
+                    //index   = 0; ??
+                    return;
                 }
                 while (index < 0) {
                     index   = l + index;
@@ -3101,7 +3105,11 @@ var Store = function(){
              * @returns MetaphorJs.Record|Object|null
              */
             remove: function(rec, silent, skipUpdate) {
-                return this.removeAt(this.indexOf(rec, true), 1, silent, skipUpdate, true);
+                var inx = this.indexOf(rec, true);
+                if (inx != -1) {
+                    return this.removeAt(inx, 1, silent, skipUpdate, true);
+                }
+                return null;
             },
 
             /**
@@ -3111,7 +3119,10 @@ var Store = function(){
              * @returns MetaphorJs.Record|Object|null
              */
             removeId: function(id, silent, skipUpdate) {
-                return this.removeAt(this.indexOfId(id, true), 1, silent, skipUpdate, true);
+                var inx = this.indexOfId(id, true);
+                if (inx != -1) {
+                    return this.removeAt(inx, 1, silent, skipUpdate, true);
+                }
             },
 
 

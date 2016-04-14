@@ -32,7 +32,7 @@ var varType = function(){
     };
 
 
-    /**
+    /*
      * 'string': 0,
      * 'number': 1,
      * 'boolean': 2,
@@ -48,6 +48,9 @@ var varType = function(){
      * @param {*} value
      * @returns {number}
      */
+
+
+
     return function varType(val) {
 
         if (!val) {
@@ -887,6 +890,14 @@ var Class = function(){
              */
             $getClass: function() {
                 return this.$class;
+            },
+
+            /**
+             * @param {string} cls
+             * @returns {boolean}
+             */
+            $is: function(cls) {
+                return isInstanceOf(this, cls);
             },
 
             /**
@@ -2437,6 +2448,10 @@ var ObservableEvent = (function(){
                     continue;
                 }
 
+                if (l.filter && l.filter.apply(l.filterContext || l.context, args) === false) {
+                    continue;
+                }
+
                 l.count++;
 
                 if (l.count < l.start) {
@@ -2892,18 +2907,20 @@ var error = (function(){
         var i, l;
 
         for (i = 0, l = listeners.length; i < l; i++) {
-            listeners[i][0].call(listeners[i][1], e);
+            if (listeners[i][0].call(listeners[i][1], e) === false) {
+                return;
+            }
         }
 
         var stack = (e ? e.stack : null) || (new Error).stack;
 
-        if (typeof console != strUndef && console.log) {
+        if (typeof console != strUndef && console.error) {
             async(function(){
                 if (e) {
-                    console.log(e);
+                    console.error(e);
                 }
                 if (stack) {
-                    console.log(stack);
+                    console.error(stack);
                 }
             });
         }
@@ -3131,6 +3148,20 @@ var Promise = function(){
             return this._state == REJECTED;
         },
 
+        hasListeners: function() {
+            var self = this,
+                ls  = [self._fulfills, self._rejects, self._dones, self._fails],
+                i, l;
+
+            for (i = 0, l = ls.length; i < l; i++) {
+                if (ls[i] && ls[i].length) {
+                    return true;
+                }
+            }
+
+            return false;
+        },
+
         _cleanup: function() {
             var self    = this;
 
@@ -3284,13 +3315,23 @@ var Promise = function(){
         /**
          * @param {Function} resolve -- called when this promise is resolved; returns new resolve value
          * @param {Function} reject -- called when this promise is rejects; returns new reject reason
+         * @param {object} context -- resolve's and reject's functions "this" object
          * @returns {Promise} new promise
          */
-        then: function(resolve, reject) {
+        then: function(resolve, reject, context) {
 
             var self            = this,
                 promise         = new Promise,
                 state           = self._state;
+
+            if (context) {
+                if (resolve) {
+                    resolve = bind(resolve, context);
+                }
+                if (reject) {
+                    reject = bind(reject, context);
+                }
+            }
 
             if (state == PENDING || self._wait != 0) {
 
@@ -3687,6 +3728,46 @@ var Promise = function(){
         return promise;
     };
 
+    Promise.forEach = function(items, fn, context, allResolved) {
+
+        var left = items.slice(),
+            p = new Promise,
+            values = [],
+            i = 0;
+
+        var next = function() {
+
+            if (!left.length) {
+                p.resolve(values);
+                return;
+            }
+
+            var item = left.shift(),
+                index = i;
+
+            i++;
+
+            Promise.fcall(fn, context, [item, index])
+                .done(function(result){
+                    values.push(result);
+                    next();
+                })
+                .fail(function(reason){
+                    if (allResolved) {
+                        p.reject(reason);
+                    }
+                    else {
+                        values.push(null);
+                        next();
+                    }
+                });
+        };
+
+        next();
+
+        return p;
+    };
+
     Promise.counter = function(cnt) {
 
         var promise     = new Promise;
@@ -3807,6 +3888,170 @@ ns.register("mixin.Promise", {
     }
 
 });
+
+
+
+
+(function(){
+
+
+
+    var accepts     = {
+            xml:        "application/xml, text/xml",
+            html:       "text/html",
+            script:     "text/javascript, application/javascript",
+            json:       "application/json, text/javascript",
+            text:       "text/plain",
+            _default:   "*/*"
+        },
+
+        createXHR       = function() {
+
+            var xhr;
+
+            if (!window.XMLHttpRequest || !(xhr = new XMLHttpRequest())) {
+                if (!(xhr = new ActiveXObject("Msxml2.XMLHTTP"))) {
+                    if (!(xhr = new ActiveXObject("Microsoft.XMLHTTP"))) {
+                        throw "Unable to create XHR object";
+                    }
+                }
+            }
+
+            return xhr;
+        },
+
+        httpSuccess     = function(r) {
+            try {
+                return (!r.status && location && location.protocol == "file:")
+                       || (r.status >= 200 && r.status < 300)
+                       || r.status === 304 || r.status === 1223; // || r.status === 0;
+            } catch(thrownError){}
+            return false;
+        };
+
+    return defineClass({
+
+        $class: "ajax.transport.XHR",
+
+        type: "xhr",
+        _xhr: null,
+        _deferred: null,
+        _ajax: null,
+
+        $init: function(opt, deferred, ajax) {
+
+            var self    = this,
+                xhr;
+
+            self._xhr = xhr     = createXHR();
+            self._deferred      = deferred;
+            self._opt           = opt;
+            self._ajax          = ajax;
+
+            if (opt.progress) {
+                xhr.onprogress = bind(opt.progress, opt.context);
+            }
+            if (opt.uploadProgress && xhr.upload) {
+                xhr.upload.onprogress = bind(opt.uploadProgress, opt.context);
+            }
+
+            xhr.onreadystatechange = bind(self.onReadyStateChange, self);
+        },
+
+        setHeaders: function() {
+
+            var self = this,
+                opt = self._opt,
+                xhr = self._xhr,
+                i;
+
+            if (opt.xhrFields) {
+                for (i in opt.xhrFields) {
+                    xhr[i] = opt.xhrFields[i];
+                }
+            }
+            if (opt.data && opt.contentType) {
+                xhr.setRequestHeader("Content-Type", opt.contentType);
+            }
+            xhr.setRequestHeader("X-Requested-With", "XMLHttpRequest");
+            xhr.setRequestHeader("Accept",
+                opt.dataType && accepts[opt.dataType] ?
+                accepts[opt.dataType] + ", */*; q=0.01" :
+                accepts._default
+            );
+            for (i in opt.headers) {
+                xhr.setRequestHeader(i, opt.headers[i]);
+            }
+
+        },
+
+        onReadyStateChange: function() {
+
+            var self        = this,
+                xhr         = self._xhr,
+                deferred    = self._deferred;
+
+            if (xhr.readyState === 0) {
+                xhr.onreadystatechange = emptyFn;
+                deferred.resolve(xhr);
+                return;
+            }
+
+            if (xhr.readyState === 4) {
+                xhr.onreadystatechange = emptyFn;
+
+                if (httpSuccess(xhr)) {
+
+                    self._ajax.processResponse(
+                        isString(xhr.responseText) ? xhr.responseText : undf,
+                        xhr.getResponseHeader("content-type") || ''
+                    );
+                }
+                else {
+
+                    xhr.responseData = null;
+
+                    try {
+                        xhr.responseData = self._ajax.returnResponse(
+                            isString(xhr.responseText) ? xhr.responseText : undf,
+                            xhr.getResponseHeader("content-type") || ''
+                        );
+                    }
+                    catch (thrownErr) {}
+
+                    deferred.reject(xhr);
+                }
+            }
+        },
+
+        abort: function() {
+            var self    = this;
+            self._xhr.onreadystatechange = emptyFn;
+            self._xhr.abort();
+        },
+
+        send: function() {
+
+            var self    = this,
+                opt     = self._opt;
+
+            try {
+                self._xhr.open(opt.method, opt.url, true, opt.username, opt.password);
+                self.setHeaders();
+                self._xhr.send(opt.data);
+            }
+            catch (thrownError) {
+                if (self._deferred) {
+                    self._deferred.reject(thrownError);
+                }
+            }
+        }
+    });
+
+}());
+
+
+
 
 function returnFalse() {
     return false;
@@ -4121,172 +4366,6 @@ var addListener = function(){
     }
 
 }();
-
-
-
-
-(function(){
-
-
-
-    var accepts     = {
-            xml:        "application/xml, text/xml",
-            html:       "text/html",
-            script:     "text/javascript, application/javascript",
-            json:       "application/json, text/javascript",
-            text:       "text/plain",
-            _default:   "*/*"
-        },
-
-        createXHR       = function() {
-
-            var xhr;
-
-            if (!window.XMLHttpRequest || !(xhr = new XMLHttpRequest())) {
-                if (!(xhr = new ActiveXObject("Msxml2.XMLHTTP"))) {
-                    if (!(xhr = new ActiveXObject("Microsoft.XMLHTTP"))) {
-                        throw "Unable to create XHR object";
-                    }
-                }
-            }
-
-            return xhr;
-        },
-
-        httpSuccess     = function(r) {
-            try {
-                return (!r.status && location && location.protocol == "file:")
-                       || (r.status >= 200 && r.status < 300)
-                       || r.status === 304 || r.status === 1223; // || r.status === 0;
-            } catch(thrownError){}
-            return false;
-        };
-
-    return defineClass({
-
-        $class: "ajax.transport.XHR",
-
-        type: "xhr",
-        _xhr: null,
-        _deferred: null,
-        _ajax: null,
-
-        $init: function(opt, deferred, ajax) {
-
-            var self    = this,
-                xhr;
-
-            self._xhr = xhr     = createXHR();
-            self._deferred      = deferred;
-            self._opt           = opt;
-            self._ajax          = ajax;
-
-            if (opt.progress) {
-                /*if (xhr.addEventListener) {
-                    xhr.addEventListener("progress", bind(opt.progress, opt.context));
-                }
-                else {
-                    addListener(xhr, "progress", bind(opt.progress, opt.context));
-                }*/
-                xhr.onprogress = bind(opt.progress, opt.context);
-            }
-            if (opt.uploadProgress && xhr.upload) {
-                /*if (xhr.addEventListener) {
-                    xhr.upload.addEventListener("progress", bind(opt.uploadProgress, opt.context));
-                }
-                else {
-                    addListener(xhr.upload, "progress", bind(opt.uploadProgress, opt.context));
-                }*/
-
-                xhr.upload.onprogress = bind(opt.uploadProgress, opt.context);
-            }
-
-            xhr.onreadystatechange = bind(self.onReadyStateChange, self);
-        },
-
-        setHeaders: function() {
-
-            var self = this,
-                opt = self._opt,
-                xhr = self._xhr,
-                i;
-
-            if (opt.xhrFields) {
-                for (i in opt.xhrFields) {
-                    xhr[i] = opt.xhrFields[i];
-                }
-            }
-            if (opt.data && opt.contentType) {
-                xhr.setRequestHeader("Content-Type", opt.contentType);
-            }
-            xhr.setRequestHeader("X-Requested-With", "XMLHttpRequest");
-            xhr.setRequestHeader("Accept",
-                opt.dataType && accepts[opt.dataType] ?
-                accepts[opt.dataType] + ", */*; q=0.01" :
-                accepts._default
-            );
-            for (i in opt.headers) {
-                xhr.setRequestHeader(i, opt.headers[i]);
-            }
-
-        },
-
-        onReadyStateChange: function() {
-
-            var self        = this,
-                xhr         = self._xhr,
-                deferred    = self._deferred;
-
-            if (xhr.readyState === 0) {
-                xhr.onreadystatechange = emptyFn;
-                deferred.resolve(xhr);
-                return;
-            }
-
-            if (xhr.readyState === 4) {
-                xhr.onreadystatechange = emptyFn;
-
-                if (httpSuccess(xhr)) {
-
-                    self._ajax.processResponse(
-                        isString(xhr.responseText) ? xhr.responseText : undf,
-                        xhr.getResponseHeader("content-type") || ''
-                    );
-                }
-                else {
-                    deferred.reject(xhr);
-                }
-            }
-        },
-
-        abort: function() {
-            var self    = this;
-            self._xhr.onreadystatechange = emptyFn;
-            self._xhr.abort();
-        },
-
-        send: function() {
-
-            var self    = this,
-                opt     = self._opt;
-
-            try {
-                self._xhr.open(opt.method, opt.url, true, opt.username, opt.password);
-                self.setHeaders();
-                self._xhr.send(opt.data);
-            }
-            catch (thrownError) {
-                if (self._deferred) {
-                    self._deferred.reject(thrownError);
-                }
-            }
-        }
-    });
-
-}());
-
-
-
 
 
 
@@ -4701,7 +4780,7 @@ defineClass({
                 }
             }
             else if (opt.contentType == "json") {
-                opt.contentType = "text/plain";
+                opt.contentType = opt.contentTypeHeader || "text/plain";
                 opt.data = isString(opt.data) ? opt.data : JSON.stringify(opt.data);
             }
             else if (isPlainObject(opt.data) && opt.method == "POST" && formDataSupport) {
@@ -4757,31 +4836,52 @@ defineClass({
             }
 
             if (globalEvents.trigger("before-send", opt, transport) === false) {
-                self._promise = Promise.reject();
+                //self._promise = Promise.reject();
+                self.$$promise.reject();
             }
             if (opt.beforeSend && opt.beforeSend.call(opt.context, opt, transport) === false) {
-                self._promise = Promise.reject();
+                //self._promise = Promise.reject();
+                self.$$promise.reject();
             }
 
-            if (!self._promise) {
+            if (self.$$promise.isPending()) {
                 async(transport.send, transport);
 
                 //deferred.abort = bind(self.abort, self);
-                self.$$promise.always(self.$destroy, self);
+                self.$$promise.always(self.asyncDestroy, self);
 
                 //self._promise = deferred;
             }
+            else {
+                async(self.asyncDestroy, self, [], 1000);
+            }
         },
 
+        asyncDestroy: function() {
+
+            var self = this;
+
+            if (self.$isDestroyed()) {
+                return;
+            }
+
+            if (self.$$promise.hasListeners()) {
+                async(self.asyncDestroy, self, [], 1000);
+                return;
+            }
+
+            self.$destroy();
+        },
 
         /*promise: function() {
             return this._promise;
         },*/
 
         abort: function(reason) {
-            this._transport.abort();
             this.$$promise.reject(reason || "abort");
+            this._transport.abort();
             //this._deferred.reject(reason || "abort");
+            return this;
         },
 
         onTimeout: function() {
@@ -4924,6 +5024,17 @@ defineClass({
             }
 
             return data;
+        },
+
+        returnResponse: function(data, contentType) {
+
+            var self    = this;
+
+            if (!self._opt.jsonp) {
+                return self.processResponseData(data, contentType);
+            }
+
+            return null;
         },
 
         processResponse: function(data, contentType) {
@@ -6564,7 +6675,7 @@ function sortArray(arr, by, dir) {
 };
 
 
-var aIndexOf = (function(){
+(function(){
 
     var aIndexOf    = Array.prototype.indexOf;
 
@@ -7757,7 +7868,8 @@ var Store = function(){
                 }
 
                 if (index == null) {
-                    index   = 0;
+                    //index   = 0; ??
+                    return;
                 }
                 while (index < 0) {
                     index   = l + index;
@@ -7980,7 +8092,11 @@ var Store = function(){
              * @returns MetaphorJs.Record|Object|null
              */
             remove: function(rec, silent, skipUpdate) {
-                return this.removeAt(this.indexOf(rec, true), 1, silent, skipUpdate, true);
+                var inx = this.indexOf(rec, true);
+                if (inx != -1) {
+                    return this.removeAt(inx, 1, silent, skipUpdate, true);
+                }
+                return null;
             },
 
             /**
@@ -7990,7 +8106,10 @@ var Store = function(){
              * @returns MetaphorJs.Record|Object|null
              */
             removeId: function(id, silent, skipUpdate) {
-                return this.removeAt(this.indexOfId(id, true), 1, silent, skipUpdate, true);
+                var inx = this.indexOfId(id, true);
+                if (inx != -1) {
+                    return this.removeAt(inx, 1, silent, skipUpdate, true);
+                }
             },
 
 
