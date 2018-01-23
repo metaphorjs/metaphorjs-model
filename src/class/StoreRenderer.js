@@ -33,7 +33,7 @@ module.exports = ListRenderer.$extend({
                 store;
 
             self.store          = store = createGetter(self.model)(scope);
-            self.watcher        = createWatchable(store, ".current", self.onChange, self, null, ns);
+            self.watcher        = createWatchable(store, ".current", self.onChange, self, {namespace: ns});
             self.trackByFn      = bind(store.getRecordId, store);
             self.griDelegate    = bind(store.indexOfId, store);
             self.bindStore(store, "on");
