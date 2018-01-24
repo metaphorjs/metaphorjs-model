@@ -3,8 +3,7 @@ var createGetter = require("metaphorjs-watchable/src/func/createGetter.js"),
     createWatchable = require("metaphorjs-watchable/src/func/createWatchable.js"),
     ns = require("metaphorjs-namespace/src/var/ns.js"),
     bind = require("metaphorjs/src/func/bind.js"),
-    ListRenderer = require("metaphorjs/src/class/ListRenderer.js"),
-    getNodeConfig = require("metaphorjs/src/func/dom/getNodeConfig.js");
+    ListRenderer = require("metaphorjs/src/class/ListRenderer.js");
 
 
 module.exports = ListRenderer.$extend({
@@ -12,16 +11,17 @@ module.exports = ListRenderer.$extend({
         $class: "StoreRenderer",
         store: null,
 
-        $constructor: function(scope, node, expr) {
+        $constructor: function(scope, node, expr, renderer, attrMap) {
 
-            var cfg = getNodeConfig(node, scope);
+            var cfg = attrMap && attrMap['modifier']['each'] ?
+                        attrMap['modifier']['each'].value : {};
 
             if (cfg.pullNext) {
                 if (cfg.buffered) {
                     cfg.bufferedPullNext = true;
                     cfg.buffered = false;
                 }
-                this.$plugins.push(typeof cfg.pullNext == "string" ? cfg.pullNext : "plugin.ListPullNext");
+                this.$plugins.push(typeof cfg.pullNext === "string" ? cfg.pullNext : "plugin.ListPullNext");
             }
 
             this.$super(scope, node, expr);
