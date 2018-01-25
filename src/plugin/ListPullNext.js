@@ -1,6 +1,5 @@
 
-var defineClass = require("metaphorjs-class/src/func/defineClass.js"),
-    getNodeConfig = require("metaphorjs/src/func/dom/getNodeConfig.js");
+var defineClass = require("metaphorjs-class/src/func/defineClass.js");
 
 require("metaphorjs/src/plugin/ListBuffered.js");
 
@@ -13,7 +12,9 @@ module.exports = defineClass({
 
     $init: function(list, args) {
 
-        var cfg = getNodeConfig(args[1]);
+        var attrMap = list.attrMap,
+            cfg = attrMap['modifier']['each'] ?
+                    attrMap['modifier']['each'] : {};
 
         if (cfg.bufferedPullNext) {
             this.buffered = cfg.bufferedPullNext;

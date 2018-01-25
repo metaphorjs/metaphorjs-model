@@ -3,31 +3,39 @@ var createGetter = require("metaphorjs-watchable/src/func/createGetter.js"),
     createWatchable = require("metaphorjs-watchable/src/func/createWatchable.js"),
     ns = require("metaphorjs-namespace/src/var/ns.js"),
     bind = require("metaphorjs/src/func/bind.js"),
+    Store = require("./Store.js"),
+    Directive = require("metaphorjs/src/class/Directive.js"),
     ListRenderer = require("metaphorjs/src/class/ListRenderer.js");
 
 
-module.exports = ListRenderer.$extend({
+module.exports = (function(){
+
+var StoreRenderer = ListRenderer.$extend({
 
         $class: "StoreRenderer",
         store: null,
 
-        $constructor: function(scope, node, expr, renderer, attrMap) {
 
-            var cfg = attrMap && attrMap['modifier']['each'] ?
-                        attrMap['modifier']['each'].value : {};
+        $constructor: function(scope, node, expr, parentRenderer, attrMap) {
+
+            var cfg = attrMap['modifier']['each'] ?
+                        attrMap['modifier']['each'] : {};
 
             if (cfg.pullNext) {
                 if (cfg.buffered) {
                     cfg.bufferedPullNext = true;
                     cfg.buffered = false;
                 }
-                this.$plugins.push(typeof cfg.pullNext === "string" ? cfg.pullNext : "plugin.ListPullNext");
+
+                this.$plugins.push(
+                    typeof cfg.pullNext === "string" ?
+                        cfg.pullNext : "plugin.ListPullNext");
             }
 
-            this.$super(scope, node, expr);
+            this.$super(scope, node, expr, parentRenderer, attrMap);
         },
 
-        afterInit: function(scope, node, expr) {
+        afterInit: function(scope, node, expr, parentRenderer, attrMap) {
 
             var self            = this,
                 store;
@@ -38,7 +46,6 @@ module.exports = ListRenderer.$extend({
             self.griDelegate    = bind(store.indexOfId, store);
             self.bindStore(store, "on");
         },
-
 
         bindStore: function(store, fn) {
 
@@ -81,3 +88,9 @@ module.exports = ListRenderer.$extend({
     }
 );
 
+Directive.getDirective("attr", "each")
+    .registerType(Store, StoreRenderer);
+
+
+return StoreRenderer;
+}());
