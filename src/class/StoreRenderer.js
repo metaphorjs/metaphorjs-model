@@ -3,6 +3,7 @@ var createGetter = require("metaphorjs-watchable/src/func/createGetter.js"),
     createWatchable = require("metaphorjs-watchable/src/func/createWatchable.js"),
     ns = require("metaphorjs-namespace/src/var/ns.js"),
     bind = require("metaphorjs/src/func/bind.js"),
+    filterLookup = require("metaphorjs/src/func/filterLookup.js"),
     ListRenderer = require("metaphorjs/src/class/ListRenderer.js");
 
 
@@ -12,10 +13,9 @@ module.exports = ListRenderer.$extend({
     store: null,
 
 
-    $constructor: function(scope, node, expr, parentRenderer, attrMap) {
+    $constructor: function(scope, node, expr, parentRenderer, attr) {
 
-        var cfg = attrMap['modifier']['each'] ?
-                    attrMap['modifier']['each'] : {};
+        var cfg = attr ? attr.config : {};
 
         if (cfg.pullNext) {
             if (cfg.buffered) {
@@ -28,16 +28,16 @@ module.exports = ListRenderer.$extend({
                     cfg.pullNext : "plugin.ListPullNext");
         }
 
-        this.$super(scope, node, expr, parentRenderer, attrMap);
+        this.$super(scope, node, expr, parentRenderer, attr);
     },
 
-    afterInit: function(scope, node, expr, parentRenderer, attrMap) {
+    afterInit: function(scope, node, expr, parentRenderer, attr) {
 
         var self            = this,
             store;
 
         self.store          = store = createGetter(self.model)(scope);
-        self.watcher        = createWatchable(store, ".current", self.onChange, self, {namespace: ns});
+        self.watcher        = createWatchable(store, ".current", self.onChange, self, {filterLookup: filterLookup});
         self.trackByFn      = bind(store.getRecordId, store);
         self.griDelegate    = bind(store.indexOfId, store);
         self.bindStore(store, "on");

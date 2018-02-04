@@ -12,9 +12,8 @@ module.exports = defineClass({
 
     $init: function(list, args) {
 
-        var attrMap = list.attrMap,
-            cfg = attrMap['modifier']['each'] ?
-                    attrMap['modifier']['each'] : {};
+        var attr = list.attr,
+            cfg = attr ? attr.config : {};
 
         if (cfg.bufferedPullNext) {
             this.buffered = cfg.bufferedPullNext;
