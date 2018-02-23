@@ -662,7 +662,7 @@ module.exports = function(){
          */
         create: function(model, cfg) {
 
-            if (model == "MetaphorJs.Model") {
+            if (model === "MetaphorJs.Model") {
                 return factory(model, cfg);
             }
             else {
