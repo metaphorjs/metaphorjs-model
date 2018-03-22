@@ -1,7 +1,6 @@
 
 var createGetter = require("metaphorjs-watchable/src/func/createGetter.js"),
     createWatchable = require("metaphorjs-watchable/src/func/createWatchable.js"),
-    ns = require("metaphorjs-namespace/src/var/ns.js"),
     bind = require("metaphorjs/src/func/bind.js"),
     filterLookup = require("metaphorjs/src/func/filterLookup.js"),
     ListRenderer = require("metaphorjs/src/class/ListRenderer.js");

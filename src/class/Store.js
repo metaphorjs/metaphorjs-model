@@ -378,7 +378,7 @@ module.exports = function(){
              * @returns {boolean}
              */
             isEmpty: function() {
-                return this.length == 0;
+                return this.length === 0;
             },
 
             /**
@@ -1127,7 +1127,7 @@ module.exports = function(){
                     i       = 0,
                     l       = self.length;
 
-                if (l == 0) {
+                if (l === 0) {
                     return;
                 }
 
@@ -1155,7 +1155,7 @@ module.exports = function(){
 
                     var id      = self.getRecordId(rec);
 
-                    if (id != undf){
+                    if (id !== undf){
                         delete self.map[id];
                         delete self.currentMap[id];
                     }
@@ -1174,12 +1174,12 @@ module.exports = function(){
                         self.bindRecord("un", rec);
                         rec.detachStore(self);
 
-                        if (length == 1) {
+                        if (length === 1) {
                             return rec.$destroyed ? undf : rec;
                         }
                     }
                     else {
-                        if (length == 1) {
+                        if (length === 1) {
                             return rec;
                         }
                     }
@@ -1288,7 +1288,7 @@ module.exports = function(){
                     }
                 }
 
-                if(id != undf){
+                if(id !== undf){
                     self.map[id] = rec;
                 }
 
@@ -1357,7 +1357,7 @@ module.exports = function(){
              */
             remove: function(rec, silent, skipUpdate) {
                 var inx = this.indexOf(rec, true);
-                if (inx != -1) {
+                if (inx !== -1) {
                     return this.removeAt(inx, 1, silent, skipUpdate, true);
                 }
                 return null;
@@ -1371,7 +1371,7 @@ module.exports = function(){
              */
             removeId: function(id, silent, skipUpdate) {
                 var inx = this.indexOfId(id, true);
-                if (inx != -1) {
+                if (inx !== -1) {
                     return this.removeAt(inx, 1, silent, skipUpdate, true);
                 }
             },
@@ -1381,16 +1381,16 @@ module.exports = function(){
             /**
              * @param {MetaphorJs.Record|Object} rec
              * @param {boolean} unfiltered
-             * @returns bool
+             * @returns boolean
              */
             contains: function(rec, unfiltered) {
-                return this.indexOf(rec, unfiltered) != -1;
+                return this.indexOf(rec, unfiltered) !== -1;
             },
 
             /**
              * @param {string|int} id
              * @param {boolean} unfiltered
-             * @returns bool
+             * @returns boolean
              */
             containsId: function(id, unfiltered) {
                 if (unfiltered) {
@@ -1618,7 +1618,7 @@ module.exports = function(){
              */
             findBy: function(fn, context, start, unfiltered) {
                 var inx = this.findIndexBy(fn, context, start, unfiltered);
-                return inx == -1 ? undf : this.getAt(inx, unfiltered);
+                return inx === -1 ? undf : this.getAt(inx, unfiltered);
             },
 
             /**
@@ -1672,7 +1672,7 @@ module.exports = function(){
 
                 }, self, 0, unfiltered);
 
-                return inx != -1 ? self.getAt(inx, unfiltered) : null;
+                return inx !== -1 ? self.getAt(inx, unfiltered) : null;
             },
 
             /**
