@@ -418,6 +418,13 @@ module.exports = function(){
             },
 
             /**
+             * @returns void
+             */
+            clearParams: function() {
+                this.extraParams = {};
+            },
+
+            /**
              * @param {number} val
              */
             setStart: function(val) {
