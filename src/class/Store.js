@@ -418,6 +418,13 @@ module.exports = function(){
             },
 
             /**
+             * @returns object
+             */
+            getParams: function() {
+                return extend({}, this.extraParams);
+            },
+
+            /**
              * @returns void
              */
             clearParams: function() {
