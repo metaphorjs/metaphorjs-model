@@ -37,7 +37,11 @@ module.exports = ListRenderer.$extend({
 
         self.store          = store = createGetter(self.model)(scope);
         self.watcher        = createWatchable(store, ".current", self.onChange, self, {filterLookup: filterLookup});
-        self.trackByFn      = bind(store.getRecordId, store);
+        
+        if (self.trackByFn !== false) {
+            self.trackByFn      = bind(store.getRecordId, store);
+        }
+        
         self.griDelegate    = bind(store.indexOfId, store);
         self.bindStore(store, "on");
     },
