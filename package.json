@@ -2,7 +2,6 @@
     "name": "metaphorjs-model",
     "version": "0.1.12",
     "description": "MetaphorJs Record/Store/Model",
-    "main": "dist/metaphorjs.model.npm.js",
     "scripts": {
         "test": "echo \"Error: no test specified\" && exit 1"
     },
@@ -15,11 +14,5 @@
     "bugs": {
         "url": "https://github.com/metaphorjs/metaphorjs-model/issues"
     },
-    "homepage": "https://github.com/metaphorjs/metaphorjs-model",
-    "dependencies": {
-        "metaphorjs-ajax": "*",
-        "metaphorjs-promise": "*",
-        "metaphorjs-namespace": "*",
-        "metaphorjs-class": "*"
-    }
+    "homepage": "https://github.com/metaphorjs/metaphorjs-model"
 }
