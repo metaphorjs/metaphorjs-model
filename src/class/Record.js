@@ -1,6 +1,7 @@
 
 var Model   = require("./Model.js"),
-    defineClass = require("metaphorjs-class/src/func/defineClass.js"),
+    cls = require("metaphorjs-class/src/cls.js"),
+    MetaphorJs = require("metaphorjs/src/MetaphorJs.js"),
     extend  = require("metaphorjs/src/func/extend.js"),
     isString = require("metaphorjs/src/func/isString.js");
 
@@ -10,10 +11,10 @@ require("metaphorjs-observable/src/mixin/Observable.js");
  * @namespace MetaphorJs
  * @class Record
  */
-module.exports = defineClass({
+module.exports = cls({
 
-    $class: "Record",
-    $mixins: ["mixin.Observable"],
+    $class: "MetaphorJs.model.Record",
+    $mixins: [MetaphorJs.mixin.Observable],
 
     /**
      * @var mixed
@@ -144,7 +145,7 @@ module.exports = defineClass({
             self.load();
         }
 
-        if (self.$getClass() != "MetaphorJs.Record") {
+        if (self.$getClass() != "MetaphorJs.model.Record") {
             Model.addToCache(self);
         }
     },
@@ -455,7 +456,7 @@ module.exports = defineClass({
 
 
 
-    destroy: function() {
+    onDestroy: function() {
 
         var self    = this;
         Model.removeFromCache(self.$getClass(), self.id);

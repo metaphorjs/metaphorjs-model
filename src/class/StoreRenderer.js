@@ -5,12 +5,10 @@ var createGetter = require("metaphorjs-watchable/src/func/createGetter.js"),
     filterLookup = require("metaphorjs/src/func/filterLookup.js"),
     ListRenderer = require("metaphorjs/src/class/ListRenderer.js");
 
-
 module.exports = ListRenderer.$extend({
 
-    $class: "StoreRenderer",
+    $class: "MetaphorJs.model.StoreRenderer",
     store: null,
-
 
     $constructor: function(scope, node, expr, parentRenderer, attr) {
 
@@ -24,7 +22,7 @@ module.exports = ListRenderer.$extend({
 
             this.$plugins.push(
                 typeof cfg.pullNext === "string" ?
-                    cfg.pullNext : "plugin.ListPullNext");
+                    cfg.pullNext : "MetaphorJs.plugin.ListPullNext");
         }
 
         this.$super(scope, node, expr, parentRenderer, attr);
@@ -72,7 +70,7 @@ module.exports = ListRenderer.$extend({
         }
     },
 
-    destroy: function() {
+    onDestroy: function() {
         var self = this;
         if (!self.store.$destroyed) {
             self.bindStore(self.store, "un");

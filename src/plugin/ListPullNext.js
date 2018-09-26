@@ -1,13 +1,11 @@
 
-var defineClass = require("metaphorjs-class/src/func/defineClass.js");
+var MetaphorJs = require("metaphorjs/src/MetaphorJs.js");
 
 require("metaphorjs/src/plugin/ListBuffered.js");
 
-module.exports = defineClass({
+module.exports = MetaphorJs.plugin.ListBuffered.$extend({
 
-    $class: "plugin.ListPullNext",
-    $extends: "plugin.ListBuffered",
-
+    $class: "MetaphorJs.plugin.ListPullNext",
     buffered: false,
 
     $init: function(list, args) {

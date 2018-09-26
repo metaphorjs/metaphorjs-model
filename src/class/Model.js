@@ -1,8 +1,8 @@
 
 var extend  = require("metaphorjs/src/func/extend.js"),
-    defineClass = require("metaphorjs-class/src/func/defineClass.js"),
+    cls = require("metaphorjs-class/src/cls.js"),
+    MetaphorJs = require("metaphorjs/src/MetaphorJs.js"),
     ajax = require("metaphorjs-ajax/src/func/ajax.js"),
-    factory = require("metaphorjs-class/src/func/factory.js"),
     Promise = require("metaphorjs-promise/src/lib/Promise.js"),
     isString = require("metaphorjs/src/func/isString.js"),
     isFunction = require("metaphorjs/src/func/isFunction.js"),
@@ -17,14 +17,13 @@ module.exports = function(){
     var instances   = {},
         cache       = {};
 
-
     /**
      * @class Model
      */
-    return defineClass({
+    return cls({
 
-        $class:         "Model",
-        $mixins:        ["mixin.Observable"],
+        $class:         "MetaphorJs.model.Model",
+        $mixins:        [MetaphorJs.mixin.Observable],
 
         type:           null,
         fields:         null,
@@ -663,18 +662,18 @@ module.exports = function(){
         create: function(model, cfg) {
 
             if (model === "MetaphorJs.Model") {
-                return factory(model, cfg);
+                return cls.factory(model, cfg);
             }
             else {
                 if (cfg) {
-                    return factory(model, cfg);
+                    return cls.factory(model, cfg);
                 }
                 else {
                     if (instances[model]) {
                         return instances[model];
                     }
                     else {
-                        return instances[model] = factory(model);
+                        return instances[model] = cls.factory(model);
                     }
                 }
             }
