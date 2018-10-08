@@ -2,6 +2,23 @@
     "version": "0.1.12",
     "description": "MetaphorJs Record/Store/Model",
 
+    "docs": {
+        "out": "docs",
+        "renderer": {
+            "type": "default",
+            "data": {
+                "title": "MetaphorJs.model.Model/Record/Store",
+                "description": "Data layer",
+                "version": "v0.1.12"
+            }
+        },
+        
+        "src": [
+            "src/model/**"
+        ],
+        "includeExternal": false
+    },
+
     "mixin": {
         "model": {
             "files": [
