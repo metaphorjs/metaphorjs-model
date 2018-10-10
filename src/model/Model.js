@@ -40,34 +40,130 @@ module.exports = MetaphorJs.model.Model = function(){
          * @constructor
          * @method $init
          * @param {object} cfg {
-         *      Properties json,id,url,data,success,extra valid 
-         *      on top level and inside all create/load/save/delete
-         *      groups. Use string instead of object as shortcut
+         *      Properties 
+         *      <code>json,id,url,data,success,extra,root,data,
+         *              processRequest,validate,resolve</code> are valid 
+         *      on the top level and inside all create/load/save/delete/controller
+         *      groups.<br> Use string instead of object as shortcut
          *      for load.url/save.url etc.
+         * 
          *      @type {string} type Record class
-         *      @type {object} fields Fields conf
+         *      @type {object} fields {
+         *          Fields conf
+         *          @type {object|string} *name* {
+         *              Field name: conf
+         *              @type {string} type {
+         *                  int|bool|boolean|double|float|date
+         *              }
+         *              @type {function} parseFn {
+         *                  Parse date field
+         *                  @param {string} value
+         *                  @param {string} format Format from this config
+         *              }
+         *              @type {function} formatFn {
+         *                  Prepare date field for sending
+         *                  @param {*} value
+         *                  @param {string} format Format from this config
+         *              }
+         *              @type {string} format Date format {
+         *                  If format == "timestamp", <code>date = parseInt(value) * 1000</code>
+         *              }
+         *              @type {function} restore {
+         *                  Custom value processor (on receiving). Another way is to override
+         *                  <code>onRestoreField(rec, name, value)</code> method
+         *                  @param {object} rec Record from response
+         *                  @param {*} value Data value
+         *                  @param {string} name Field name
+         *                  @returns {*}
+         *              }
+         *              @type {function} store {
+         *                  Custom value processor (on sending). Another way is to override
+         *                  <code>onStoreField(rec, value, name)</code> method.
+         *                  @param {object} rec 
+         *                  @param {*} value
+         *                  @param {string} name
+         *                  @returns {string}
+         *              }
+         *          }
+         *      }
+         *      
+         *      @type {bool} json Send data as json string in the request body.
+         *      @type {string|function} url Api endpoint. If url is function,
+         *                      it accepts payload and returns Promise which
+         *                      is then resolved with response.<br>
+         *                      In url you can use <code>:name</code> placeholders,
+         *                      they will be taken from payload.
+         *      @type {string} id Id field. Where to take record id from or 
+         *                      put record id to (when sending).
+         *      @type {string|function} success Success field or function
+         *                     that takes response and returns boolean. 
+         *                     If resulted in false, request fails. Leave
+         *                     undefined to skip this check.
+         *      @type {object} data Main data payload.
+         *      @type {object} extra Extra params object. Adds data to payload, 
+         *                          overrides data fields.
+         *      @type {string} root Records root. In "load" requests this is
+         *                          the field to take records from,
+         *                          in other requests (if defined) this will be the field
+         *                          to put payload into.
+         *      @type {object} ajax Various ajax settings from MetaphorJs.ajax module.
+         *      @type {function} processRequest {
+         *          Custom request processor.
+         *          @param {MetaphorJs.lib.Promise} returnPromise The promise 
+         *                          that is returned from load()/save() etc. 
+         *                          You can take control of this promise if needed.
+         *          @param {int|string|null} id Record id (if applicable)
+         *          @param {object|string|null} data Payload
+         *      }
+         *      @type {function} validate {
+         *          Validate request
+         *          @param {int|string|null} id Record id (if applicable)
+         *          @param {object|string|null} data Payload
+         *          @returns {boolean} Return false to cancel the request and 
+         *                              reject promise.
+         *      }
+         *      @type {function} resolve {
+         *          Custom request resolver
+         *          @param {int|string|null} id Record id (if applicable)
+         *          @param {object|string|null} data Payload
+         *          @returns {MetaphorJs.lib.Promise|*} If returned Promise, 
+         *              this promise will be returned from the function making
+         *              the request. If returned something else, 
+         *              will return a new Promise resolved with this value. 
+         *              If returned nothing, will continue making the request
+         *              as usual.
+         *      }
+         * 
          *      @type {object} record {
-         *          @type {string|object} create
-                    @type {string|object} load
-         *          @type {string|object} save
-         *          @type {string|object} delete
+         *          @type {string|object} create New record config
+         *          @type {string|object} load Load one record config
+         *          @type {string|object} save Save one record config
+         *          @type {string|object} delete Delete one record config
+         *          @type {object} extend {
+         *              Use properties of this object to extend every
+         *              received record. If you don't want to create
+         *              a whole record class but want to add a few 
+         *              methods to a record object.
+         *          }
          *      }
          *      @type {object} store {
-         *          @type {string} total Total field
-         *          @type {string} start Start field
-         *          @type {string} limit Limit field
-         *          @type {string|object} load
-         *          @type {string|object} save
-         *          @type {string|object} delete
+         *          @type {string} total Total count of records field
+         *          @type {string} start Start field: pagination offset
+         *          @type {string} limit Limit field: pagination per page
+         *          @type {string|object} load Load multiple records
+         *          @type {string|object} save Save multiple records
+         *          @type {string|object} delete Delete multiple records
          *      }
-         *      @type {bool} json send data as json
-         *      @type {string} url
-         *      @type {string} id Id field
-         *      @type {string} data Data field
-         *      @type {string} success Success field 
-         *      @type {object} extra Extra params object
-         *      @type {string|int|bool} ... other $.ajax({ properties })
+         * 
+         *      @type {object} controller {
+         *          @type {object} *name* {
+         *              Controller config (<code>id,root,data,success</code> etc).<br>
+         *              Called via <code>model.runController("name")</code>
+         *          }
+         *      }
          * }
+         * @code src-docs/snippets/model.js
+         * @code src-docs/snippets/controller.js
          */
         $init: function(cfg) {
 
@@ -109,7 +205,8 @@ module.exports = MetaphorJs.model.Model = function(){
         },
 
         /**
-         * Do records within this model have type or they are plain objects
+         * Do records within this model have type (config's "type" property) 
+         * or are they plain objects
          * @method
          * @returns {bool}
          */
@@ -118,16 +215,23 @@ module.exports = MetaphorJs.model.Model = function(){
         },
 
         /**
+         * Get config property related to specific record action 
+         * (create/save/load/delete).If there is no such config,
+         * it will check a higher level config: <br>
+         * config.record.load.url or config.record.url or
+         * config.url
          * @method
-         * @param {string} type load|save|delete
+         * @param {string} type create|load|save|delete
          * @param {string} prop
          * @returns {*}
+         * @code model.getRecordProp("load", "url");
          */
         getRecordProp: function(type, prop) {
             return this.getProp("record", type, prop);
         },
 
         /**
+         * Set record config property. See getRecordProp and constructor's config.
          * @method
          * @param {string} prop
          * @param {string|int|bool} value
@@ -137,6 +241,11 @@ module.exports = MetaphorJs.model.Model = function(){
         },
 
         /**
+         * Get config property related to specific store action 
+         * (save/load/delete). If there is no such config,
+         * it will check a higher level config: <br>
+         * config.store.load.url or config.store.url or
+         * config.url
          * @method
          * @param {string} type load|save|delete
          * @param {string} prop
@@ -147,6 +256,7 @@ module.exports = MetaphorJs.model.Model = function(){
         },
 
         /**
+         * Set store config property. See getStoreProp and constructor's config.
          * @method
          * @param {string} prop
          * @param {string|int|bool} value
@@ -157,9 +267,14 @@ module.exports = MetaphorJs.model.Model = function(){
 
 
         /**
+         * Get config property related to specific action 
+         * (save/load/delete). If there is no such config,
+         * it will check a higher level config: <br>
+         * config.:what:.:type:.:prop: or config.:what:.:prop: or
+         * config.:prop:
          * @method
          * @param {string} what record|store
-         * @param {string} type load|save|delete
+         * @param {string} type create|load|save|delete
          * @param {string} prop
          * @returns {*}
          */
@@ -169,6 +284,7 @@ module.exports = MetaphorJs.model.Model = function(){
         },
 
         /**
+         * Set config property. 
          * @method
          * @param {string} prop
          * @param {string|int|bool} value
@@ -275,10 +391,10 @@ module.exports = MetaphorJs.model.Model = function(){
                     promise = new MetaphorJs.lib.Promise;
 
                 df.then(function(response){
-                    if (what == "record") {
+                    if (what === "record") {
                         self._processRecordResponse(type, response, promise);
                     }
-                    else if (what == "store") {
+                    else if (what === "store") {
                         self._processStoreResponse(type, response, promise);
                     }
                 });
@@ -290,7 +406,7 @@ module.exports = MetaphorJs.model.Model = function(){
                 ajaxCfg.data[idProp] = id;
             }
 
-            if (data && dataProp && type != "load") {
+            if (data && dataProp && type !== "load") {
                 ajaxCfg.data[dataProp] = data;
             }
 
@@ -301,15 +417,15 @@ module.exports = MetaphorJs.model.Model = function(){
             }
 
             if (!ajaxCfg.method) {
-                if (what != "controller") {
-                    ajaxCfg.method = type == "load" ? "GET" : "POST";
+                if (what !== "controller") {
+                    ajaxCfg.method = type === "load" ? "GET" : "POST";
                 }
                 else {
                     ajaxCfg.method = "GET";
                 }
             }
 
-            if (isJson && ajaxCfg.data && ajaxCfg.method != 'GET') { // && cfg.type != 'GET') {
+            if (isJson && ajaxCfg.data && ajaxCfg.method !== 'GET') { // && cfg.type != 'GET') {
                 ajaxCfg.contentType = "text/plain";
                 ajaxCfg.data        = JSON.stringify(ajaxCfg.data);
             }
@@ -318,21 +434,21 @@ module.exports = MetaphorJs.model.Model = function(){
 
             var returnPromise;
 
-            if (what == "record") {
+            if (what === "record") {
                 ajaxCfg.processResponse = function(response, deferred) {
                     self.lastAjaxResponse = response;
                     self._processRecordResponse(type, response, deferred);
                 };
                 returnPromise = self._processRecordRequest(ajax(ajaxCfg), type, id, data);
             }
-            else if (what == "store") {
+            else if (what === "store") {
                 ajaxCfg.processResponse = function(response, deferred) {
                     self.lastAjaxResponse = response;
                     self._processStoreResponse(type, response, deferred);
                 };
                 returnPromise = self._processStoreRequest(ajax(ajaxCfg), type, id, data);
             }
-            else if (what == "controller") {
+            else if (what === "controller") {
                 ajaxCfg.processResponse = function(response, deferred) {
                     self.lastAjaxResponse = response;
                     self._processControllerResponse(type, response, deferred);
@@ -407,7 +523,7 @@ module.exports = MetaphorJs.model.Model = function(){
             var self    = this,
                 sucProp = self.getProp(what, type, "success");
 
-            if (typeof sucProp == "function") {
+            if (typeof sucProp === "function") {
                 return sucProp(response);
             }
 
@@ -434,6 +550,7 @@ module.exports = MetaphorJs.model.Model = function(){
         },
 
         /**
+         * Send a create or save request with record data
          * @method
          * @param {MetaphorJs.model.Record} rec
          * @param {array|null} keys
@@ -450,6 +567,7 @@ module.exports = MetaphorJs.model.Model = function(){
         },
 
         /**
+         * Make a record/delete request.
          * @method
          * @param {MetaphorJs.model.Record} rec
          * @returns {MetaphorJs.lib.Promise}
@@ -459,6 +577,7 @@ module.exports = MetaphorJs.model.Model = function(){
         },
 
         /**
+         * Load store records
          * @method
          * @param {MetaphorJs.model.Store} store
          * @param {object} params
@@ -469,6 +588,7 @@ module.exports = MetaphorJs.model.Model = function(){
         },
 
         /**
+         * Send store records back to server for saving
          * @method
          * @param {MetaphorJs.model.Store} store
          * @param {object} recordData
@@ -479,6 +599,7 @@ module.exports = MetaphorJs.model.Model = function(){
         },
 
         /**
+         * Delete store records
          * @method
          * @param {MetaphorJs.model.Store} store
          * @param {array} ids
@@ -504,6 +625,7 @@ module.exports = MetaphorJs.model.Model = function(){
         },
 
         /**
+         * Get field configs
          * @method
          * @returns {object}
          */
@@ -512,13 +634,14 @@ module.exports = MetaphorJs.model.Model = function(){
         },
 
         /**
+         * Extract record id from a record
          * @method
          * @param {object} rec
          * @returns {*|null}
          */
         getRecordId: function(rec) {
             var idProp = this.getRecordProp("load", "id");
-            return rec[idProp] || null;
+            return (rec.getId ? rec.getId() : rec[idProp]) || null;
         },
 
         /**
@@ -567,7 +690,7 @@ module.exports = MetaphorJs.model.Model = function(){
                             value   = Date['parse'](value, f.format);
                         }
                         else {
-                            if (f.format == "timestamp") {
+                            if (f.format === "timestamp") {
                                 value   = parseInt(value) * 1000;
                             }
                             value   = new Date(value);
@@ -585,6 +708,7 @@ module.exports = MetaphorJs.model.Model = function(){
         },
 
         /**
+         * Override this method to have your own value processor
          * @method
          * @access protected
          * @param {MetaphorJs.model.Record} rec
@@ -626,7 +750,7 @@ module.exports = MetaphorJs.model.Model = function(){
                             value   = Date.format(value, f.format);
                         }
                         else {
-                            if (f.format == "timestamp") {
+                            if (f.format === "timestamp") {
                                 value   = value.getTime() / 1000;
                             }
                             else {
@@ -650,6 +774,7 @@ module.exports = MetaphorJs.model.Model = function(){
         },
 
         /**
+         * Override this method to have your own value processor
          * @method
          * @access protected
          * @param {MetaphorJs.model.Record} rec

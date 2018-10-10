@@ -11,8 +11,86 @@ require("metaphorjs-observable/src/mixin/Observable.js");
 
 /**
  * @class MetaphorJs.model.Record
+ * @mixes MetaphorJs.mixin.Observable
  */
 module.exports = MetaphorJs.model.Record = cls({
+
+    /**
+     * @event dirty-change {
+     *  Record become changed on unchanged
+     *  @param {MetaphorJs.model.Record} rec
+     *  @param {boolean} dirty
+     * }
+     */
+    /**
+     * @event change {
+     *  General record change event
+     *  @param {MetaphorJs.model.Record} rec 
+     *  @param {string} key
+     *  @param {*} value 
+     *  @param {*} prevValue
+     * }
+     */
+    /**
+     * @event change-_key_ {
+     *  Specific key change event
+     *  @param {MetaphorJs.model.Record} rec 
+     *  @param {string} key
+     *  @param {*} value 
+     *  @param {*} prevValue
+     * }
+     */
+    /**
+     * @event before-load {
+     *  @param {MetaphorJs.model.Record}
+     * }
+     */
+    /**
+     * @event load {
+     *  @param {MetaphorJs.model.Record}
+     * }
+     */
+    /**
+     * @event failed-load {
+     *  @param {MetaphorJs.model.Record}
+     * }
+     */
+    /**
+     * @event before-save {
+     *  @param {MetaphorJs.model.Record}
+     * }
+     */
+    /**
+     * @event save {
+     *  @param {MetaphorJs.model.Record}
+     * }
+     */
+    /**
+     * @event failed-save {
+     *  @param {MetaphorJs.model.Record}
+     * }
+     */
+    /**
+     * @event before-delete {
+     *  @param {MetaphorJs.model.Record}
+     * }
+     */
+    /**
+     * @event delete {
+     *  @param {MetaphorJs.model.Record}
+     * }
+     */
+    /**
+     * @event failed-delete {
+     *  @param {MetaphorJs.model.Record}
+     * }
+     */
+    /**
+     * @event reset {
+     *  @param {MetaphorJs.model.Record}
+     * }
+     */
+
 
     $mixins: [MetaphorJs.mixin.Observable],
 
@@ -33,7 +111,21 @@ module.exports = MetaphorJs.model.Record = cls({
      * @constructor
      * @method $init
      * @param {*} id
-     * @param {object} cfg
+     * @param {object} cfg {
+     *  @type {string|MetaphorJs.model.Model} model
+     *  @type {boolean} autoLoad {
+     *      Load record automatically when constructed
+     *      @default true
+     *  }
+     *  @type {boolean} importUponSave {
+     *      Import new data from response on save request
+     *      @default false
+     *  }
+     *  @type {boolean} importUponCreate {
+     *      Import new data from response on create request
+     *      @default false
+     *  }
+     * }
      */
 
     /**
@@ -54,12 +146,12 @@ module.exports = MetaphorJs.model.Record = cls({
         var self    = this,
             args    = arguments.length;
 
-        if (args == 1) {
+        if (args === 1) {
             cfg     = id;
             id      = null;
             data    = null;
         }
-        else if (args == 2) {
+        else if (args === 2) {
             cfg     = data;
             data    = null;
         }
@@ -87,12 +179,13 @@ module.exports = MetaphorJs.model.Record = cls({
             self.load();
         }
 
-        if (self.$getClass() != "MetaphorJs.model.Record") {
+        if (self.$getClass() !== "MetaphorJs.model.Record") {
             MetaphorJs.model.Model.addToCache(self);
         }
     },
 
     /**
+     * Is record finished loading from server
      * @method
      * @returns {bool}
      */
@@ -101,6 +194,7 @@ module.exports = MetaphorJs.model.Record = cls({
     },
 
     /**
+     * Is record still loading from server
      * @method
      * @returns {bool}
      */
@@ -109,6 +203,7 @@ module.exports = MetaphorJs.model.Record = cls({
     },
 
     /**
+     * Is this record was created separately from a store
      * @method
      * @returns {bool}
      */
@@ -117,6 +212,7 @@ module.exports = MetaphorJs.model.Record = cls({
     },
 
     /**
+     * Does this record have changes
      * @method
      * @returns {bool}
      */
@@ -133,6 +229,7 @@ module.exports = MetaphorJs.model.Record = cls({
     },
 
     /**
+     * Make this record belong to a store
      * @method
      * @param {MetaphorJs.model.Store} store
      */
@@ -146,6 +243,8 @@ module.exports = MetaphorJs.model.Record = cls({
     },
 
     /**
+     * Remove attachment to a store. If record is not standalone,
+     * it will be destroyed.
      * @method
      * @param {MetaphorJs.model.Store} store
      */
@@ -164,6 +263,7 @@ module.exports = MetaphorJs.model.Record = cls({
     },
 
     /**
+     * Mark this record as having changes
      * @method
      * @param {bool} dirty
      */
@@ -176,6 +276,7 @@ module.exports = MetaphorJs.model.Record = cls({
     },
 
     /**
+     * Import record data. Resets record to a unchanged state
      * @method
      * @param {object} data
      */
@@ -200,6 +301,7 @@ module.exports = MetaphorJs.model.Record = cls({
     },
 
     /**
+     * Prepare data for sending to a server
      * @method
      * @access protected
      * @param {object} data
@@ -220,6 +322,7 @@ module.exports = MetaphorJs.model.Record = cls({
 
 
     /**
+     * Get record id
      * @method
      * @returns {*}
      */
@@ -228,6 +331,8 @@ module.exports = MetaphorJs.model.Record = cls({
     },
 
     /**
+     * Get record data. Returns a new object with all data keys 
+     * or only the ones specified and without keys starting with $.
      * @method
      * @param {[]|null|string} keys
      * @returns {object}
@@ -252,7 +357,7 @@ module.exports = MetaphorJs.model.Record = cls({
             var sdata = this.data;
 
             for (i in sdata) {
-                if (i.substr(0, 1) == "$") {
+                if (i.substr(0, 1) === "$") {
                     continue;
                 }
                 data[i] = sdata[i];
@@ -263,6 +368,7 @@ module.exports = MetaphorJs.model.Record = cls({
     },
 
     /**
+     * Get changed properties
      * @method
      * @returns {object}
      */
@@ -271,6 +377,7 @@ module.exports = MetaphorJs.model.Record = cls({
     },
 
     /**
+     * Is the field changed
      * @method
      * @param {string} key
      * @returns {bool}
@@ -280,6 +387,7 @@ module.exports = MetaphorJs.model.Record = cls({
     },
 
     /**
+     * Get specific data key
      * @method
      * @param {string} key
      * @returns {*}
@@ -289,6 +397,7 @@ module.exports = MetaphorJs.model.Record = cls({
     },
 
     /**
+     * Set record id
      * @method
      * @param {*} id
      */
@@ -299,6 +408,7 @@ module.exports = MetaphorJs.model.Record = cls({
     },
 
     /**
+     * Set data field
      * @method
      * @param {string} key
      * @param {*} value
@@ -320,6 +430,7 @@ module.exports = MetaphorJs.model.Record = cls({
     },
 
     /**
+     * Revert record to the last saved state
      * @method
      */
     revert: function() {
@@ -332,6 +443,7 @@ module.exports = MetaphorJs.model.Record = cls({
     },
 
     /**
+     * Load record from the server
      * @method
      * @returns {MetaphorJs.lib.Promise}
      */
@@ -354,9 +466,10 @@ module.exports = MetaphorJs.model.Record = cls({
     },
 
     /**
+     * Send data back to server 
      * @method
-     * @param {array|null|string} keys
-     * @param {object|null} extra
+     * @param {array|null|string} keys Only send these keys
+     * @param {object|null} extra Send this data along with record data
      * @returns {MetaphorJs.lib.Promise}
      */
     save: function(keys, extra) {
@@ -382,6 +495,7 @@ module.exports = MetaphorJs.model.Record = cls({
     },
 
     /**
+     * Send delete request
      * @method
      * @returns {MetaphorJs.lib.Promise}
      */
@@ -400,6 +514,7 @@ module.exports = MetaphorJs.model.Record = cls({
 
 
     /**
+     * Set record back to unloaded state
      * @method
      */
     reset: function() {

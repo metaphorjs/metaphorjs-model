@@ -21,6 +21,7 @@ module.exports = MetaphorJs.model.Store = function(){
 
     /**
      * @class MetaphorJs.model.Store
+     * @mixes MetaphorJs.mixin.Observable
      */
     return cls({
 
@@ -31,33 +32,14 @@ module.exports = MetaphorJs.model.Store = function(){
             clearOnLoad:    true,
             model:          null,
 
-            /**
-             * Extra params to pass to Model when loading stuff
-             * @var {object}
-             * @access protected
-             */
             extraParams:    null,
             loaded:         false,
             loading:        false,
             local:          false,
 
-            /**
-             * @var {[]}
-             * @access protected
-             */
             items:          null,
             current:        null,
-
-            /**
-             * @var {object}
-             * @access protected
-             */
             map:            null,
-
-            /**
-             * @var {object}
-             * @access protected
-             */
             currentMap:     null,
 
             length:         0,
@@ -74,16 +56,37 @@ module.exports = MetaphorJs.model.Store = function(){
             filterOpt:      null,
             sortBy:         null,
             sortDir:        null,
-            publicStore: false,
+            publicStore:    false,
 
-            idProp: null,
+            idProp:         null,
             loadingPromise: null,
 
             /**
              * @constructor
              * @method $init
-             * @param {object} options
-             * @param {[]} initialData
+             * @param {object} options {
+             *  @type {string} url Api endpoint url if not defined in model
+             *  @type {boolean} local {
+             *      This store does not load data from remote server
+             *      @default false
+             *  }
+             *  @type {int} pageSize Number of records per page
+             *  @type {boolean} autoLoad {
+             *      @default false
+             *  }
+             *  @type {boolean} clearOnLoad {
+             *      On load, remove everything already added 
+             *      @default true
+             *  }
+             *  @type {string|object|MetaphorJs.model.Model} model
+             *  @type {object} extraParams {
+             *      Extra params to add to every request
+             *  }
+             *  @type {MetaphorJs.model.Store} sourceStore {
+             *      Keep in sync with another store
+             *  }
+             * }
+             * @param {array} initialData Array of records
              */
 
             /**
@@ -91,7 +94,7 @@ module.exports = MetaphorJs.model.Store = function(){
              * @method $init
              * @param {string} url
              * @param {object} options
-             * @param {[]} initialData
+             * @param {array} initialData
              */
             $init:     function(url, options, initialData) {
 
@@ -150,6 +153,10 @@ module.exports = MetaphorJs.model.Store = function(){
                 }
             },
 
+            /**
+             * Change store's model
+             * @param {MetaphorJs.model.Model} model 
+             */
             setModel: function(model) {
                 this.model = model;
                 this.initModel({});
@@ -175,10 +182,8 @@ module.exports = MetaphorJs.model.Store = function(){
 
 
             initSourceStore: function(sourceStore, mode) {
-
                 var self = this;
                 sourceStore[mode]("update", self.onSourceStoreUpdate, self);
-
             },
 
             onSourceStoreUpdate: function() {
@@ -194,6 +199,7 @@ module.exports = MetaphorJs.model.Store = function(){
             },
 
             /**
+             * Get store id
              * @method
              * @returns {string}
              */
@@ -202,6 +208,7 @@ module.exports = MetaphorJs.model.Store = function(){
             },
 
             /**
+             * Is this store finished loading data
              * @method
              * @returns {bool}
              */
@@ -210,6 +217,7 @@ module.exports = MetaphorJs.model.Store = function(){
             },
 
             /**
+             * Is this store local (does not load remote data)
              * @method
              * @returns {bool}
              */
@@ -218,6 +226,7 @@ module.exports = MetaphorJs.model.Store = function(){
             },
 
             /**
+             * Make this store local or remote
              * @method
              * @param {bool} state
              */
@@ -226,6 +235,7 @@ module.exports = MetaphorJs.model.Store = function(){
             },
 
             /**
+             * Is this store currently loading
              * @method
              * @returns {bool}
              */
@@ -234,6 +244,7 @@ module.exports = MetaphorJs.model.Store = function(){
             },
 
             /**
+             * Does this store have a filter applied
              * @method
              * @returns {bool}
              */
@@ -242,6 +253,7 @@ module.exports = MetaphorJs.model.Store = function(){
             },
 
             /**
+             * Does this store have a sorter applied
              * @method
              * @returns {bool}
              */
@@ -250,6 +262,7 @@ module.exports = MetaphorJs.model.Store = function(){
             },
 
             /**
+             * Get number of records in this store
              * @method
              * @param {boolean} unfiltered
              * @returns {number}
@@ -259,6 +272,7 @@ module.exports = MetaphorJs.model.Store = function(){
             },
 
             /**
+             * Get number of records on the server
              * @method
              * @returns {number}
              */
@@ -267,6 +281,7 @@ module.exports = MetaphorJs.model.Store = function(){
             },
 
             /**
+             * Is this store currently empty
              * @method
              * @returns {boolean}
              */
@@ -275,6 +290,7 @@ module.exports = MetaphorJs.model.Store = function(){
             },
 
             /**
+             * Get number of pages (based on pageSize setting)
              * @method
              * @returns {number}
              */
@@ -291,6 +307,7 @@ module.exports = MetaphorJs.model.Store = function(){
             },
 
             /**
+             * Set extra param. It will be sent along with every request
              * @method
              * @param {string} k
              * @param {string|int|null} v
@@ -305,6 +322,7 @@ module.exports = MetaphorJs.model.Store = function(){
             },
 
             /**
+             * Get extra param
              * @method
              * @param {string} k
              * @returns {*}
@@ -314,6 +332,7 @@ module.exports = MetaphorJs.model.Store = function(){
             },
 
             /**
+             * Get all extra params (in a new object)
              * @method
              * @returns {object}
              */
@@ -322,6 +341,7 @@ module.exports = MetaphorJs.model.Store = function(){
             },
 
             /**
+             * Clear all extra params
              * @method
              */
             clearParams: function() {
@@ -329,6 +349,7 @@ module.exports = MetaphorJs.model.Store = function(){
             },
 
             /**
+             * Set remote record offset
              * @method
              * @param {number} val
              */
@@ -337,6 +358,7 @@ module.exports = MetaphorJs.model.Store = function(){
             },
 
             /**
+             * Set page size
              * @method
              * @param {number} val
              */
@@ -345,6 +367,7 @@ module.exports = MetaphorJs.model.Store = function(){
             },
 
             /**
+             * Get unprocessed response data
              * @method
              * @returns {object}
              */
@@ -353,8 +376,10 @@ module.exports = MetaphorJs.model.Store = function(){
             },
 
             /**
+             * Does this store have records marked as dirty
              * @method
-             * @param {boolean} unfiltered
+             * @param {boolean} unfiltered If filter is appied this flag will 
+             *  make this method ignore the filter
              * @returns {bool}
              */
             hasDirty: function(unfiltered) {
@@ -373,8 +398,10 @@ module.exports = MetaphorJs.model.Store = function(){
             },
 
             /**
+             * Get list of records marked as dirty
              * @method
-             * @param {boolean} unfiltered
+             * @param {boolean} unfiltered If filter is appied this flag will 
+             *  make this method ignore the filter
              * @returns {array}
              */
             getDirty: function(unfiltered) {
@@ -391,8 +418,9 @@ module.exports = MetaphorJs.model.Store = function(){
             },
 
             /**
+             * Get current model
              * @method
-             * @returns MetaphorJs.model.Model
+             * @returns {MetaphorJs.model.Model}
              */
             getModel: function() {
                 return this.model;
@@ -400,11 +428,12 @@ module.exports = MetaphorJs.model.Store = function(){
 
 
             /**
+             * Get list of records (affected by store filter)
              * @method
              * @returns {array}
              */
             toArray: function() {
-                return this.current;
+                return this.current.slice();
             },
 
 
@@ -507,9 +536,35 @@ module.exports = MetaphorJs.model.Store = function(){
             },
 
             /**
+             * (Re)load store. 
              * @method
-             * @param {object} params optional
-             * @param {object} options optional
+             * @param {object} params {
+             *  Add these params to load request
+             *  @optional
+             * }
+             * @param {object} options {
+             *  @type {boolean} silent {
+             *      Do not trigger events
+             *      @default false
+             *  }
+             *  @type {boolean} noopOnEmpty {
+             *      Stop doing anything as soon as we know the data is empty
+             *      (do not clear and update)
+             *      @default false
+             *  }
+             *  @type {boolean} prepend {
+             *      Insert loaded data in front of old ones (and do not clear)
+             *      @default false
+             *  }
+             *  @type {boolean} append {
+             *      Insert loaded data after existing records (and do not clear)
+             *      @default false
+             *  }
+             *  @type {boolean} skipUpdate {
+             *      Skip updating store - re-filter, re-map
+             *      @default false
+             *  }
+             * }
              * @returns {MetaphorJs.lib.Promise}
              */
             load: function(params, options) {
@@ -593,12 +648,25 @@ module.exports = MetaphorJs.model.Store = function(){
                 }
             },
 
+            /**
+             * Override this method to catch successful loads
+             * @method
+             */
             onLoad: emptyFn,
+
+            /**
+             * Override this method to catch failed loads
+             * @method
+             */
             onFailedLoad: emptyFn,
 
             /**
+             * Save all dirty records
              * @method
-             * @param {boolean} silent
+             * @param {boolean} silent {
+             *  Do not trigger events
+             *  @default false
+             * }
              * @returns {MetaphorJs.lib.Promise}
              */
             save: function(silent) {
@@ -623,7 +691,7 @@ module.exports = MetaphorJs.model.Store = function(){
                 });
 
                 if (!cnt) {
-                    throw new Error("Nothing to save");
+                    return null;
                 }
 
                 if (!silent && self.trigger("before-save", self, recs) === false) {
@@ -673,15 +741,31 @@ module.exports = MetaphorJs.model.Store = function(){
                 }
             },
 
+            /**
+             * Override this method to catch successful saves
+             * @method
+             */
             onSave: emptyFn,
+
+            /**
+             * Override this method to catch failed saves
+             * @method
+             */
             onFailedSave: emptyFn,
 
 
             /**
+             * Delete record by id (send delete request)
              * @method
-             * @param {[]} ids
-             * @param {boolean} silent
-             * @param {boolean} skipUpdate
+             * @param {int|string|array} ids Record id(s)
+             * @param {boolean} silent {
+             *  Do not trigger events
+             *  @default false
+             * }
+             * @param {boolean} skipUpdate {
+             *  Skip updating store (re-filter, re-map)
+             *  @default false
+             * }
              * @returns {MetaphorJs.lib.Promise}
              */
             deleteById: function(ids, silent, skipUpdate) {
@@ -704,7 +788,7 @@ module.exports = MetaphorJs.model.Store = function(){
                 for (i = 0, len = ids.length; i < len; i++){
                     rec = self.getById(ids[i]);
                     self.remove(rec, silent, skipUpdate);
-                    if (rec instanceof Record) {
+                    if (rec instanceof MetaphorJs.model.Record) {
                         rec.$destroy();
                     }
                 }
@@ -729,13 +813,22 @@ module.exports = MetaphorJs.model.Store = function(){
                     });
             },
 
-
+            /**
+             * Override this method to catch successful deletes
+             * @method
+             */
             onDelete: emptyFn,
+
+            /**
+             * Override this method to catch failed deletes
+             * @method
+             */
             onFailedDelete: emptyFn,
 
             /**
+             * Delete record at index
              * @method
-             * @param {number} inx
+             * @param {number} inx Position at which to delete record
              * @param {boolean} silent
              * @param {boolean} skipUpdate
              * @returns {MetaphorJs.lib.Promise}
@@ -751,6 +844,7 @@ module.exports = MetaphorJs.model.Store = function(){
             },
 
             /**
+             * Delete record
              * @method
              * @param {MetaphorJs.model.Record} rec
              * @param {boolean} silent
@@ -763,6 +857,7 @@ module.exports = MetaphorJs.model.Store = function(){
             },
 
             /**
+             * Delete multiple records
              * @method
              * @param {MetaphorJs.model.Record[]} recs
              * @param {boolean} silent
@@ -785,30 +880,28 @@ module.exports = MetaphorJs.model.Store = function(){
             /**
              * Load store if not loaded or call provided callback
              * @method
-             * @param {function} cb
-             * @param {object} cbScope
-             * @param {object} options
+             * @param {object} options See load()
+             * @returns {MetaphorJs.lib.Promise}
              */
-            loadOr: function(cb, cbScope, options) {
+            loadOr: function(options) {
 
                 var self    = this;
 
-                if (self.local) {
-                    return;
+                if (!self.local && !self.isLoading() && !self.isLoaded()) {
+                    return self.load(null, options);
                 }
 
-                if (!self.isLoading()) {
-                    if (!self.isLoaded()) {
-                        self.load(null, options);
-                    }
-                    else if (cb) {
-                        cb.call(cbScope || self);
-                    }
-                }
+                return MetaphorJs.lib.Promise.resolve(self);
             },
 
             /**
+             * Load previous page and prepend before current records
              * @method
+             * @param {object} options {
+             *      See load(). append,prepend and noopOnEmpty will be set to
+             *      false, true and true.
+             * }
+             * @returns {MetaphorJs.lib.Promise}
              */
             addPrevPage: function(options) {
                 var self    = this;
@@ -822,7 +915,13 @@ module.exports = MetaphorJs.model.Store = function(){
             },
 
             /**
+             * Load next page and append after current records
              * @method
+             * @param {object} options {
+             *      See load(). append,prepend and noopOnEmpty will be set to
+             *      true, false and true.
+             * }
+             * @returns {MetaphorJs.lib.Promise}
              */
             addNextPage: function(options) {
 
@@ -839,23 +938,37 @@ module.exports = MetaphorJs.model.Store = function(){
                         limit:      self.pageSize
                     }, options);
                 }
+                else {
+                    return MetaphorJs.lib.Promise.resolve();
+                }
             },
 
             /**
+             * Load next page and replace current records with records from 
+             * the next page
              * @method
+             * @param {object} options See load()
+             * @returns {MetaphorJs.lib.Promise}
              */
             loadNextPage: function(options) {
 
                 var self    = this;
 
-                if (!self.local && (!self.totalLength || self.length < self.totalLength)) {
+                if (!self.local && (!self.totalLength || 
+                                    self.length < self.totalLength)) {
                     self.start += self.pageSize;
                     return self.load(null, options);
                 }
+                
+                return MetaphorJs.lib.Promise.resolve();
             },
 
             /**
+             * Load prev page and replace current records with records from 
+             * the prev page
              * @method
+             * @param {object} options See load()
+             * @returns {MetaphorJs.lib.Promise}
              */
             loadPrevPage: function(options) {
 
@@ -868,11 +981,17 @@ module.exports = MetaphorJs.model.Store = function(){
                     }
                     return self.load(null, options);
                 }
+
+                return MetaphorJs.lib.Promise.resolve();
             },
 
             /**
+             * Load a page and replace current records with records from 
+             * the page
              * @method
-             * @param {int} start
+             * @param {int} start Records offset
+             * @param {object} options See load()
+             * @returns {MetaphorJs.lib.Promise}
              */
             loadPage: function(start, options) {
                 var self = this;
@@ -883,15 +1002,18 @@ module.exports = MetaphorJs.model.Store = function(){
                     }
                     return self.load(null, options);
                 }
+                return MetaphorJs.lib.Promise.resolve();
             },
 
 
             /**
+             * Extract id from a record
              * @method
-             * @param {MetaphorJs.model.Record|Object} rec
+             * @param {MetaphorJs.model.Record|object} rec
+             * @returns {int|string|null}
              */
             getRecordId: function(rec) {
-                if (rec instanceof Record) {
+                if (rec instanceof MetaphorJs.model.Record) {
                     return rec.getId();
                 }
                 else if (this.model) {
@@ -903,14 +1025,17 @@ module.exports = MetaphorJs.model.Store = function(){
             },
 
             /**
+             * Get record data as plain object
              * @method
              * @param {MetaphorJs.model.Record|object} rec
+             * @returns {object}
              */
             getRecordData: function(rec) {
                 return this.model.isPlain() ? rec : rec.data;
             },
 
             /**
+             * @ignore
              * @method
              * @access protected
              * @param {MetaphorJs.model.Record|Object} item
@@ -949,6 +1074,7 @@ module.exports = MetaphorJs.model.Store = function(){
             },
 
             /**
+             * @ignore
              * @method
              * @param {string} mode on|un
              * @param {MetaphorJs.model.Record} rec
@@ -1000,10 +1126,11 @@ module.exports = MetaphorJs.model.Store = function(){
 
 
             /**
+             * Remove and return first record
              * @method
-             * @param {boolean} silent
-             * @param {boolean} skipUpdate
-             * @param {boolean} unfiltered
+             * @param {boolean} silent Do not trigger events
+             * @param {boolean} skipUpdate Do not run store updates
+             * @param {boolean} unfiltered Execute on unfiltered set of records
              * @returns {MetaphorJs.model.Record|Object|null}
              */
             shift: function(silent, skipUpdate, unfiltered) {
@@ -1011,34 +1138,35 @@ module.exports = MetaphorJs.model.Store = function(){
             },
 
             /**
-             * Works with unfiltered data
+             * Insert record at the beginning. Works with unfiltered data
              * @method
-             * @param {{}|MetaphorJs.model.Record} rec
-             * @param {boolean} silent
-             * @param {boolean} skipUpdate
-             * @returns {MetaphorJs.model.Record|Object}
+             * @param {object|MetaphorJs.model.Record} rec
+             * @param {boolean} silent Do not trigger events
+             * @param {boolean} skipUpdate Do not run store updates
+             * @returns {MetaphorJs.model.Record|object}
              */
             unshift: function(rec, silent, skipUpdate) {
                 return this.insert(0, rec, silent, skipUpdate);
             },
 
             /**
+             * Remove and return last record
              * @method
-             * @param {boolean} silent
-             * @param {boolean} skipUpdate
-             * @param {boolean} unfiltered
-             * @returns {MetaphorJs.model.Record|Object|null}
+             * @param {boolean} silent Do not trigger events
+             * @param {boolean} skipUpdate Do not run store updates
+             * @param {boolean} unfiltered Execute on unfiltered set of records
+             * @returns {MetaphorJs.model.Record|object|null}
              */
             pop: function(silent, skipUpdate, unfiltered) {
                 return this.removeAt(this.length - 1, 1, silent, skipUpdate, unfiltered);
             },
 
             /**
-             * Works with unfiltered data
+             * Add many records to the store. Works with unfiltered data
              * @method
-             * @param {[]} recs
-             * @param {boolean} silent
-             * @param {boolean} skipUpdate
+             * @param {MetaphorJs.model.Record[]|object[]} recs
+             * @param {boolean} silent Do not trigger events
+             * @param {boolean} skipUpdate Do not run store updates
              */
             addMany: function(recs, silent, skipUpdate) {
                 var i, l, self = this, start = self.length;
@@ -1057,27 +1185,39 @@ module.exports = MetaphorJs.model.Store = function(){
             },
 
             /**
-             * Works with unfiltered data
+             * Add one record to the store. Works with unfiltered data
              * @method
-             * @param {MetaphorJs.model.Record|Object} rec
-             * @param {boolean} silent
-             * @param {boolean} skipUpdate
+             * @param {MetaphorJs.model.Record|object} rec
+             * @param {boolean} silent Do not trigger events
+             * @param {boolean} skipUpdate Do not run store updates
              */
             add: function(rec, silent, skipUpdate) {
                 return this.insert(this.length, rec, silent, skipUpdate);
             },
 
+            /**
+             * Override this method to catch when records are added
+             * @method 
+             * @param {int} index
+             * @param {MetaphorJs.model.Record|object} rec
+             */
             onAdd: emptyFn,
 
             /**
-             * Works with both filtered and unfiltered
+             * Remove records from specific position
              * @method
-             * @param {number} index
-             * @param {number} length = 1
-             * @param {boolean} silent
-             * @param {boolean} skipUpdate
-             * @param {boolean} unfiltered -- index from unfiltered item list
-             * @returns {MetaphorJs.model.Record|Object|null}
+             * @param {number} index {
+             *  Starting index 
+             *  @required
+             * }
+             * @param {number} length {
+             *  Number of records to remove
+             *  @default 1
+             * }
+             * @param {boolean} silent Do not trigger events
+             * @param {boolean} skipUpdate Do not run store updates
+             * @param {boolean} unfiltered Execute on unfiltered set of records
+             * @returns {MetaphorJs.model.Record|object|undefined}
              */
             removeAt: function(index, length, silent, skipUpdate, unfiltered) {
 
@@ -1089,7 +1229,7 @@ module.exports = MetaphorJs.model.Store = function(){
                     return;
                 }
 
-                if (index == null) {
+                if (index === null) {
                     //index   = 0; ??
                     return;
                 }
@@ -1128,7 +1268,7 @@ module.exports = MetaphorJs.model.Store = function(){
                         self.trigger('remove', rec, id);
                     }
 
-                    if (rec instanceof Record) {
+                    if (rec instanceof MetaphorJs.model.Record) {
                         self.bindRecord("un", rec);
                         rec.detachStore(self);
 
@@ -1149,12 +1289,14 @@ module.exports = MetaphorJs.model.Store = function(){
             },
 
             /**
+             * Remove records between start and end indexes
              * @method
-             * @param {int} start
-             * @param {int} end
-             * @param {boolean} silent
-             * @param {boolean} skipUpdate
-             * @param {boolean} unfiltered
+             * @param {int} start Start index
+             * @param {int} end End index
+             * @param {boolean} silent Do not trigger events
+             * @param {boolean} skipUpdate Do not run store updates
+             * @param {boolean} unfiltered Execute on unfiltered set of records
+             * @returns {MetaphorJs.model.Record|object|undefined}
              */
             removeRange: function(start, end, silent, skipUpdate, unfiltered) {
                 var l       = this.length;
@@ -1183,15 +1325,23 @@ module.exports = MetaphorJs.model.Store = function(){
                 return this.removeAt(start, (end - start) + 1, silent, skipUpdate, unfiltered);
             },
 
+            /**
+             * Override this method to catch all record removals
+             * @method
+             * @param {MetaphorJs.model.Record|object} rec
+             * @param {int|string|null} id
+             */
             onRemove: emptyFn,
 
             /**
-             * Works with unfiltered items
+             * Insert multiple records at specific index. (Works with unfiltered set)
              * @method
-             * @param {number} index
-             * @param {[]} recs
-             * @param {boolean} silent
-             * @param {boolean} skipUpdate
+             * @param {int} index {
+             *  @required
+             * }
+             * @param {array} recs
+             * @param {boolean} silent Do not trigger events
+             * @param {boolean} skipUpdate Do not run store updates
              */
             insertMany: function(index, recs, silent, skipUpdate) {
                 var i, l, self = this;
@@ -1207,13 +1357,15 @@ module.exports = MetaphorJs.model.Store = function(){
             },
 
             /**
-             * Works with unfiltered items
+             * Insert record at specific index. (Works with unfiltered set)
              * @method
-             * @param {number} index
-             * @param {MetaphorJs.model.Record|Object} rec
-             * @param {boolean} silent
-             * @param {boolean} skipUpdate
-             * @returns {MetaphorJs.model.Record|Object}
+             * @param {number} index {
+             *  @required
+             * }
+             * @param {MetaphorJs.model.Record|object} rec
+             * @param {boolean} silent Do not trigger events
+             * @param {boolean} skipUpdate Do not run store updates
+             * @returns {MetaphorJs.model.Record|object}
              */
             insert: function(index, rec, silent, skipUpdate) {
 
@@ -1272,12 +1424,13 @@ module.exports = MetaphorJs.model.Store = function(){
             },
 
             /**
+             * Replace one record with another
              * @method
-             * @param {MetaphorJs.model.Record|Object} old
-             * @param {MetaphorJs.model.Record|Object} rec
-             * @param {boolean} silent
-             * @param {boolean} skipUpdate
-             * @returns {MetaphorJs.model.Record|Object}
+             * @param {MetaphorJs.model.Record|object} old Old record
+             * @param {MetaphorJs.model.Record|object} rec New record
+             * @param {boolean} silent Do not trigger events
+             * @param {boolean} skipUpdate Do not run store updates
+             * @returns {MetaphorJs.model.Record|object} new record
              */
             replace: function(old, rec, silent, skipUpdate) {
                 var self    = this,
@@ -1292,6 +1445,8 @@ module.exports = MetaphorJs.model.Store = function(){
                     self.update();
                 }
 
+                self.onReplace(old, rec);
+
                 if (!silent) {
                     self.trigger('replace', old, rec);
                 }
@@ -1301,12 +1456,13 @@ module.exports = MetaphorJs.model.Store = function(){
 
 
             /**
+             * Replace record with given id by another record
              * @method
-             * @param {int|string} id
-             * @param {MetaphorJs.model.Record|object} rec
-             * @param {boolean} silent
-             * @param {boolean} skipUpdate
-             * @returns {MetaphorJs.model.Record|object}
+             * @param {int|string} id Old record id
+             * @param {MetaphorJs.model.Record|object} rec New record
+             * @param {boolean} silent Do not trigger events
+             * @param {boolean} skipUpdate Do not run store updates
+             * @returns {MetaphorJs.model.Record|object} new record
              */
             replaceId: function(id, rec, silent, skipUpdate) {
                 var self    = this,
@@ -1317,14 +1473,21 @@ module.exports = MetaphorJs.model.Store = function(){
                 return self.replace(self.getAt(index), rec, silent, skipUpdate);
             },
 
+            /**
+             * Override this method to catch all record replacements
+             * @method
+             * @param {MetaphorJs.model.Record|object} old Old record
+             * @param {MetaphorJs.model.Record|object} rec New record
+             */
             onReplace: emptyFn,
 
             /**
+             * Remove record from the store
              * @method
-             * @param {MetaphorJs.model.Record|Object} rec
-             * @param {boolean} silent
-             * @param {boolean} skipUpdate
-             * @returns {MetaphorJs.model.Record|Object|null}
+             * @param {MetaphorJs.model.Record|object} rec
+             * @param {boolean} silent Do not trigger events
+             * @param {boolean} skipUpdate Do not run store updates
+             * @returns {MetaphorJs.model.Record|object|null}
              */
             remove: function(rec, silent, skipUpdate) {
                 var inx = this.indexOf(rec, true);
@@ -1335,11 +1498,12 @@ module.exports = MetaphorJs.model.Store = function(){
             },
 
             /**
+             * Remove record from the store by record id
              * @method
-             * @param {string|int} id
-             * @param {boolean} silent
-             * @param {boolean} skipUpdate
-             * @returns {MetaphorJs.model.Record|Object|null}
+             * @param {string|int} id Record id
+             * @param {boolean} silent Do not trigger events
+             * @param {boolean} skipUpdate Do not run store updates
+             * @returns {MetaphorJs.model.Record|object|null}
              */
             removeId: function(id, silent, skipUpdate) {
                 var inx = this.indexOfId(id, true);
@@ -1351,9 +1515,10 @@ module.exports = MetaphorJs.model.Store = function(){
 
 
             /**
+             * Does this store contains record
              * @method
-             * @param {MetaphorJs.model.Record|Object} rec
-             * @param {boolean} unfiltered
+             * @param {MetaphorJs.model.Record|object} rec
+             * @param {boolean} unfiltered Check unfiltered set
              * @returns {boolean}
              */
             contains: function(rec, unfiltered) {
@@ -1361,9 +1526,10 @@ module.exports = MetaphorJs.model.Store = function(){
             },
 
             /**
+             * Does this store contains a record with given id
              * @method
-             * @param {string|int} id
-             * @param {boolean} unfiltered
+             * @param {string|int} id Record id
+             * @param {boolean} unfiltered Check in unfiltered set
              * @returns {boolean}
              */
             containsId: function(id, unfiltered) {
@@ -1376,8 +1542,9 @@ module.exports = MetaphorJs.model.Store = function(){
             },
 
             /**
+             * Remove all records from the store
              * @method
-             * @param {boolean} silent
+             * @param {boolean} silent Do not trigger events
              */
             clear: function(silent) {
 
@@ -1392,9 +1559,15 @@ module.exports = MetaphorJs.model.Store = function(){
                 }
             },
 
+            /**
+             * Override this method to catch when the store is being cleared
+             * @method
+             */
             onClear: emptyFn,
 
             /**
+             * Same as clear but it doesn't trigger any events. 
+             * This is what clear() calls internally
              * @method
              */
             reset: function() {
@@ -1428,10 +1601,11 @@ module.exports = MetaphorJs.model.Store = function(){
 
 
             /**
+             * Get record at given index
              * @method
-             * @param {number} index
-             * @param {boolean} unfiltered
-             * @returns {MetaphorJs.model.Record|Object|null}
+             * @param {int} index
+             * @param {boolean} unfiltered Get from unfiltered set
+             * @returns {MetaphorJs.model.Record|object|null}
              */
             getAt: function(index, unfiltered) {
                 return unfiltered ?
@@ -1440,10 +1614,11 @@ module.exports = MetaphorJs.model.Store = function(){
             },
 
             /**
+             * Get record by id
              * @method
-             * @param {string|int} id
-             * @param {boolean} unfiltered
-             * @returns {MetaphorJs.model.Record|Object|null}
+             * @param {string|int} id Record id
+             * @param {boolean} unfiltered Get from unfiltered set
+             * @returns {MetaphorJs.model.Record|object|null}
              */
             getById: function(id, unfiltered) {
                 return unfiltered ?
@@ -1452,11 +1627,11 @@ module.exports = MetaphorJs.model.Store = function(){
             },
 
             /**
-             * Works with filtered list unless fromOriginal = true
+             * Get index of record
              * @method
-             * @param {MetaphorJs.model.Record|Object} rec
-             * @param {boolean} unfiltered
-             * @returns {int}
+             * @param {MetaphorJs.model.Record|object} rec
+             * @param {boolean} unfiltered Lookup in unfiltered set
+             * @returns {int} returns -1 if not found
              */
             indexOf: function(rec, unfiltered) {
                 return unfiltered ?
@@ -1465,24 +1640,27 @@ module.exports = MetaphorJs.model.Store = function(){
             },
 
             /**
+             * Get index of record by given record id
              * @method
-             * @param {string|int} id
-             * @param {boolean} unfiltered
-             * @returns {int}
+             * @param {string|int} id Record id
+             * @param {boolean} unfiltered Lookup in unfiltered set
+             * @returns {int} returns -1 if not found
              */
             indexOfId: function(id, unfiltered) {
                 return this.indexOf(this.getById(id, unfiltered), unfiltered);
             },
 
             /**
+             * Interate over store records
              * @method
              * @param {function} fn {
-             *      @param {MetaphorJs.model.Record|Object} rec
+             *      @param {MetaphorJs.model.Record|object} rec
              *      @param {number} index
              *      @param {number} length
+             *      @returns {boolean|null} return false to stop
              * }
-             * @param {object} context
-             * @param {boolean} unfiltered
+             * @param {object} context fn's context
+             * @param {boolean} unfiltered Iterate over unfiltered set
              */
             each: function(fn, context, unfiltered) {
                 var items = unfiltered ?
@@ -1497,14 +1675,16 @@ module.exports = MetaphorJs.model.Store = function(){
             },
 
             /**
+             * Iterate over store records
              * @method
              * @param {function} fn {
-             *      @param {string|number} id
-             *      @param {number} index
-             *      @param {number} length
+             *      @param {string|number} id Record id
+             *      @param {number} index Record position in set
+             *      @param {number} length Set length
+             *      @returns {boolean|null} return false to stop
              * }
-             * @param {object} context
-             * @param {boolean} unfiltered
+             * @param {object} context fn's context
+             * @param {boolean} unfiltered Iterate over unfiltered set
              */
             eachId: function(fn, context, unfiltered) {
 
@@ -1516,9 +1696,10 @@ module.exports = MetaphorJs.model.Store = function(){
             },
 
             /**
+             * Collect values of given field
              * @method
              * @param {string} f Field name
-             * @param {boolean} unfiltered
+             * @param {boolean} unfiltered Collect from unfiltered set
              * @returns {array}
              */
             collect: function(f, unfiltered) {
@@ -1540,29 +1721,40 @@ module.exports = MetaphorJs.model.Store = function(){
             },
 
             /**
+             * Get first record
              * @method
-             * @param {boolean} unfiltered
-             * @returns {MetaphorJs.model.Record|Object}
+             * @param {boolean} unfiltered Get from unfiltered set
+             * @returns {MetaphorJs.model.Record|object|null}
              */
             first : function(unfiltered){
-                return unfiltered ? this.items[0] : this.current[0];
+                return unfiltered ? this.items[0] : 
+                                    this.current[0];
             },
 
             /**
+             * Get last record
              * @method
-             * @param {boolean} unfiltered
-             * @returns {MetaphorJs.model.Record|Object}
+             * @param {boolean} unfiltered Get from unfiltered set
+             * @returns {MetaphorJs.model.Record|object|null}
              */
             last : function(unfiltered){
-                return unfiltered ? this.items[this.length-1] : this.current[this.current-1];
+                return unfiltered ? this.items[this.length-1] : 
+                                    this.current[this.current-1];
             },
 
             /**
-             *@method
-             * @param {number} start Optional
-             * @param {number} end Optional
-             * @param {boolean} unfiltered
-             * @returns {MetaphorJs.model.Record[]|Object[]}
+             * Get a slice of records list
+             * @method
+             * @param {number} start {
+             *  Start index
+             *  @default 0
+             * }
+             * @param {number} end {
+             *  End index
+             *  @default length-1
+             * }
+             * @param {boolean} unfiltered Get from unfiltered set
+             * @returns {MetaphorJs.model.Record[]|object[]}
              */
             getRange : function(start, end, unfiltered){
                 var self    = this,
@@ -1590,15 +1782,17 @@ module.exports = MetaphorJs.model.Store = function(){
             },
 
             /**
+             * Find and return record matching custom filter
              * @method
              * @param {function} fn {
-             *      @param {MetaphorJs.model.Record|Object} rec
+             *      @param {MetaphorJs.model.Record|object} rec
              *      @param {string|int} id
+             *      @returns {boolean} Return true to accept record
              * }
-             * @param {object} context
+             * @param {object} context fn's context
              * @param {number} start { @default 0 }
-             * @param {boolean} unfiltered
-             * @returns {MetaphorJs.model.Record|Object|null}
+             * @param {boolean} unfiltered Look in unfiltered set
+             * @returns {MetaphorJs.model.Record|object|null}
              */
             findBy: function(fn, context, start, unfiltered) {
                 var inx = this.findIndexBy(fn, context, start, unfiltered);
@@ -1606,15 +1800,17 @@ module.exports = MetaphorJs.model.Store = function(){
             },
 
             /**
+             * Find index of a record matching custom filter
              * @method
              * @param {function} fn {
-             *      @param {MetaphorJs.model.Record|Object} rec
+             *      @param {MetaphorJs.model.Record|object} rec
              *      @param {string|int} id
+             *      @returns {boolean} return true to accept record
              * }
-             * @param {object} context
+             * @param {object} context fn's context
              * @param {number} start { @default 0 }
-             * @param {boolean} unfiltered
-             * @returns {int}
+             * @param {boolean} unfiltered Look in unfiltered set
+             * @returns {int} returns -1 if not found
              */
             findIndexBy : function(fn, context, start, unfiltered) {
 
@@ -1631,12 +1827,14 @@ module.exports = MetaphorJs.model.Store = function(){
             },
 
             /**
+             * Find record by its field value
              * @method
-             * @param {string} property
-             * @param {string|int|bool} value
-             * @param {bool} exact
-             * @param {boolean} unfiltered
-             * @returns {int}
+             * @param {string} property Record's field name
+             * @param {string|int|bool} value Value to compare to
+             * @param {bool} exact Make a strict comparison
+             * @param {boolean} unfiltered Look in unfiltered set
+             * @returns {MetaphorJs.model.Record|object|null}
+             * @code store.find("name", "Jane");
              */
             find: function(property, value, exact, unfiltered) {
 
@@ -1661,21 +1859,25 @@ module.exports = MetaphorJs.model.Store = function(){
             },
 
             /**
+             * Find record by its field value.<br>
+             * Same as <code>find()</code> but with exact=true
              * @method
-             * @param {string} property
-             * @param {string|int|bool} value
-             * @param {boolean} unfiltered
-             * @returns {int}
+             * @param {string} property Record's field name
+             * @param {string|int|bool} value Value to compare to
+             * @param {boolean} unfiltered Look in unfiltered set
+             * @returns {MetaphorJs.model.Record|object|null}
              */
             findExact: function(property, value, unfiltered) {
                 return this.find(property, value, true, unfiltered);
             },
 
             /**
+             * Find record by a set of fields
              * @method
-             * @param {object} props
-             * @param {boolean} unfiltered
-             * @returns {MetaphorJs.model.Record|Object|null}
+             * @param {object} props A set of field:value pairs to match record against.
+             * All fields must match for the record to be accepted.
+             * @param {boolean} unfiltered Look in unfiltered set
+             * @returns {MetaphorJs.model.Record|object|null}
              */
             findBySet: function(props, unfiltered) {
 
@@ -1708,7 +1910,11 @@ module.exports = MetaphorJs.model.Store = function(){
 
 
 
-
+            /**
+             * Re-apply filter and sorting. 
+             * Call this function if you used <code>skipUpdate</code> before.
+             * @method
+             */
             update: function() {
 
                 var self        = this,
@@ -1746,7 +1952,11 @@ module.exports = MetaphorJs.model.Store = function(){
                         getterFn        = function(item) {
                             return rt ? item.get(sortBy) : item[sortBy];
                         };
-                    self.current        = sortArray(self.current, getterFn, self.sortDir);
+                    self.current        = sortArray(
+                        self.current, 
+                        isFunction(sortBy) ? {fn: sortBy} : getterFn, 
+                        self.sortDir
+                    );
                 }
 
                 self.trigger("update", self);
@@ -1754,9 +1964,13 @@ module.exports = MetaphorJs.model.Store = function(){
 
 
             /**
+             * Filter store using a custom filter. This will change store contents
+             * and length and you might have to use <code>unfiltered</code> flag
+             * in some of the methods later. 
              * @method
-             * @param {{}|string} by
+             * @param {object|string|regexp|function|boolean} by
              * @param {string|boolean} opt
+             * @code metaphorjs-shared/src-docs/examples/filterArray.js
              */
             filter: function(by, opt) {
 
@@ -1770,6 +1984,7 @@ module.exports = MetaphorJs.model.Store = function(){
             },
 
             /**
+             * Clear filter
              * @method
              */
             clearFilter: function() {
@@ -1787,9 +2002,15 @@ module.exports = MetaphorJs.model.Store = function(){
             },
 
             /**
+             * Sort array
              * @method
-             * @param {string} by
-             * @param {string} dir
+             * @param {string|function} by {
+             *  Either a field name to sort by, or a function 
+             *  @param {MetaphorJs.model.Record|object} a
+             *  @param {MetaphorJs.model.Record|object} b 
+             *  @returns {int} -1|0|1
+             * }
+             * @param {string} dir asc|desc
              */
             sort: function(by, dir) {
                 var self = this;
@@ -1800,6 +2021,7 @@ module.exports = MetaphorJs.model.Store = function(){
             },
 
             /**
+             * Clear sorting
              * @method
              */
             clearSorting: function() {
@@ -1832,21 +2054,23 @@ module.exports = MetaphorJs.model.Store = function(){
 
         {
             /**
+             * Find store
              * @static
              * @method
              * @param {string} id
-             * @returns MetaphorJs.Store|null
+             * @returns MetaphorJs.model.Store|null
              */
             lookupStore: function(id) {
                 return allStores[id] || null;
             },
 
             /**
+             * Iterate over registered stores
              * @static
              * @method
              * @param {function} fn {
              *  @param {MetaphorJs.model.Store} store
-             *  @returns {boolean} return false to break iterator
+             *  @returns {boolean} return false to stop
              * }
              * @param {object} fnScope
              */
