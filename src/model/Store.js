@@ -25,6 +25,125 @@ module.exports = MetaphorJs.model.Store = function(){
      */
     return cls({
 
+        /**
+         * @event update {
+         *  Store contents got updated
+         *  @param {MetaphorJs.model.Store} store
+         *  @param {MetaphorJs.model.Record|object} rec
+         * }
+         */
+        /**
+         * @event before-load {
+         *  Before store sends a get request to the server
+         *  @param {MetaphorJs.model.Store} store
+         *  @returns {boolean} return false to cancel laoding
+         * }
+         */
+        /**
+         * @event load {
+         *  After store finished loading and updating its contents
+         *  @param {MetaphorJs.model.Store} store
+         * }
+         */
+        /**
+         * @event loading-end {
+         *  After store finished loading but before updating.<br>
+         *  This event does not respect <code>silent</code> option. 
+         *  The purpose of this event is to let you 
+         *  display loading indicator or something like that.
+         *  @param {MetaphorJs.model.Store} store
+         * }
+         */
+        /**
+         * @event loading-start {
+         *  The store requested the server.<br>
+         *  This event does not respect <code>silent</code> option. 
+         *  The purpose of this event is to let you 
+         *  display loading indicator or something like that.
+         *  @param {MetaphorJs.model.Store} store
+         * }
+         */
+        /**
+         * @event failed-load {
+         *  There was an error while loading
+         *  @param {MetaphorJs.model.Store} store
+         *  @param {string|Error} reason
+         * }
+         */
+        /**
+         * @event before-save {
+         *  Before sending "save" request
+         *  @param {MetaphorJs.model.Store} store
+         *  @param {array} recs
+         *  @returns {boolean} return false to cancel saving
+         * }
+         */
+        /**
+         * @event save {
+         *  Records have been saved
+         *  @param {MetaphorJs.model.Store} store
+         * }
+         */
+        /**
+         * @event failed-save {
+         *  There was an error while saving
+         *  @param {MetaphorJs.model.Store} store
+         *  @param {string|Error} reason
+         * }
+         */
+        /**
+         * @event before-delete {
+         *  Before sending "delete" request
+         *  @param {MetaphorJs.model.Store} store
+         *  @param {array} ids 
+         *  @returns {boolean} return false to cancel deletion
+         * }
+         */
+        /**
+         * @event delete {
+         *  Records have been deleted
+         *  @param {MetaphorJs.model.Store} store
+         *  @param {array} ids 
+         * }
+         */
+        /**
+         * @event failed-delete {
+         *  There was an error while deleting
+         *  @param {MetaphorJs.model.Store} store
+         *  @param {array} ids 
+         * }
+         */
+        /**
+         * @event add {
+         *  Some records were added to the store
+         *  @param {MetaphorJs.model.Store} store
+         *  @param {array} recs 
+         * }
+         */
+        /**
+         * @event remove {
+         *  Record got removed from the store
+         *  @param {MetaphorJs.model.Store} store
+         *  @param {MetaphorJs.model.Record|object} rec
+         *  @param {string|int} id 
+         * }
+         */
+        /**
+         * @event replace {
+         *  A record was replaced
+         *  @param {MetaphorJs.model.Store} store
+         *  @param {MetaphorJs.model.Record|object} old
+         *  @param {MetaphorJs.model.Record|object} rec
+         * }
+         */
+        /**
+         * @event clear {
+         *  The store has been cleared
+         *  @param {MetaphorJs.model.Store} store
+         *  @param {array} recs
+         * }
+         */
+
             $mixins:        [MetaphorJs.mixin.Observable],
 
             id:             null,
@@ -523,6 +642,7 @@ module.exports = MetaphorJs.model.Store = function(){
                 self.loaded     = true;
                 self.loading    = false;
 
+                
                 self.trigger("loading-end", self);
                 self.onLoad();
 
@@ -737,7 +857,7 @@ module.exports = MetaphorJs.model.Store = function(){
                 var self = this;
                 self.onFailedSave(reason);
                 if (!silent) {
-                    self.trigger("failed-save", self);
+                    self.trigger("failed-save", self, reason);
                 }
             },
 
@@ -1555,7 +1675,7 @@ module.exports = MetaphorJs.model.Store = function(){
                 self.onClear();
 
                 if (!silent) {
-                    self.trigger('clear', recs);
+                    self.trigger('clear', self, recs);
                 }
             },
 
