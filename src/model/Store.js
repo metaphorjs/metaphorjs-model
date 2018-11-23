@@ -1165,7 +1165,7 @@ module.exports = MetaphorJs.model.Store = function(){
 
                 var self    = this;
 
-                if (item instanceof Record) {
+                if (item instanceof MetaphorJs.model.Record) {
                     return item;
                 }
 
@@ -1525,7 +1525,7 @@ module.exports = MetaphorJs.model.Store = function(){
                     self.map[id] = rec;
                 }
 
-                if (rec instanceof Record) {
+                if (rec instanceof MetaphorJs.model.Record) {
                     rec.attachStore(self);
                     self.bindRecord("on", rec);
                 }
@@ -1702,7 +1702,7 @@ module.exports = MetaphorJs.model.Store = function(){
                 if (!keepRecords) {
                     for (i = 0, len = self.items.length; i < len; i++) {
                         rec = self.items[i];
-                        if (rec instanceof Record) {
+                        if (rec instanceof MetaphorJs.model.Record) {
                             self.bindRecord("un", rec);
                             rec.detachStore(self);
                         }
