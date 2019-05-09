@@ -402,10 +402,11 @@ module.exports = MetaphorJs.model.Store = function(){
             /**
              * Is this store currently empty
              * @method
+             * @param {boolean} unfiltered
              * @returns {boolean}
              */
-            isEmpty: function() {
-                return this.length === 0;
+            isEmpty: function(unfiltered) {
+                return unfiltered ? this.length === 0 : this.currentLength === 0;
             },
 
             /**
