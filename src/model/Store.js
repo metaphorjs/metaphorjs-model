@@ -1075,10 +1075,17 @@ module.exports = MetaphorJs.model.Store = function(){
 
                 var self    = this;
 
-                if (!self.local && (!self.totalLength || 
-                                    self.length < self.totalLength)) {
+                if (!self.totalLength || 
+                    self.local ||
+                    self.length < self.totalLength) {
+
                     self.start += self.pageSize;
-                    return self.load(null, options);
+                    if (!self.local) {
+                        return self.load(null, options);
+                    }
+                    else {
+                        self.update();
+                    }
                 }
                 
                 return MetaphorJs.lib.Promise.resolve();
@@ -1095,12 +1102,17 @@ module.exports = MetaphorJs.model.Store = function(){
 
                 var self    = this;
 
-                if (!self.local && self.start > 0) {
+                if (self.start > 0) {
                     self.start -= self.pageSize;
                     if (self.start < 0) {
                         self.start = 0;
                     }
-                    return self.load(null, options);
+                    if (!self.local) {
+                        return self.load(null, options);
+                    }
+                    else {
+                        self.update();
+                    }
                 }
 
                 return MetaphorJs.lib.Promise.resolve();
@@ -1116,12 +1128,15 @@ module.exports = MetaphorJs.model.Store = function(){
              */
             loadPage: function(start, options) {
                 var self = this;
+                self.start = parseInt(start, 10);
+                if (self.start < 0) {
+                    self.start = 0;
+                }
                 if (!self.local) {
-                    self.start = parseInt(start, 10);
-                    if (self.start < 0) {
-                        self.start = 0;
-                    }
                     return self.load(null, options);
+                }
+                else {
+                    self.update();
                 }
                 return MetaphorJs.lib.Promise.resolve();
             },
@@ -2043,6 +2058,10 @@ module.exports = MetaphorJs.model.Store = function(){
                     sorted      = self.sorted,
                     isPlain     = self.model.isPlain();
 
+                if (self.local) {
+                    self.totalLength = self.length = self.items.length;
+                }
+
                 self.currentLength  = self.length;
                 self.currentMap     = self.map;
                 self.current        = self.items;
@@ -2064,6 +2083,11 @@ module.exports = MetaphorJs.model.Store = function(){
                         }
                     }, null, true);
 
+                    self.currentLength  = self.current.length;
+                }
+
+                if (self.local && self.pageSize) {
+                    self.current = self.current.slice(self.start, self.start + self.pageSize);
                     self.currentLength  = self.current.length;
                 }
 
