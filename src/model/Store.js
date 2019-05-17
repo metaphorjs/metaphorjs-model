@@ -1149,7 +1149,10 @@ module.exports = MetaphorJs.model.Store = function(){
              * @returns {int|string|null}
              */
             getRecordId: function(rec) {
-                if (rec instanceof MetaphorJs.model.Record) {
+                if (!rec) {
+                    return null;
+                }
+                else if (rec instanceof MetaphorJs.model.Record) {
                     return rec.getId();
                 }
                 else if (this.model) {

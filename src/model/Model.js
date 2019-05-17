@@ -621,7 +621,9 @@ module.exports = MetaphorJs.model.Model = function(){
             var self    = this,
                 ext     = self.getRecordProp(null, "extend");
 
-            return ext ? extend(rec, ext, false, false) : rec;
+            rec = ext ? extend(rec, ext, false, false) : rec;
+            rec.$$model = self;
+            return rec;
         },
 
         /**
@@ -641,7 +643,7 @@ module.exports = MetaphorJs.model.Model = function(){
          */
         getRecordId: function(rec) {
             var idProp = this.getRecordProp("load", "id");
-            return (rec.getId ? rec.getId() : rec[idProp]) || null;
+            return rec ? (rec.getId ? rec.getId() : rec[idProp]) || null : null;
         },
 
         /**
