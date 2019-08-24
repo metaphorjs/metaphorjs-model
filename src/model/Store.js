@@ -1694,6 +1694,7 @@ module.exports = MetaphorJs.model.Store = function(){
                 self.onClear();
 
                 if (!silent) {
+                    self.trigger('update', self);
                     self.trigger('clear', self, recs);
                 }
             },
