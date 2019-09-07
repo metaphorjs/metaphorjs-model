@@ -2,30 +2,29 @@
     "version": "0.1.12",
     "description": "MetaphorJs Record/Store/Model",
 
-    "push": [
-        "github"
-    ],
+    "docs": {
+        "out": "docs",
+        "renderer": {
+            "type": "default",
+            "data": {
+                "title": "MetaphorJs.model.Model/Record/Store",
+                "description": "Data layer",
+                "version": "v0.1.12"
+            }
+        },
+        
+        "src": [
+            "src/model/**"
+        ],
+        "includeExternal": false
+    },
+
     "mixin": {
         "model": {
             "files": [
-                [
-                    "src/class/Model.js",
-                    {
-                        "as": "Model"
-                    }
-                ],
-                [
-                    "src/class/Record.js",
-                    {
-                        "as": "Record"
-                    }
-                ],
-                [
-                    "src/class/Store.js",
-                    {
-                        "as": "Store"
-                    }
-                ]
+                ["src/class/Model.js", {"as": "*"}],
+                ["src/class/Record.js", {"as": "*"}],
+                ["src/class/Store.js", {"as": "*"}]
             ]
         },
         "all": {
@@ -38,29 +37,33 @@
             ]
         }
     },
+
     "build": {
         "standalone": {
-            "wrap": true,
-            "global": true,
             "target": "dist/metaphorjs.model.js",
             "files": [
                 "metaphorjs/src/MetaphorJs.js",
                 "model"
             ],
-            "expose": [
-                "Model",
-                "Record",
-                "Store"
-            ]
+            "options": {
+                "wrap": true,
+                "global": true,
+                "expose": [
+                    "Model",
+                    "Record",
+                    "Store"
+                ]
+            }
         },
+
+        "standalone-min": {
+            "extend": "standalone",
+            "target": "dist/metaphorjs.model.min.js",
+            "pipe": ["build", "compile", "write"]
+        },
+
         "npm": {
             "target": "dist/metaphorjs.model.npm.js",
-            "compile": false,
-            "wrap": {
-                "exported": true,
-                "deferred": true,
-                "args": ["window"]
-            },
             "files": [
                 "model"
             ],
@@ -70,19 +73,28 @@
                 "metaphorjs-observable/src/lib/Observable.js",
                 "metaphorjs-select/src/func/select.js",
                 "metaphorjs-namespace/src/lib/Namespace.js",
-                "metaphorjs-class/src/lib/Class.js"
+                "metaphorjs-class/src/cls.js"
             ],
-            "returns": "MetaphorJs",
-            "require": {
-                "metaphorjs-ajax": {
-                    "as": "ajax",
+            "options": {
+                "exports": true,
+                "wrap": {
+                    "exports": true,
+                    "deferred": true,
+                    "return": "MetaphorJs",
                     "args": ["window"]
                 },
-                "metaphorjs-promise": "Promise",
-                "metaphorjs-namespace": "Namespace",
-                "metaphorjs-class": "Class"
+                "require": {
+                    "metaphorjs-ajax": {
+                        "as": "ajax",
+                        "args": ["window"]
+                    },
+                    "metaphorjs-promise": "Promise",
+                    "metaphorjs-namespace": "Namespace",
+                    "metaphorjs-class": "cls"
+                }
             }
         },
+
         "amd": {
             "target": "dist/metaphorjs.model.amd.js",
             "files": [
@@ -94,25 +106,30 @@
                 "metaphorjs-observable/src/lib/Observable.js",
                 "metaphorjs-select/src/func/select.js",
                 "metaphorjs-namespace/src/lib/Namespace.js",
-                "metaphorjs-class/src/lib/Class.js",
-                "metaphorjs-class/src/func/defineClass.js",
-                "metaphorjs-class/src/func/isInstanceOf.js",
-                "metaphorjs-class/src/func/factory.js"
+                "metaphorjs-class/src/cls.js"
             ],
-            "prepend": [
-                "src/amd/prepend.js"
-            ],
-            "define": {
-                "name": "metaphorjs-model",
-                "return": "MetaphorJs",
-                "deps": {
-                    "metaphorjs-ajax": "ajax",
-                    "metaphorjs-promise": "Promise",
-                    "metaphorjs-namespace": "Namespace",
-                    "metaphorjs-class": "Class",
-                    "metaphorjs": "MetaphorJs"
+            "options": {
+                "prepend": [
+                    "src/amd/prepend.js"
+                ],
+                "amd": {
+                    "name": "metaphorjs-model",
+                    "return": "MetaphorJs",
+                    "deps": {
+                        "metaphorjs-ajax": "ajax",
+                        "metaphorjs-promise": "Promise",
+                        "metaphorjs-namespace": "Namespace",
+                        "metaphorjs-class": "cls",
+                        "metaphorjs": "MetaphorJs"
+                    }
                 }
             }
+        },
+
+        "amd-min": {
+            "extend": "amd",
+            "target": "dist/metaphorjs.model.amd.min.js",
+            "pipe": ["build", "compile", "write"]
         }
     }
 }
