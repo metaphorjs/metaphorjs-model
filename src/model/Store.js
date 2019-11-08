@@ -242,6 +242,7 @@ module.exports = MetaphorJs.model.Store = function(){
                 extend(self, options, true, false);
 
                 self.id         = self.id || nextUid();
+                self.filtered   = !!self.filterBy;
                 
                 if (self.publicStore) {
                     allStores[self.id]  = self;
