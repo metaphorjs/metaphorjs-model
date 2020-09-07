@@ -1,11 +1,10 @@
 
-var extend  = require("metaphorjs-shared/src/func/extend.js"),
+const extend  = require("metaphorjs-shared/src/func/extend.js"),
     emptyFn = require("metaphorjs-shared/src/func/emptyFn.js"),
     isArray = require("metaphorjs-shared/src/func/isArray.js"),
     cls = require("metaphorjs-class/src/cls.js"),
     MetaphorJs = require("metaphorjs-shared/src/MetaphorJs.js"),
     isString = require("metaphorjs-shared/src/func/isString.js"),
-    undf = require("metaphorjs-shared/src/var/undf.js"),
     nextUid = require("metaphorjs-shared/src/func/nextUid.js"),
     filterArray = require("metaphorjs-shared/src/func/filterArray.js"),
     sortArray = require("metaphorjs-shared/src/func/sortArray.js");
@@ -1393,7 +1392,7 @@ module.exports = MetaphorJs.model.Store = function(){
 
                     var id      = self.getRecordId(rec);
 
-                    if (id !== undf){
+                    if (id !== undefined){
                         delete self.map[id];
                         delete self.currentMap[id];
                     }
@@ -1413,7 +1412,7 @@ module.exports = MetaphorJs.model.Store = function(){
                         rec.detachStore(self);
 
                         if (length === 1) {
-                            return rec.$destroyed ? undf : rec;
+                            return rec.$destroyed ? undefined : rec;
                         }
                     }
                     else {
@@ -1425,7 +1424,7 @@ module.exports = MetaphorJs.model.Store = function(){
                     i++;
                 }
 
-                return undf;
+                return undefined;
             },
 
             /**
@@ -1541,7 +1540,7 @@ module.exports = MetaphorJs.model.Store = function(){
                     }
                 }
 
-                if(id !== undf){
+                if(id !== undefined){
                     self.map[id] = rec;
                 }
 
@@ -1674,10 +1673,10 @@ module.exports = MetaphorJs.model.Store = function(){
              */
             containsId: function(id, unfiltered) {
                 if (unfiltered) {
-                    return this.map[id] !== undf;
+                    return this.map[id] !== undefined;
                 }
                 else {
-                    return this.currentMap[id] !== undf;
+                    return this.currentMap[id] !== undefined;
                 }
             },
 
@@ -1750,8 +1749,8 @@ module.exports = MetaphorJs.model.Store = function(){
              */
             getAt: function(index, unfiltered) {
                 return unfiltered ?
-                       (this.items[index] || undf) :
-                       (this.current[index] || undf);
+                       (this.items[index] || undefined) :
+                       (this.current[index] || undefined);
             },
 
             /**
@@ -1763,8 +1762,8 @@ module.exports = MetaphorJs.model.Store = function(){
              */
             getById: function(id, unfiltered) {
                 return unfiltered ?
-                       (this.map[id] || undf) :
-                       (this.currentMap[id] || undf);
+                       (this.map[id] || undefined) :
+                       (this.currentMap[id] || undefined);
             },
 
             /**
@@ -1908,7 +1907,7 @@ module.exports = MetaphorJs.model.Store = function(){
                 }
 
                 start   = start || 0;
-                end     = Math.min(end == undf ? self.length-1 : end, self.length-1);
+                end     = Math.min(end == undefined ? self.length-1 : end, self.length-1);
 
                 if(start <= end){
                     for(i = start; i <= end; i++) {
@@ -1937,7 +1936,7 @@ module.exports = MetaphorJs.model.Store = function(){
              */
             findBy: function(fn, context, start, unfiltered) {
                 var inx = this.findIndexBy(fn, context, start, unfiltered);
-                return inx === -1 ? undf : this.getAt(inx, unfiltered);
+                return inx === -1 ? undefined : this.getAt(inx, unfiltered);
             },
 
             /**

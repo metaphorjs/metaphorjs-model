@@ -1,12 +1,11 @@
 
-var extend  = require("metaphorjs-shared/src/func/extend.js"),
+const extend  = require("metaphorjs-shared/src/func/extend.js"),
     cls = require("metaphorjs-class/src/cls.js"),
     MetaphorJs = require("metaphorjs-shared/src/MetaphorJs.js"),
     ajax = require("metaphorjs-ajax/src/func/ajax.js"),
     isString = require("metaphorjs-shared/src/func/isString.js"),
     isFunction = require("metaphorjs-shared/src/func/isFunction.js"),
-    isThenable = require("metaphorjs-shared/src/func/isThenable.js"),
-    undf = require("metaphorjs-shared/src/var/undf.js");
+    isThenable = require("metaphorjs-shared/src/func/isThenable.js");
 
 require("../__init.js");
 require("metaphorjs-promise/src/lib/Promise.js");
@@ -527,7 +526,7 @@ module.exports = MetaphorJs.model.Model = function(){
                 return sucProp(response);
             }
 
-            if (sucProp && response[sucProp] != undf) {
+            if (sucProp && response[sucProp] != undefined) {
                 return response[sucProp];
             }
             else {
