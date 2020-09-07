@@ -14,5 +14,6 @@
     "bugs": {
         "url": "https://github.com/metaphorjs/metaphorjs-model/issues"
     },
-    "homepage": "https://github.com/metaphorjs/metaphorjs-model"
+    "homepage": "https://github.com/metaphorjs/metaphorjs-model",
+    "dependencies": {}
 }
