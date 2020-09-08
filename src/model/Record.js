@@ -143,8 +143,7 @@ module.exports = MetaphorJs.model.Record = cls({
      */
     $init: function(id, data, cfg) {
 
-        var self    = this,
-            args    = arguments.length;
+        let args    = arguments.length;
 
         if (args === 1) {
             cfg     = id;
@@ -156,31 +155,31 @@ module.exports = MetaphorJs.model.Record = cls({
             data    = null;
         }
 
-        self.data       = {};
-        self.orig       = {};
-        self.stores     = [];
-        self.modified   = {};
+        this.data       = {};
+        this.orig       = {};
+        this.stores     = [];
+        this.modified   = {};
         cfg             = cfg || {};
-        self.$super(cfg);
+        this.$super(cfg);
 
-        if (isString(self.model)) {
-            self.model  = MetaphorJs.model.Model.create(self.model);
+        if (isString(this.model)) {
+            this.model  = MetaphorJs.model.Model.create(this.model);
         }
-        else if (!(self.model instanceof MetaphorJs.model.Model)) {
-            self.model  = new MetaphorJs.model.Model(self.model);
+        else if (!(this.model instanceof MetaphorJs.model.Model)) {
+            this.model  = new MetaphorJs.model.Model(this.model);
         }
 
-        self.id     = id;
+        this.id     = id;
 
         if (data) {
-            self.importData(data);
+            this.importData(data);
         }
         else if(cfg.autoLoad !== false && id) {
-            self.load();
+            this.load();
         }
 
-        if (self.$getClass() !== "MetaphorJs.model.Record") {
-            MetaphorJs.model.Model.addToCache(self);
+        if (this.$getClass() !== "MetaphorJs.model.Record") {
+            MetaphorJs.model.Model.addToCache(this);
         }
     },
 
@@ -234,11 +233,10 @@ module.exports = MetaphorJs.model.Record = cls({
      * @param {MetaphorJs.model.Store} store
      */
     attachStore: function(store) {
-        var self    = this,
-            sid     = store.getId();
+        let sid = store.getId();
 
-        if (self.stores.indexOf(sid) == -1) {
-            self.stores.push(sid);
+        if (this.stores.indexOf(sid) == -1) {
+            this.stores.push(sid);
         }
     },
 
@@ -249,15 +247,14 @@ module.exports = MetaphorJs.model.Record = cls({
      * @param {MetaphorJs.model.Store} store
      */
     detachStore: function(store) {
-        var self    = this,
-            sid     = store.getId(),
+        var sid     = store.getId(),
             inx;
 
-        if (!self.$destroyed && (inx = self.stores.indexOf(sid)) != -1) {
-            self.stores.splice(inx, 1);
+        if (!this.$destroyed && (inx = this.stores.indexOf(sid)) != -1) {
+            this.stores.splice(inx, 1);
 
-            if (self.stores.length == 0 && !self.standalone) {
-                self.$destroy();
+            if (this.stores.length == 0 && !this.standalone) {
+                this.$destroy();
             }
         }
     },
@@ -268,10 +265,9 @@ module.exports = MetaphorJs.model.Record = cls({
      * @param {bool} dirty
      */
     setDirty: function(dirty) {
-        var self    = this;
-        if (self.dirty != dirty) {
-            self.dirty  = !!dirty;
-            self.trigger("dirty-change", self, dirty);
+        if (this.dirty != dirty) {
+            this.dirty  = !!dirty;
+            this.trigger("dirty-change", this, dirty);
         }
     },
 
@@ -282,22 +278,21 @@ module.exports = MetaphorJs.model.Record = cls({
      */
     importData: function(data) {
 
-        var self        = this,
-            processed   = {},
+        let processed   = {},
             name;
 
         if (data) {
             for (name in data) {
-                processed[name] = self.model.restoreField(self, name, data[name]);
+                processed[name] = this.model.restoreField(this, name, data[name]);
             }
 
-            self.data   = processed;
+            this.data   = processed;
         }
 
-        self.orig       = extend({}, self.data);
-        self.modified   = {};
-        self.loaded     = true;
-        self.setDirty(false);
+        this.orig       = extend({}, this.data);
+        this.modified   = {};
+        this.loaded     = true;
+        this.setDirty(false);
     },
 
     /**
@@ -309,12 +304,11 @@ module.exports = MetaphorJs.model.Record = cls({
      */
     storeData: function(data) {
 
-        var self        = this,
-            processed   = {},
+        let processed   = {},
             name;
 
         for (name in data) {
-            processed[name] = self.model.storeField(self, name, data[name]);
+            processed[name] = this.model.storeField(this, name, data[name]);
         }
 
         return processed;
@@ -339,22 +333,21 @@ module.exports = MetaphorJs.model.Record = cls({
      */
     getData: function(keys) {
 
-        var data = {},
+        let data = {},
             i;
 
         if (keys) {
-            var len,
-                self    = this;
+            let len;
 
             keys = isString(keys) ? [keys] : keys;
 
             for (i = 0, len = keys.length; i < len; i++) {
-                data[keys[i]] = self.data[keys[i]];
+                data[keys[i]] = this.data[keys[i]];
             }
             return data;
         }
         else {
-            var sdata = this.data;
+            let sdata = this.data;
 
             for (i in sdata) {
                 if (i.substr(0, 1) === "$") {
@@ -415,17 +408,16 @@ module.exports = MetaphorJs.model.Record = cls({
      */
     set: function(key, value) {
 
-        var self    = this,
-            prev    = self.data[key];
+        let prev = this.data[key];
 
-        value           = self.model.restoreField(self, key, value);
-        self.data[key]  = value;
+        value           = this.model.restoreField(this, key, value);
+        this.data[key]  = value;
 
         if (prev != value) {
-            self.modified[key]  = true;
-            self.setDirty(true);
-            self.trigger("change", self, key, value, prev);
-            self.trigger("change-"+key, self, key, value, prev);
+            this.modified[key]  = true;
+            this.setDirty(true);
+            this.trigger("change", this, key, value, prev);
+            this.trigger("change-"+key, this, key, value, prev);
         }
     },
 
@@ -434,11 +426,10 @@ module.exports = MetaphorJs.model.Record = cls({
      * @method
      */
     revert: function() {
-        var self    = this;
-        if (self.dirty) {
-            self.data       = extend({}, self.orig);
-            self.modified   = {};
-            self.setDirty(false);
+        if (this.dirty) {
+            this.data       = extend({}, this.orig);
+            this.modified   = {};
+            this.setDirty(false);
         }
     },
 
@@ -448,20 +439,19 @@ module.exports = MetaphorJs.model.Record = cls({
      * @returns {MetaphorJs.lib.Promise}
      */
     load: function() {
-        var self    = this;
-        self.loading = true;
-        self.trigger("before-load", self);
-        return self.model.loadRecord(self.id)
-            .always(function(){
-                self.loading = false;
+        this.loading = true;
+        this.trigger("before-load", this);
+        return this.model.loadRecord(this.id)
+            .always(() => {
+                this.loading = false;
             })
-            .done(function(response) {
-                self.setId(response.id);
-                self.importData(response.data);
-                self.trigger("load", self);
+            .done((response) => {
+                this.setId(response.id);
+                this.importData(response.data);
+                this.trigger("load", this);
             })
-            .fail(function() {
-                self.trigger("failed-load", self);
+            .fail(() => {
+                this.trigger("failed-load", this);
             });
     },
 
@@ -473,25 +463,22 @@ module.exports = MetaphorJs.model.Record = cls({
      * @returns {MetaphorJs.lib.Promise}
      */
     save: function(keys, extra) {
-        var self    = this;
-        self.trigger("before-save", self);
+        this.trigger("before-save", this);
 
-        var create  = !self.getId(),
-            imprt   = create ? self.importUponCreate : self.importUponSave;
+        let create  = !this.getId(),
+            imprt   = create ? this.importUponCreate : this.importUponSave;
 
-        return self.model.saveRecord(self, keys, extra)
-            .done(function(response) {
+        return this.model.saveRecord(this, keys, extra)
+            .done((response) => {
                 if (response.id) {
-                    self.setId(response.id);
+                    this.setId(response.id);
                 }
                 if (imprt) {
-                    self.importData(response.data);
+                    this.importData(response.data);
                 }
-                self.trigger("save", self);
+                this.trigger("save", this);
             })
-            .fail(function(response) {
-                self.trigger("failed-save", self);
-            });
+            .fail(() => this.trigger("failed-save", this));
     },
 
     /**
@@ -500,15 +487,14 @@ module.exports = MetaphorJs.model.Record = cls({
      * @returns {MetaphorJs.lib.Promise}
      */
     "delete": function() {
-        var self    = this;
-        self.trigger("before-delete", self);
-        return self.model.deleteRecord(self)
-            .done(function() {
-                self.trigger("delete", self);
-                self.$destroy();
+        this.trigger("before-delete", this);
+        return this.model.deleteRecord(this)
+            .done(() => {
+                this.trigger("delete", this);
+                this.$destroy();
             }).
-            fail(function() {
-                self.trigger("failed-delete", self);
+            fail(() => {
+                this.trigger("failed-delete", this);
             });
     },
 
@@ -519,25 +505,21 @@ module.exports = MetaphorJs.model.Record = cls({
      */
     reset: function() {
 
-        var self        = this;
+        this.id         = null;
+        this.data       = {};
+        this.orig       = {};
+        this.modified   = {};
+        this.loaded     = false;
+        this.dirty      = false;
 
-        self.id         = null;
-        self.data       = {};
-        self.orig       = {};
-        self.modified   = {};
-        self.loaded     = false;
-        self.dirty      = false;
-
-        self.trigger("reset", self);
+        this.trigger("reset", this);
     },
 
 
 
     onDestroy: function() {
-
-        var self    = this;
-        MetaphorJs.model.Model.removeFromCache(self.$getClass(), self.id);
-        self.$super();
+        MetaphorJs.model.Model.removeFromCache(this.$getClass(), this.id);
+        this.$super();
     }
 
 });

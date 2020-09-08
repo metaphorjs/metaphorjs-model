@@ -14,8 +14,7 @@ require("metaphorjs-observable/src/mixin/Observable.js");
 
 module.exports = MetaphorJs.model.Model = function(){
 
-    "use strict";
-    var instances   = {},
+    let instances   = {},
         cache       = {};
 
     /**
@@ -87,11 +86,12 @@ module.exports = MetaphorJs.model.Model = function(){
          *      }
          *      
          *      @type {bool} json Send data as json string in the request body.
-         *      @type {string|function} url Api endpoint. If url is function,
-         *                      it accepts payload and returns Promise which
-         *                      is then resolved with response.<br>
+         *      @type {string} url Api endpoint.
          *                      In url you can use <code>:name</code> placeholders,
          *                      they will be taken from payload.
+         *      @type {function} fetch Optional function that performs request.
+         *                       It accepts payload and returns Promise which
+         *                          is then resolved with response. 
          *      @type {string} id Id field. Where to take record id from or 
          *                      put record id to (when sending).
          *      @type {string|function} success Success field or function
@@ -166,8 +166,7 @@ module.exports = MetaphorJs.model.Model = function(){
          */
         $init: function(cfg) {
 
-            var self        = this,
-                defaults    = {
+            let defaults    = {
                     record: {
                         load:       null,
                         save:       null,
@@ -193,14 +192,14 @@ module.exports = MetaphorJs.model.Model = function(){
                 };
 
 
-            if (!self.fields) {
-                self.fields = {};
+            if (!this.fields) {
+                this.fields = {};
             }
 
-            extend(self, defaults, false, true);
-            extend(self, cfg, true, true);
+            extend(this, defaults, false, true);
+            extend(this, cfg, true, true);
 
-            self.plain      = !self.type;
+            this.plain = !this.type;
         },
 
         /**
@@ -278,7 +277,7 @@ module.exports = MetaphorJs.model.Model = function(){
          * @returns {*}
          */
         getProp: function(what, type, prop) {
-            var profile = this[what];
+            let profile = this[what];
             return (profile[type] && profile[type][prop]) || profile[prop] || this[prop] || null;
         },
 
@@ -296,7 +295,7 @@ module.exports = MetaphorJs.model.Model = function(){
 
             url = url.replace(/:([a-z0-9_\-]+)/gi, function(match, name){
 
-                var value = data[name];
+                let value = data[name];
 
                 if (value != undefined) {
                     delete data[name];
@@ -317,30 +316,31 @@ module.exports = MetaphorJs.model.Model = function(){
 
         _makeRequest: function(what, type, id, data) {
 
-            var self        = this,
-                profile     = self[what],
-                cfg         = extend({},
-                                    isString(profile[type]) || isFunction(profile[type]) ?
-                                        {url: profile[type]} :
-                                        profile[type]
-                                    ),
-                idProp      = self.getProp(what, type, "id"),
-                dataProp    = self.getProp(what, type, "root"),
-                url         = self.getProp(what, type, "url"),
-                isJson      = self.getProp(what, type, "json"),
-                res,
-                ajaxCfg     = {};
+            const profile     = this[what],
+                  idProp      = this.getProp(what, type, "id"),
+                  dataProp    = this.getProp(what, type, "root"),
+                  url         = this.getProp(what, type, "url"),
+                  isJson      = this.getProp(what, type, "json"),
+                  ajaxCfg     = {};
+
+            let res;
+            let cfg = !isString(profile[type]) && !isFunction(profile[type]) ?
+                            extend({}, profile[type]) :
+                            profile[type];
 
             if (!cfg) {
                 if (url) {
-                    cfg     = {url: url};
+                    cfg     = { url };
                 }
                 else {
                     throw what + "." + type + " not defined";
                 }
             }
-            if (isString(cfg) || isFunction(cfg)) {
-                cfg         = {url: cfg};
+            else if (isString(cfg)) {
+                cfg = { url: cfg };
+            }
+            else if (isFunction(cfg)) {
+                cfg = { fetch: cfg };
             }
 
             if (!cfg.url) {
@@ -357,14 +357,14 @@ module.exports = MetaphorJs.model.Model = function(){
             }
 
             if (cfg.validate) {
-                res = cfg.validate.call(self, id, data);
+                res = cfg.validate.call(this, id, data);
                 if (res === false) {
                     return MetaphorJs.lib.Promise.reject(res);
                 }
             }
 
             if (cfg.resolve) {
-                res = cfg.resolve.call(self, id, data);
+                res = cfg.resolve.call(this, id, data);
                 if (res && isThenable(res)){
                     return res;
                 }
@@ -376,7 +376,7 @@ module.exports = MetaphorJs.model.Model = function(){
             ajaxCfg.data        = extend(
                 {},
                 cfg.data,
-                self.extra,
+                this.extra,
                 profile.extra,
                 profile[type] ? profile[type].extra : null,
                 ajaxCfg.data,
@@ -385,16 +385,16 @@ module.exports = MetaphorJs.model.Model = function(){
                 true
             );
 
-            if (isFunction(cfg.url)) {
-                var df = cfg.url(ajaxCfg.data),
-                    promise = new MetaphorJs.lib.Promise;
+            if (cfg.fetch) {
+                const df = cfg.fetch(ajaxCfg.data),
+                      promise = new MetaphorJs.lib.Promise;
 
-                df.then(function(response){
+                df.then(response => {
                     if (what === "record") {
-                        self._processRecordResponse(type, response, promise);
+                        this._processRecordResponse(type, response, promise);
                     }
                     else if (what === "store") {
-                        self._processStoreResponse(type, response, promise);
+                        this._processStoreResponse(type, response, promise);
                     }
                 });
 
@@ -409,7 +409,7 @@ module.exports = MetaphorJs.model.Model = function(){
                 ajaxCfg.data[dataProp] = data;
             }
 
-            ajaxCfg.url = self._prepareRequestUrl(ajaxCfg.url, ajaxCfg.data);
+            ajaxCfg.url = this._prepareRequestUrl(ajaxCfg.url, ajaxCfg.data);
 
             if (!ajaxCfg.url) {
                 return MetaphorJs.lib.Promise.reject();
@@ -429,34 +429,34 @@ module.exports = MetaphorJs.model.Model = function(){
                 ajaxCfg.data        = JSON.stringify(ajaxCfg.data);
             }
 
-            ajaxCfg.context = self;
+            ajaxCfg.context = this;
 
-            var returnPromise;
+            let returnPromise;
 
             if (what === "record") {
-                ajaxCfg.processResponse = function(response, deferred) {
-                    self.lastAjaxResponse = response;
-                    self._processRecordResponse(type, response, deferred);
+                ajaxCfg.processResponse = (response, deferred) => {
+                    this.lastAjaxResponse = response;
+                    this._processRecordResponse(type, response, deferred);
                 };
-                returnPromise = self._processRecordRequest(ajax(ajaxCfg), type, id, data);
+                returnPromise = this._processRecordRequest(ajax(ajaxCfg), type, id, data);
             }
             else if (what === "store") {
-                ajaxCfg.processResponse = function(response, deferred) {
-                    self.lastAjaxResponse = response;
-                    self._processStoreResponse(type, response, deferred);
+                ajaxCfg.processResponse = (response, deferred) => {
+                    this.lastAjaxResponse = response;
+                    this._processStoreResponse(type, response, deferred);
                 };
-                returnPromise = self._processStoreRequest(ajax(ajaxCfg), type, id, data);
+                returnPromise = this._processStoreRequest(ajax(ajaxCfg), type, id, data);
             }
             else if (what === "controller") {
-                ajaxCfg.processResponse = function(response, deferred) {
-                    self.lastAjaxResponse = response;
-                    self._processControllerResponse(type, response, deferred);
+                ajaxCfg.processResponse = (response, deferred) => {
+                    this.lastAjaxResponse = response;
+                    this._processControllerResponse(type, response, deferred);
                 };
-                returnPromise = self._processControllerRequest(ajax(ajaxCfg), type, id, data);
+                returnPromise = this._processControllerRequest(ajax(ajaxCfg), type, id, data);
             }
 
             if (cfg.processRequest) {
-                cfg.processRequest.call(self, returnPromise, id, data);
+                cfg.processRequest.call(this, returnPromise, id, data);
             }
 
             return returnPromise;
@@ -467,18 +467,18 @@ module.exports = MetaphorJs.model.Model = function(){
         },
 
         _processRecordResponse: function(type, response, df) {
-            var self        = this,
-                idProp      = self.getRecordProp(type, "id"),
-                dataProp    = self.getRecordProp(type, "root"),
+            let idProp      = this.getRecordProp(type, "id"),
+                dataProp    = this.getRecordProp(type, "root"),
                 data        = dataProp ? response[dataProp] : response,
                 id          = (data && data[idProp]) || response[idProp];
 
-            if (!self._getSuccess("record", type, response)) {
+            if (!this._getSuccess("record", type, response)) {
                 df.reject(response);
             }
             else {
-                //df.resolve(id, data);
-                df.resolve({id: id, data: self.extendPlainRecord(data)});
+                data = this.normalizeRecord(data);
+                data = this.extendPlainRecord(data);
+                df.resolve({ id, data });
             }
         },
 
@@ -487,18 +487,16 @@ module.exports = MetaphorJs.model.Model = function(){
         },
 
         _processStoreResponse: function(type, response, df) {
-            var self        = this,
-                dataProp    = self.getStoreProp(type, "root"),
-                totalProp   = self.getStoreProp(type, "total"),
-                data        = dataProp ? response[dataProp] : response,
-                total       = totalProp ? response[totalProp] : null;
+            const   dataProp    = this.getStoreProp(type, "root"),
+                    totalProp   = this.getStoreProp(type, "total"),
+                    data        = dataProp ? response[dataProp] : response,
+                    total       = totalProp ? response[totalProp] : null;
 
-            if (!self._getSuccess("store", type, response)) {
+            if (!this._getSuccess("store", type, response)) {
                 df.reject(response);
             }
             else {
-                //df.resolve(data, total);
-                df.resolve({data: data, total: total});
+                df.resolve({ data, total });
             }
         },
 
@@ -507,10 +505,7 @@ module.exports = MetaphorJs.model.Model = function(){
         },
 
         _processControllerResponse: function(type, response, df) {
-
-            var self    = this;
-
-            if (!self._getSuccess("controller", type, response)) {
+            if (!this._getSuccess("controller", type, response)) {
                 df.reject(response);
             }
             else {
@@ -519,8 +514,7 @@ module.exports = MetaphorJs.model.Model = function(){
         },
 
         _getSuccess: function(what, type, response) {
-            var self    = this,
-                sucProp = self.getProp(what, type, "success");
+            const sucProp = this.getProp(what, type, "success");
 
             if (typeof sucProp === "function") {
                 return sucProp(response);
@@ -617,12 +611,18 @@ module.exports = MetaphorJs.model.Model = function(){
          * @returns {object}
          */
         extendPlainRecord: function(rec) {
-            var self    = this,
-                ext     = self.getRecordProp(null, "extend");
-
+            const ext     = this.getRecordProp(null, "extend");
             rec = ext ? extend(rec, ext, false, false) : rec;
-            rec.$$model = self;
+            rec.$$model = this;
             return rec;
+        },
+
+        /**
+         * Normalize record data response
+         * @param {object} data 
+         */
+        normalizeRecord: function(data) {
+            return data;
         },
 
         /**
@@ -641,7 +641,7 @@ module.exports = MetaphorJs.model.Model = function(){
          * @returns {*|null}
          */
         getRecordId: function(rec) {
-            var idProp = this.getRecordProp("load", "id");
+            const idProp = this.getRecordProp("load", "id");
             return rec ? (rec.getId ? rec.getId() : rec[idProp]) || null : null;
         },
 
@@ -655,11 +655,10 @@ module.exports = MetaphorJs.model.Model = function(){
          */
         restoreField: function(rec, name, value) {
 
-            var self    = this,
-                f       = self.fields[name];
+            const f  = this.fields[name];
 
             if (f) {
-                var type = isString(f) ? f : f.type;
+                const type = isString(f) ? f : f.type;
 
                 switch (type) {
                     case "int": {
@@ -705,7 +704,7 @@ module.exports = MetaphorJs.model.Model = function(){
                 }
             }
 
-            return self.onRestoreField(rec, name, value);
+            return this.onRestoreField(rec, name, value);
         },
 
         /**
@@ -731,11 +730,10 @@ module.exports = MetaphorJs.model.Model = function(){
          */
         storeField: function(rec, name, value) {
 
-            var self    = this,
-                f       = self.fields[name];
+            const f = this.fields[name];
 
             if (f) {
-                var type = isString(f) ? f : f.type;
+                const type = isString(f) ? f : f.type;
 
                 switch (type) {
                     case "bool":
@@ -770,7 +768,7 @@ module.exports = MetaphorJs.model.Model = function(){
                 }
             }
 
-            return self.onStoreField(rec, name, value);
+            return this.onStoreField(rec, name, value);
 
         },
 
@@ -824,11 +822,10 @@ module.exports = MetaphorJs.model.Model = function(){
          */
         addToCache: function(rec) {
 
-            var id      = rec.getId(),
-                cname   = rec.$getClass();
+            const   id      = rec.getId(),
+                    cname   = rec.$getClass();
 
-            if (!(rec instanceof MetaphorJs.model.Record) && 
-                cname) {
+            if (!(rec instanceof MetaphorJs.model.Record) && cname) {
                 if (!cache[cname]) {
                     cache[cname] = {};
                 }

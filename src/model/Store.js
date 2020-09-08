@@ -16,7 +16,7 @@ require("metaphorjs-observable/src/mixin/Observable.js");
 
 module.exports = MetaphorJs.model.Store = function(){
 
-    var allStores   = {};
+    const allStores   = {};
 
     /**
      * @class MetaphorJs.model.Store
@@ -157,7 +157,7 @@ module.exports = MetaphorJs.model.Store = function(){
 
             items:          null,
             current:        null,
-            map:            null,
+            itemMap:        null,
             currentMap:     null,
 
             length:         0,
@@ -216,14 +216,12 @@ module.exports = MetaphorJs.model.Store = function(){
              */
             $init:     function(url, options, initialData) {
 
-                var self        = this;
-
-                self.items      = [];
-                self.current    = [];
-                self.map        = {};
-                self.currentMap = {};
-                self.loaded     = false;
-                self.extraParams    = self.extraParams || {};
+                this.items          = [];
+                this.current        = [];
+                this.itemMap        = {};
+                this.currentMap     = {};
+                this.loaded         = false;
+                this.extraParams    = this.extraParams || {};
 
                 if (url && !isString(url)) {
                     initialData = options;
@@ -237,38 +235,38 @@ module.exports = MetaphorJs.model.Store = function(){
                     options.url = url;
                 }
 
-                self.$super(options);
-                extend(self, options, true, false);
+                this.$super(options);
+                extend(this, options, true, false);
 
-                self.id         = self.id || nextUid();
-                self.filtered   = !!self.filterBy;
+                this.id         = this.id || nextUid();
+                this.filtered   = !!this.filterBy;
                 
-                if (self.publicStore) {
-                    allStores[self.id]  = self;
+                if (this.publicStore) {
+                    allStores[this.id]  = this;
                 }
 
-                self.initModel(options);
+                this.initModel(options);
 
-                self.$$observable.createEvent("beforeload", false);
+                this.$$observable.createEvent("beforeload", false);
 
-                if (!self.local && self.autoLoad) {
-                    self.load();
+                if (!this.local && this.autoLoad) {
+                    this.load();
                 }
                 else if (initialData) {
                     if (isArray(initialData)) {
-                        self._loadArray(initialData);
+                        this._loadArray(initialData);
                     }
                     else {
-                        self._loadAjaxData(initialData);
+                        this._loadAjaxData(initialData);
                     }
                 }
 
-                if (self.local) {
-                    self.loaded     = true;
+                if (this.local) {
+                    this.loaded     = true;
                 }
 
-                if (self.sourceStore) {
-                    self.initSourceStore(self.sourceStore, "on");
+                if (this.sourceStore) {
+                    this.initSourceStore(this.sourceStore, "on");
                 }
             },
 
@@ -283,38 +281,34 @@ module.exports = MetaphorJs.model.Store = function(){
 
             initModel: function(options) {
 
-                var self = this;
-
-                if (isString(self.model)) {
-                    self.model  = MetaphorJs.model.Model.create(self.model);
+                if (isString(this.model)) {
+                    this.model  = MetaphorJs.model.Model.create(this.model);
                 }
-                else if (!(self.model instanceof MetaphorJs.model.Model)) {
-                    self.model  = new MetaphorJs.model.Model(self.model);
+                else if (!(this.model instanceof MetaphorJs.model.Model)) {
+                    this.model  = new MetaphorJs.model.Model(this.model);
                 }
 
                 if (options.url) {
-                    self.model.store.load    = options.url;
+                    this.model.store.load = options.url;
                 }
 
-                self.idProp = self.model.getStoreProp("load", "id");
+                this.idProp = this.model.getStoreProp("load", "id");
             },
 
 
             initSourceStore: function(sourceStore, mode) {
-                var self = this;
-                sourceStore[mode]("update", self.onSourceStoreUpdate, self);
+                sourceStore[mode]("update", this.onSourceStoreUpdate, this);
             },
 
             onSourceStoreUpdate: function() {
 
-                var self    = this;
-                self.$$observable.suspendAllEvents();
+                this.$$observable.suspendAllEvents();
 
-                self.clear();
-                self.addMany(self.sourceStore.toArray());
+                this.clear();
+                this.addMany(this.sourceStore.toArray());
 
-                self.$$observable.resumeAllEvents();
-                self.trigger("update", self);
+                this.$$observable.resumeAllEvents();
+                this.trigger("update", this);
             },
 
             /**
@@ -415,11 +409,8 @@ module.exports = MetaphorJs.model.Store = function(){
              * @returns {number}
              */
             getPagesCount: function() {
-
-                var self    = this;
-
-                if (self.pageSize !== null) {
-                    return parseInt(self.totalLength / self.pageSize);
+                if (this.pageSize !== null) {
+                    return parseInt(this.totalLength / this.pageSize);
                 }
                 else {
                     return 1;
@@ -506,7 +497,7 @@ module.exports = MetaphorJs.model.Store = function(){
                 if (this.model.isPlain()) {
                     return false;
                 }
-                var ret = false;
+                let ret = false;
                 this.each(function(rec){
                     if (rec.isDirty()) {
                         ret = true;
@@ -525,7 +516,7 @@ module.exports = MetaphorJs.model.Store = function(){
              * @returns {array}
              */
             getDirty: function(unfiltered) {
-                var recs    = [];
+                let recs    = [];
                 if (this.model.isPlain()) {
                     return recs;
                 }
@@ -566,22 +557,20 @@ module.exports = MetaphorJs.model.Store = function(){
              */
             _loadAjaxData: function(data, options) {
 
-                var self    = this;
-
                 options = options || {};
 
-                if (!options.silent && self.trigger("before-load", self) === false) {
+                if (!options.silent && this.trigger("before-load", this) === false) {
                     return;
                 }
 
-                self.ajaxData = data;
+                this.ajaxData = data;
 
-                self.model._processStoreResponse("load", data, {
-                    resolve: function(response) {
-                        self._onModelLoadSuccess(response, options);
+                this.model._processStoreResponse("load", data, {
+                    resolve: (response) => {
+                        this._onModelLoadSuccess(response, options);
                     },
-                    reject: function(reason) {
-                        self._onModelLoadFail(reason, options);
+                    reject: (reason) => {
+                        this._onModelLoadFail(reason, options);
                     }
                 });
             },
@@ -594,17 +583,15 @@ module.exports = MetaphorJs.model.Store = function(){
              */
             _loadArray: function(recs, options) {
 
-                var self    = this;
-
                 options = options || {};
 
-                if (!options.silent && self.trigger("before-load", self) === false) {
+                if (!options.silent && this.trigger("before-load", this) === false) {
                     return;
                 }
 
                 if (isArray(recs)) {
-                    self._load(recs, options);
-                    self.totalLength    = self.length;
+                    this._load(recs, options);
+                    this.totalLength = this.length;
                 }
             },
 
@@ -618,41 +605,30 @@ module.exports = MetaphorJs.model.Store = function(){
              */
             _load: function(recs, options) {
 
-                var self    = this,
-                    prepend = options.prepend;
+                const prepend = options.prepend;
 
                 options = options || {};
                 recs = recs || [];
 
                 if (prepend) {
-                    self.insertMany(0, recs, true, true)
+                    this.insertMany(0, recs, true, true)
                 }
                 else {
-                    self.addMany(recs, true, true);
+                    this.addMany(recs, true, true);
                 }
 
-                /*for (var i = 0; i < recs.length; i++) {
-                    if (prepend) {
-                        self.insert(i, recs[i], true, true);
-                    }
-                    else {
-                        self.add(recs[i], true, true);
-                    }
-                }*/
+                this.loaded     = true;
+                this.loading    = false;
 
-                self.loaded     = true;
-                self.loading    = false;
-
-                
-                self.trigger("loading-end", self);
-                self.onLoad();
+                this.trigger("loading-end", this);
+                this.onLoad();
 
                 if (!options.skipUpdate) {
-                    self.update();
+                    this.update();
                 }
 
                 if (!options.silent) {
-                    self.trigger("load", self);
+                    this.trigger("load", this);
                 }
             },
 
@@ -690,82 +666,81 @@ module.exports = MetaphorJs.model.Store = function(){
              */
             load: function(params, options) {
 
-                var self    = this,
-                    ms      = self.model.store,
-                    sp      = ms.start,
-                    lp      = ms.limit,
-                    ps      = self.pageSize;
+                const ms      = this.model.store,
+                      sp      = ms.start,
+                      lp      = ms.limit,
+                      ps      = this.pageSize;
 
-                if (self.loadingPromise && self.loadingPromise.abort) {
-                    self.loadingPromise.abort();
+                if (this.loadingPromise && this.loadingPromise.abort) {
+                    this.loadingPromise.abort();
                 }
 
                 options     = options || {};
 
-                if (self.local) {
+                if (this.local) {
                     return null;
                 }
 
-                params      = extend({}, self.extraParams, params || {});
+                params      = extend({}, this.extraParams, params || {});
 
                 if (ps !== null && !params[sp] && !params[lp]) {
                     if (sp) {
-                        params[sp]    = self.start;
+                        params[sp]    = this.start;
                     }
                     if (lp) {
                         params[lp]    = ps;
                     }
                 }
 
-                if (!options.silent && self.trigger("before-load", self) === false) {
+                if (!options.silent && this.trigger("before-load", this) === false) {
                     return null;
                 }
 
-                self.loading = true;
+                this.loading = true;
 
-                self.trigger("loading-start", self);
+                this.trigger("loading-start", this);
 
-                return self.loadingPromise = self.model.loadStore(self, params)
-                    .done(function(response) {
-                        if (self.$destroyed) {
+                return this.loadingPromise = this.model.loadStore(this, params)
+                    .done((response) => {
+                        if (this.$destroyed) {
                             return;
                         }
-                        self.loadingPromise = null;
-                        self.ajaxData = self.model.lastAjaxResponse;
-                        self._onModelLoadSuccess(response, options);
+                        this.loadingPromise = null;
+                        this.ajaxData = this.model.lastAjaxResponse;
+                        this._onModelLoadSuccess(response, options);
                     })
-                    .fail(function(reason){
-                        if (self.$destroyed) {
+                    .fail((reason) => {
+                        if (this.$destroyed) {
                             return;
                         }
-                        self.loadingPromise = null;
-                        self.ajaxData = self.model.lastAjaxResponse;
-                        self._onModelLoadFail(reason, options);
+                        this.loadingPromise = null;
+                        this.ajaxData = this.model.lastAjaxResponse;
+                        this._onModelLoadFail(reason, options);
                     });
             },
 
             _onModelLoadSuccess: function(response, options) {
 
-                var self = this;
                 options = options || {};
 
                 if (options.noopOnEmpty && !response.data.length) {
                     return;
                 }
 
-                if ((!options.prepend && !options.append) && self.clearOnLoad && self.length > 0) {
-                    self.clear(true);
+                if ((!options.prepend && !options.append) && 
+                    this.clearOnLoad && 
+                    this.length > 0) {
+                        this.clear(true);
                 }
 
-                self.totalLength = parseInt(response.total);
-                self._load(response.data, options);
+                this.totalLength = parseInt(response.total);
+                this._load(response.data, options);
             },
 
             _onModelLoadFail: function(reason, options) {
-                var self = this;
-                self.onFailedLoad();
+                this.onFailedLoad();
                 if (!options.silent) {
-                    self.trigger("failed-load", self, reason);
+                    this.trigger("failed-load", this, reason);
                 }
             },
 
@@ -792,19 +767,18 @@ module.exports = MetaphorJs.model.Store = function(){
              */
             save: function(silent) {
 
-                var self    = this,
-                    recs    = {},
+                let recs    = {},
                     cnt     = 0;
 
-                if (self.local) {
+                if (this.local) {
                     return null;
                 }
 
-                if (self.model.isPlain()) {
+                if (this.model.isPlain()) {
                     throw new Error("Cannot save plain store");
                 }
 
-                self.each(function(rec) {
+                this.each(rec => {
                     if (rec.isDirty()) {
                         recs[rec.getId()] = rec.storeData(rec.getData());
                         cnt++;
@@ -815,32 +789,27 @@ module.exports = MetaphorJs.model.Store = function(){
                     return null;
                 }
 
-                if (!silent && self.trigger("before-save", self, recs) === false) {
+                if (!silent && this.trigger("before-save", this, recs) === false) {
                     return null;
                 }
 
-                return self.model.saveStore(self, recs)
-                    .done(function(response){
-                        self._onModelSaveSuccess(response, silent);
-                    })
-                    .fail(function(reason){
-                        self._onModelSaveFail(reason, silent);
-                    });
-
+                return this.model
+                    .saveStore(this, recs)
+                    .done(response => this._onModelSaveSuccess(response, silent))
+                    .fail(reason => this._onModelSaveFail(reason, silent));
             },
 
             _onModelSaveSuccess: function(response, silent) {
 
-                var self = this,
-                    i, len,
+                let i, len,
                     id, rec,
                     data = response.data;
 
                 if (data && data.length) {
                     for (i = 0, len = data.length; i < len; i++) {
 
-                        id      = self.getRecordId(data[i]);
-                        rec     = self.getById(id);
+                        id      = this.getRecordId(data[i]);
+                        rec     = this.getById(id);
 
                         if (rec) {
                             rec.importData(data[i]);
@@ -848,17 +817,16 @@ module.exports = MetaphorJs.model.Store = function(){
                     }
                 }
 
-                self.onSave();
+                this.onSave();
                 if (!silent) {
-                    self.trigger("save", self);
+                    this.trigger("save", this);
                 }
             },
 
             _onModelSaveFail: function(reason, silent) {
-                var self = this;
-                self.onFailedSave(reason);
+                this.onFailedSave(reason);
                 if (!silent) {
-                    self.trigger("failed-save", self, reason);
+                    this.trigger("failed-save", this, reason);
                 }
             },
 
@@ -891,10 +859,9 @@ module.exports = MetaphorJs.model.Store = function(){
              */
             deleteById: function(ids, silent, skipUpdate) {
 
-                var self    = this,
-                    i, len, rec;
+                let i, len, rec;
 
-                if (self.local) {
+                if (this.local) {
                     return null;
                 }
 
@@ -907,29 +874,29 @@ module.exports = MetaphorJs.model.Store = function(){
                 }
 
                 for (i = 0, len = ids.length; i < len; i++){
-                    rec = self.getById(ids[i]);
-                    self.remove(rec, silent, skipUpdate);
+                    rec = this.getById(ids[i]);
+                    this.remove(rec, silent, skipUpdate);
                     if (rec instanceof MetaphorJs.model.Record) {
                         rec.$destroy();
                     }
                 }
 
-                if (!silent && self.trigger("before-delete", self, ids) === false) {
+                if (!silent && this.trigger("before-delete", this, ids) === false) {
                     return null;
                 }
 
-                return self.model.deleteRecords(self, ids)
-                    .done(function() {
-                        self.totalLength -= ids.length;
-                        self.onDelete();
+                return this.model.deleteRecords(this, ids)
+                    .done(() => {
+                        this.totalLength -= ids.length;
+                        this.onDelete();
                         if (!silent) {
-                            self.trigger("delete", self, ids);
+                            this.trigger("delete", this, ids);
                         }
                     })
-                    .fail(function() {
-                        self.onFailedDelete();
+                    .fail(() => {
+                        this.onFailedDelete();
                         if (!silent) {
-                            self.trigger("failed-delete", self, ids);
+                            this.trigger("failed-delete", this, ids);
                         }
                     });
             },
@@ -955,13 +922,12 @@ module.exports = MetaphorJs.model.Store = function(){
              * @returns {MetaphorJs.lib.Promise}
              */
             deleteAt: function(inx, silent, skipUpdate) {
-                var self    = this,
-                    rec     = self.getAt(inx);
+                const rec = this.getAt(inx);
 
                 if (!rec) {
                     throw new Error("Record not found at " + inx);
                 }
-                return self["delete"](rec, silent, skipUpdate);
+                return this["delete"](rec, silent, skipUpdate);
             },
 
             /**
@@ -973,8 +939,7 @@ module.exports = MetaphorJs.model.Store = function(){
              * @returns {MetaphorJs.lib.Promise}
              */
             "delete": function(rec, silent, skipUpdate) {
-                var self    = this;
-                return self.deleteById(self.getRecordId(rec), silent, skipUpdate);
+                return this.deleteById(this.getRecordId(rec), silent, skipUpdate);
             },
 
             /**
@@ -986,15 +951,14 @@ module.exports = MetaphorJs.model.Store = function(){
              * @returns {MetaphorJs.lib.Promise}
              */
             deleteRecords: function(recs, silent, skipUpdate) {
-                var ids     = [],
-                    self    = this,
-                    i, len;
+                const ids = [];
+                let i, len;
 
                 for (i = 0, len = recs.length; i < len; i++) {
-                    ids.push(self.getRecordId(recs[i]));
+                    ids.push(this.getRecordId(recs[i]));
                 }
 
-                return self.deleteById(ids, silent, skipUpdate);
+                return this.deleteById(ids, silent, skipUpdate);
             },
 
 
@@ -1006,13 +970,11 @@ module.exports = MetaphorJs.model.Store = function(){
              */
             loadOr: function(options) {
 
-                var self    = this;
-
-                if (!self.local && !self.isLoading() && !self.isLoaded()) {
-                    return self.load(null, options);
+                if (!this.local && !this.isLoading() && !this.isLoaded()) {
+                    return this.load(null, options);
                 }
 
-                return MetaphorJs.lib.Promise.resolve(self);
+                return MetaphorJs.lib.Promise.resolve(this);
             },
 
             /**
@@ -1025,14 +987,13 @@ module.exports = MetaphorJs.model.Store = function(){
              * @returns {MetaphorJs.lib.Promise}
              */
             addPrevPage: function(options) {
-                var self    = this;
 
                 options = options || {};
                 options.append = false;
                 options.prepend = true;
                 options.noopOnEmpty = true;
 
-                return self.loadPrevPage(options);
+                return this.loadPrevPage(options);
             },
 
             /**
@@ -1045,18 +1006,15 @@ module.exports = MetaphorJs.model.Store = function(){
              * @returns {MetaphorJs.lib.Promise}
              */
             addNextPage: function(options) {
-
-                var self    = this;
-
                 options = options || {};
                 options.append = true;
                 options.prepend = false;
                 options.noopOnEmpty = true;
 
-                if (!self.local && (!self.totalLength || self.length < self.totalLength)) {
-                    return self.load({
-                        start:      self.length,
-                        limit:      self.pageSize
+                if (!this.local && (!this.totalLength || this.length < this.totalLength)) {
+                    return this.load({
+                        start:      this.length,
+                        limit:      this.pageSize
                     }, options);
                 }
                 else {
@@ -1073,18 +1031,16 @@ module.exports = MetaphorJs.model.Store = function(){
              */
             loadNextPage: function(options) {
 
-                var self    = this;
+                if (!this.totalLength || 
+                    this.local ||
+                    this.length < this.totalLength) {
 
-                if (!self.totalLength || 
-                    self.local ||
-                    self.length < self.totalLength) {
-
-                    self.start += self.pageSize;
-                    if (!self.local) {
-                        return self.load(null, options);
+                    this.start += this.pageSize;
+                    if (!this.local) {
+                        return this.load(null, options);
                     }
                     else {
-                        self.update();
+                        this.update();
                     }
                 }
                 
@@ -1100,18 +1056,16 @@ module.exports = MetaphorJs.model.Store = function(){
              */
             loadPrevPage: function(options) {
 
-                var self    = this;
-
-                if (self.start > 0) {
-                    self.start -= self.pageSize;
-                    if (self.start < 0) {
-                        self.start = 0;
+                if (this.start > 0) {
+                    this.start -= this.pageSize;
+                    if (this.start < 0) {
+                        this.start = 0;
                     }
-                    if (!self.local) {
-                        return self.load(null, options);
+                    if (!this.local) {
+                        return this.load(null, options);
                     }
                     else {
-                        self.update();
+                        this.update();
                     }
                 }
 
@@ -1127,16 +1081,16 @@ module.exports = MetaphorJs.model.Store = function(){
              * @returns {MetaphorJs.lib.Promise}
              */
             loadPage: function(start, options) {
-                var self = this;
-                self.start = parseInt(start, 10);
-                if (self.start < 0) {
-                    self.start = 0;
+
+                this.start = parseInt(start, 10);
+                if (this.start < 0) {
+                    this.start = 0;
                 }
-                if (!self.local) {
-                    return self.load(null, options);
+                if (!this.local) {
+                    return this.load(null, options);
                 }
                 else {
-                    self.update();
+                    this.update();
                 }
                 return MetaphorJs.lib.Promise.resolve();
             },
@@ -1182,20 +1136,20 @@ module.exports = MetaphorJs.model.Store = function(){
              */
             processRawDataItem: function(item) {
 
-                var self    = this;
-
                 if (item instanceof MetaphorJs.model.Record) {
                     return item;
                 }
 
-                if (self.model.isPlain()) {
-                    return self.model.extendPlainRecord(item);
+                if (this.model.isPlain()) {
+                    return this.model.extendPlainRecord(
+                        this.model.normalizeRecord(item)
+                    );
                 }
                 else {
 
-                    var type    = self.model.type,
-                        id      = self.getRecordId(item),
-                        r;
+                    const type    = this.model.type,
+                        id      = this.getRecordId(item);
+                    let r;
 
                     if (id) {
                         r       = MetaphorJs.model.Model.getFromCache(type, id);
@@ -1203,7 +1157,7 @@ module.exports = MetaphorJs.model.Store = function(){
 
                     if (!r) {
                         r       = cls.factory(type, id, item, {
-                                    model:      self.model,
+                                    model:      this.model,
                                     standalone: false
                         });
                     }
@@ -1220,10 +1174,9 @@ module.exports = MetaphorJs.model.Store = function(){
              * @returns {MetaphorJs.model.Record}
              */
             bindRecord: function(mode, rec) {
-                var self = this;
-                rec[mode]("change", self.onRecordChange, self);
-                rec[mode]("destroy", self.onRecordDestroy, self);
-                rec[mode]("dirty-change", self.onRecordDirtyChange, self);
+                rec[mode]("change", this.onRecordChange, this);
+                rec[mode]("destroy", this.onRecordDestroy, this);
+                rec[mode]("dirty-change", this.onRecordDirtyChange, this);
                 return rec;
             },
 
@@ -1308,18 +1261,18 @@ module.exports = MetaphorJs.model.Store = function(){
              * @param {boolean} skipUpdate Do not run store updates
              */
             addMany: function(recs, silent, skipUpdate) {
-                var i, l, self = this, start = self.length;
+                let i, l, start = this.length;
 
                 for (i = 0, l = recs.length; i < l; i++) {
-                    self.insert(start + i, recs[i], true, true);
+                    this.insert(start + i, recs[i], true, true);
                 }
 
                 if (!skipUpdate) {
-                    self.update();
+                    this.update();
                 }
 
                 if (l > 0 && !silent) {
-                    self.trigger("add", recs);
+                    this.trigger("add", recs);
                 }
             },
 
@@ -1360,9 +1313,8 @@ module.exports = MetaphorJs.model.Store = function(){
              */
             removeAt: function(index, length, silent, skipUpdate, unfiltered) {
 
-                var self    = this,
-                    i       = 0,
-                    l       = self.length;
+                let i       = 0,
+                    l       = this.length;
 
                 if (l === 0) {
                     return;
@@ -1381,35 +1333,35 @@ module.exports = MetaphorJs.model.Store = function(){
                 }
 
                 if (!unfiltered) {
-                    index   = self.items.indexOf(self.current[index]);
+                    index   = this.items.indexOf(this.current[index]);
                 }
 
-                while (index < self.length && index >= 0 && i < length) {
+                while (index < this.length && index >= 0 && i < length) {
 
-                    self.length--;
-                    var rec     = self.items[index];
-                    self.items.splice(index, 1);
+                    this.length--;
+                    const rec     = this.items[index];
+                    this.items.splice(index, 1);
 
-                    var id      = self.getRecordId(rec);
+                    const id      = this.getRecordId(rec);
 
                     if (id !== undefined){
-                        delete self.map[id];
-                        delete self.currentMap[id];
+                        delete this.itemMap[id];
+                        delete this.currentMap[id];
                     }
 
-                    self.onRemove(rec, id);
+                    this.onRemove(rec, id);
 
                     if (!skipUpdate) {
-                        self.update();
+                        this.update();
                     }
 
                     if (!silent) {
-                        self.trigger('remove', rec, id);
+                        this.trigger('remove', rec, id);
                     }
 
                     if (rec instanceof MetaphorJs.model.Record) {
-                        self.bindRecord("un", rec);
-                        rec.detachStore(self);
+                        this.bindRecord("un", rec);
+                        rec.detachStore(this);
 
                         if (length === 1) {
                             return rec.$destroyed ? undefined : rec;
@@ -1438,7 +1390,7 @@ module.exports = MetaphorJs.model.Store = function(){
              * @returns {MetaphorJs.model.Record|object|undefined}
              */
             removeRange: function(start, end, silent, skipUpdate, unfiltered) {
-                var l       = this.length;
+                const l = this.length;
 
                 if (l === 0) {
                     return;
@@ -1483,15 +1435,15 @@ module.exports = MetaphorJs.model.Store = function(){
              * @param {boolean} skipUpdate Do not run store updates
              */
             insertMany: function(index, recs, silent, skipUpdate) {
-                var i, l, self = this;
+                let i, l;
                 for (i = 0, l = recs.length; i < l; i++) {
-                    self.insert(index + i, recs[i], true, true);
+                    this.insert(index + i, recs[i], true, true);
                 }
                 if (l > 0 && !skipUpdate) {
-                    self.update();
+                    this.update();
                 }
                 if (l > 0 && !silent) {
-                    self.trigger("add", recs);
+                    this.trigger("add", recs);
                 }
             },
 
@@ -1508,55 +1460,54 @@ module.exports = MetaphorJs.model.Store = function(){
              */
             insert: function(index, rec, silent, skipUpdate) {
 
-                var self = this,
-                    id,
+                let id,
                     last = false;
 
-                rec     = self.processRawDataItem(rec);
-                id      = self.getRecordId(rec);
+                rec     = this.processRawDataItem(rec);
+                id      = this.getRecordId(rec);
 
-                if(self.map[id]){
-                    self.$$observable.suspendAllEvents();
-                    self.removeId(id);
-                    self.$$observable.resumeAllEvents();
+                if(this.itemMap[id]){
+                    this.$$observable.suspendAllEvents();
+                    this.removeId(id);
+                    this.$$observable.resumeAllEvents();
                 }
 
-                if(index >= self.length){
-                    self.items.push(rec);
+                if(index >= this.length){
+                    this.items.push(rec);
                     last = true;
                 }
                 else {
-                    self.items.splice(index, 0, rec);
+                    this.items.splice(index, 0, rec);
                 }
 
-                self.length++;
+                this.length++;
 
-                if (self.maxLength && self.length > self.maxLength) {
+                if (this.maxLength && this.length > this.maxLength) {
                     if (last) {
-                        self.pop(silent, true);
+                        this.pop(silent, true);
                     }
                     else {
-                        self.shift(silent, true);
+                        this.shift(silent, true);
                     }
                 }
 
                 if(id !== undefined){
-                    self.map[id] = rec;
+                    this.itemMap[id] = rec;
                 }
 
                 if (rec instanceof MetaphorJs.model.Record) {
-                    rec.attachStore(self);
-                    self.bindRecord("on", rec);
+                    rec.attachStore(this);
+                    this.bindRecord("on", rec);
                 }
 
-                self.onAdd(index, rec);
+                this.onAdd(index, rec);
 
                 if (!skipUpdate) {
-                    self.update();
+                    this.update();
                 }
 
                 if (!silent) {
-                    self.trigger('add', [rec]);
+                    this.trigger('add', [rec]);
                 }
 
                 return rec;
@@ -1572,22 +1523,20 @@ module.exports = MetaphorJs.model.Store = function(){
              * @returns {MetaphorJs.model.Record|object} new record
              */
             replace: function(old, rec, silent, skipUpdate) {
-                var self    = this,
-                    index;
 
-                index   = self.items.indexOf(old);
+                const index   = this.items.indexOf(old);
 
-                self.removeAt(index, 1, true, true, true);
-                self.insert(index, rec, true, true);
+                this.removeAt(index, 1, true, true, true);
+                this.insert(index, rec, true, true);
 
                 if (!skipUpdate) {
-                    self.update();
+                    this.update();
                 }
 
-                self.onReplace(old, rec);
+                this.onReplace(old, rec);
 
                 if (!silent) {
-                    self.trigger('replace', old, rec);
+                    this.trigger('replace', old, rec);
                 }
 
                 return rec;
@@ -1604,12 +1553,8 @@ module.exports = MetaphorJs.model.Store = function(){
              * @returns {MetaphorJs.model.Record|object} new record
              */
             replaceId: function(id, rec, silent, skipUpdate) {
-                var self    = this,
-                    index;
-
-                index = self.indexOfId(id);
-
-                return self.replace(self.getAt(index), rec, silent, skipUpdate);
+                const index = this.indexOfId(id);
+                return this.replace(this.getAt(index), rec, silent, skipUpdate);
             },
 
             /**
@@ -1629,7 +1574,7 @@ module.exports = MetaphorJs.model.Store = function(){
              * @returns {MetaphorJs.model.Record|object|null}
              */
             remove: function(rec, silent, skipUpdate) {
-                var inx = this.indexOf(rec, true);
+                const inx = this.indexOf(rec, true);
                 if (inx !== -1) {
                     return this.removeAt(inx, 1, silent, skipUpdate, true);
                 }
@@ -1645,7 +1590,7 @@ module.exports = MetaphorJs.model.Store = function(){
              * @returns {MetaphorJs.model.Record|object|null}
              */
             removeId: function(id, silent, skipUpdate) {
-                var inx = this.indexOfId(id, true);
+                const inx = this.indexOfId(id, true);
                 if (inx !== -1) {
                     return this.removeAt(inx, 1, silent, skipUpdate, true);
                 }
@@ -1673,7 +1618,7 @@ module.exports = MetaphorJs.model.Store = function(){
              */
             containsId: function(id, unfiltered) {
                 if (unfiltered) {
-                    return this.map[id] !== undefined;
+                    return this.itemMap[id] !== undefined;
                 }
                 else {
                     return this.currentMap[id] !== undefined;
@@ -1687,15 +1632,14 @@ module.exports = MetaphorJs.model.Store = function(){
              */
             clear: function(silent) {
 
-                var self    = this,
-                    recs    = self.getRange();
+                const recs = this.getRange();
 
-                self._reset();
-                self.onClear();
+                this._reset();
+                this.onClear();
 
                 if (!silent) {
-                    self.trigger('update', self);
-                    self.trigger('clear', self, recs);
+                    this.trigger('update', this);
+                    this.trigger('clear', this, recs);
                 }
             },
 
@@ -1716,27 +1660,26 @@ module.exports = MetaphorJs.model.Store = function(){
             },
 
             _reset: function(keepRecords) {
-                var self    = this,
-                i, len, rec;
+                let i, len, rec;
 
                 if (!keepRecords) {
-                    for (i = 0, len = self.items.length; i < len; i++) {
-                        rec = self.items[i];
+                    for (i = 0, len = this.items.length; i < len; i++) {
+                        rec = this.items[i];
                         if (rec instanceof MetaphorJs.model.Record) {
-                            self.bindRecord("un", rec);
-                            rec.detachStore(self);
+                            this.bindRecord("un", rec);
+                            rec.detachStore(this);
                         }
                     }
                 }
 
-                self.length         = 0;
-                self.currentLength  = 0;
-                self.totalLength    = 0;
-                self.items          = [];
-                self.current        = [];
-                self.map            = {};
-                self.currentMap     = {};
-                self.loaded         = self.local;
+                this.length         = 0;
+                this.currentLength  = 0;
+                this.totalLength    = 0;
+                this.items          = [];
+                this.current        = [];
+                this.itemMap        = {};
+                this.currentMap     = {};
+                this.loaded         = this.local;
             },
 
 
@@ -1762,7 +1705,7 @@ module.exports = MetaphorJs.model.Store = function(){
              */
             getById: function(id, unfiltered) {
                 return unfiltered ?
-                       (this.map[id] || undefined) :
+                       (this.itemMap[id] || undefined) :
                        (this.currentMap[id] || undefined);
             },
 
@@ -1803,15 +1746,29 @@ module.exports = MetaphorJs.model.Store = function(){
              * @param {boolean} unfiltered Iterate over unfiltered set
              */
             each: function(fn, context, unfiltered) {
-                var items = unfiltered ?
+                const items = unfiltered ?
                             this.items.slice() :
                             this.current.slice();
+                let i, len;
 
-                for(var i = 0, len = items.length; i < len; i++){
+                for(i = 0, len = items.length; i < len; i++){
                     if(fn.call(context, items[i], i, len) === false){
                         break;
                     }
                 }
+            },
+
+            /**
+             * Map store
+             * @param {function} fn 
+             * @param {object} context 
+             * @param {boolean} unfiltered 
+             * @returns []
+             */
+            map: function(fn, context, unfiltered) {
+                const ret = [];
+                this.each(rec => ret.push(fn.call(context, rec)), null, unfiltered);
+                return ret;
             },
 
             /**
@@ -1827,12 +1784,12 @@ module.exports = MetaphorJs.model.Store = function(){
              * @param {boolean} unfiltered Iterate over unfiltered set
              */
             eachId: function(fn, context, unfiltered) {
-
-                var self    = this;
-
-                self.each(function(rec, i, len){
-                    return fn.call(context, self.getRecordId(rec), i, len);
-                }, null, unfiltered);
+                this.each(
+                    (rec, i, len) => 
+                        fn.call(context, this.getRecordId(rec), i, len), 
+                    null, 
+                    unfiltered
+                );
             },
 
             /**
@@ -1844,20 +1801,14 @@ module.exports = MetaphorJs.model.Store = function(){
              */
             collect: function(f, unfiltered) {
 
-                var coll    = [],
-                    self    = this,
-                    rt      = !self.model.isPlain();
+                const rt      = !this.model.isPlain();
 
-                self.each(function(rec){
-
-                    var val = rt ? rec.get(f) : rec[f];
-
-                    if (val) {
-                        coll.push(val);
-                    }
-                }, null, unfiltered);
-
-                return coll;
+                return this.map(
+                            rec => rt ? rec.get(f) : rec[f], 
+                            null, 
+                            unfiltered
+                        )
+                        .filter(r => r !== undefined)
             },
 
             /**
@@ -1897,17 +1848,16 @@ module.exports = MetaphorJs.model.Store = function(){
              * @returns {MetaphorJs.model.Record[]|object[]}
              */
             getRange : function(start, end, unfiltered){
-                var self    = this,
-                    items   = unfiltered ? self.items : self.current,
-                    r       = [],
-                    i;
+                const items   = unfiltered ? this.items : this.current,
+                      r       = [];
+                let   i;
 
                 if(items.length < 1){
                     return r;
                 }
 
                 start   = start || 0;
-                end     = Math.min(end == undefined ? self.length-1 : end, self.length-1);
+                end     = Math.min(end == undefined ? this.length-1 : end, this.length-1);
 
                 if(start <= end){
                     for(i = start; i <= end; i++) {
@@ -1935,7 +1885,7 @@ module.exports = MetaphorJs.model.Store = function(){
              * @returns {MetaphorJs.model.Record|object|null}
              */
             findBy: function(fn, context, start, unfiltered) {
-                var inx = this.findIndexBy(fn, context, start, unfiltered);
+                const inx = this.findIndexBy(fn, context, start, unfiltered);
                 return inx === -1 ? undefined : this.getAt(inx, unfiltered);
             },
 
@@ -1954,11 +1904,11 @@ module.exports = MetaphorJs.model.Store = function(){
              */
             findIndexBy : function(fn, context, start, unfiltered) {
 
-                var self = this,
-                    it  = unfiltered ? self.items : self.current;
+                const it  = unfiltered ? this.items : this.current;
+                let i, len;
 
-                for(var i = (start||0), len = it.length; i < len; i++){
-                    if(fn.call(context, it[i], self.getRecordId(it[i]))){
+                for(i = (start||0), len = it.length; i < len; i++) {
+                    if(fn.call(context, it[i], this.getRecordId(it[i]))){
                         return i;
                     }
                 }
@@ -1978,13 +1928,10 @@ module.exports = MetaphorJs.model.Store = function(){
              */
             find: function(property, value, exact, unfiltered) {
 
-                var self    = this,
-                    rt      = !self.model.isPlain(),
-                    v;
+                const rt    = !this.model.isPlain();
+                const inx   = this.findIndexBy(rec => {
 
-                var inx = self.findIndexBy(function(rec) {
-
-                    v = rt ? rec.get(property) : rec[property];
+                    const v = rt ? rec.get(property) : rec[property];
 
                     if (exact) {
                         return v === value;
@@ -1993,9 +1940,9 @@ module.exports = MetaphorJs.model.Store = function(){
                         return v == value;
                     }
 
-                }, self, 0, unfiltered);
+                }, this, 0, unfiltered);
 
-                return inx !== -1 ? self.getAt(inx, unfiltered) : null;
+                return inx !== -1 ? this.getAt(inx, unfiltered) : null;
             },
 
             /**
@@ -2021,7 +1968,7 @@ module.exports = MetaphorJs.model.Store = function(){
              */
             findBySet: function(props, unfiltered) {
 
-                var found   = null,
+                let found   = null,
                     match,
                     i;
 
@@ -2057,58 +2004,57 @@ module.exports = MetaphorJs.model.Store = function(){
              */
             update: function() {
 
-                var self        = this,
-                    filtered    = self.filtered,
-                    sorted      = self.sorted,
-                    isPlain     = self.model.isPlain();
+                const filtered    = this.filtered,
+                      sorted      = this.sorted,
+                      isPlain     = this.model.isPlain();
 
-                if (self.local) {
-                    self.totalLength = self.length = self.items.length;
+                if (this.local) {
+                    this.totalLength = this.length = this.items.length;
                 }
 
-                self.currentLength  = self.length;
-                self.currentMap     = self.map;
-                self.current        = self.items;
+                this.currentLength  = this.length;
+                this.currentMap     = this.itemMap;
+                this.current        = this.items;
 
                 if (filtered) {
 
-                    var by              = self.filterBy,
-                        opt             = self.filterOpt,
-                        current,
-                        map;
+                    const by              = this.filterBy,
+                          opt             = this.filterOpt;
+                    let current, map;
 
-                    self.current        = current = [];
-                    self.currentMap     = map = {};
+                    this.current        = current = [];
+                    this.currentMap     = map = {};
 
-                    self.each(function(rec){
+                    this.each((rec) => {
                         if (filterArray.compare(isPlain ? rec : rec.data, by, opt)) {
                             current.push(rec);
-                            map[self.getRecordId(rec)] = rec;
+                            map[this.getRecordId(rec)] = rec;
                         }
                     }, null, true);
 
-                    self.currentLength  = self.current.length;
+                    this.currentLength  = this.current.length;
                 }
 
-                if (self.local && self.pageSize) {
-                    self.current = self.current.slice(self.start, self.start + self.pageSize);
-                    self.currentLength  = self.current.length;
+                if (this.local && this.pageSize) {
+                    this.current = this.current.slice(this.start, this.start + this.pageSize);
+                    this.currentLength  = this.current.length;
                 }
 
                 if (sorted) {
-                    var sortBy          = self.sortBy,
-                        rt              = !self.model.isPlain(),
+                    const sortBy        = this.sortBy,
+                        rt              = !this.model.isPlain(),
                         getterFn        = function(item) {
                             return rt ? item.get(sortBy) : item[sortBy];
                         };
-                    self.current        = sortArray(
-                        self.current, 
+
+                    this.current        = sortArray(
+                        this.current, 
                         isFunction(sortBy) ? {fn: sortBy} : getterFn, 
-                        self.sortDir
+                        this.sortDir
                     );
                 }
 
-                self.trigger("update", self);
+                this.trigger("update", this);
             },
 
 
@@ -2123,13 +2069,11 @@ module.exports = MetaphorJs.model.Store = function(){
              */
             filter: function(by, opt) {
 
-                var self    = this;
+                this.filtered       = true;
+                this.filterBy       = by;
+                this.filterOpt      = opt;
 
-                self.filtered       = true;
-                self.filterBy       = by;
-                self.filterOpt      = opt;
-
-                self.update();
+                this.update();
             },
 
             /**
@@ -2138,16 +2082,14 @@ module.exports = MetaphorJs.model.Store = function(){
              */
             clearFilter: function() {
 
-                var self    = this;
-
-                if (!self.filtered) {
+                if (!this.filtered) {
                     return;
                 }
 
-                self.filterBy = null;
-                self.filterOpt = null;
+                this.filterBy = null;
+                this.filterOpt = null;
 
-                self.update();
+                this.update();
             },
 
             /**
@@ -2162,11 +2104,10 @@ module.exports = MetaphorJs.model.Store = function(){
              * @param {string} dir asc|desc
              */
             sort: function(by, dir) {
-                var self = this;
-                self.sorted = true;
-                self.sortBy = by;
-                self.sortDir = dir;
-                self.update();
+                this.sorted = true;
+                this.sortBy = by;
+                this.sortDir = dir;
+                this.update();
             },
 
             /**
@@ -2174,29 +2115,24 @@ module.exports = MetaphorJs.model.Store = function(){
              * @method
              */
             clearSorting: function() {
-                var self = this;
-                self.sorted = false;
-                self.sortBy = null;
-                self.sortDir = null;
-                self.update();
+                this.sorted = false;
+                this.sortBy = null;
+                this.sortDir = null;
+                this.update();
             },
 
 
             onDestroy: function() {
 
-                var self    = this;
+                delete allStores[this.id];
 
-                delete allStores[self.id];
-
-                if (self.sourceStore) {
-                    self.initSourceStore(self.sourceStore, "un");
+                if (this.sourceStore) {
+                    this.initSourceStore(this.sourceStore, "un");
                 }
 
-                self.clear();
-
-                self.trigger("destroy", self);
-
-                self.$super();
+                this.clear();
+                this.trigger("destroy", this);
+                this.$super();
             }
 
         },
@@ -2225,7 +2161,7 @@ module.exports = MetaphorJs.model.Store = function(){
              */
             eachStore: function(fn, fnScope) {
 
-                var id;
+                let id;
 
                 for (id in allStores) {
                     if (fn.call(fnScope, allStores[id]) === false) {
