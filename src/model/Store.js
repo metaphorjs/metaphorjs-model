@@ -733,7 +733,9 @@ module.exports = MetaphorJs.model.Store = function(){
                         this.clear(true);
                 }
 
-                this.totalLength = parseInt(response.total);
+                if (response.total !== null && response.total !== undefined) { 
+                    this.totalLength = parseInt(response.total);
+                }
                 this._load(response.data, options);
             },
 

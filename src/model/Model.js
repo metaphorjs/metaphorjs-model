@@ -344,10 +344,10 @@ module.exports = MetaphorJs.model.Model = function(){
             }
 
             if (!cfg.url) {
-                if (!url) {
+                if (!url && !cfg.fetch) {
                     throw what + "." + type + " url not defined";
                 }
-                cfg.url     = url;
+                url && (cfg.url = url);
             }
 
             ajaxCfg.url = cfg.url;
@@ -395,6 +395,9 @@ module.exports = MetaphorJs.model.Model = function(){
                     }
                     else if (what === "store") {
                         this._processStoreResponse(type, response, promise);
+                    }
+                    else if (what === "controller") {
+                        this._processControllerResponse(type, response, promise);
                     }
                 });
 
