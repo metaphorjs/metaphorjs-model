@@ -386,7 +386,9 @@ module.exports = MetaphorJs.model.Model = function(){
             );
 
             if (cfg.fetch) {
-                const df = cfg.fetch(ajaxCfg.data),
+                const df = what === "controller" ?
+                            cfg.fetch(id, ajaxCfg.data) :
+                            cfg.fetch(ajaxCfg.data),
                       promise = new MetaphorJs.lib.Promise;
 
                 df.then(response => {
