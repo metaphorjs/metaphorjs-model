@@ -39,11 +39,11 @@ module.exports = MetaphorJs.model.Model = function(){
          * @method $init
          * @param {object} cfg {
          *      Properties 
-         *      <code>json,id,url,data,success,extra,root,data,
+         *      <code>json,id,url,fn,data,success,extra,root,data,
          *              processRequest,validate,resolve</code> are valid 
          *      on the top level and inside all create/load/save/delete/controller
-         *      groups.<br> Use string instead of object as shortcut
-         *      for load.url/save.url etc.
+         *      groups.<br> Use string or function instead of object as shortcut
+         *      for load.url/save.url/load.fn/save.fn etc.
          * 
          *      @type {string} type Record class
          *      @type {object} fields {
@@ -89,7 +89,7 @@ module.exports = MetaphorJs.model.Model = function(){
          *      @type {string} url Api endpoint.
          *                      In url you can use <code>:name</code> placeholders,
          *                      they will be taken from payload.
-         *      @type {function} fetch Optional function that performs request.
+         *      @type {function} fn Optional function that performs request.
          *                       It accepts payload and returns Promise which
          *                          is then resolved with response. 
          *      @type {string} id Id field. Where to take record id from or 
@@ -340,11 +340,11 @@ module.exports = MetaphorJs.model.Model = function(){
                 cfg = { url: cfg };
             }
             else if (isFunction(cfg)) {
-                cfg = { fetch: cfg };
+                cfg = { fn: cfg };
             }
 
             if (!cfg.url) {
-                if (!url && !cfg.fetch) {
+                if (!url && !cfg.fn) {
                     throw what + "." + type + " url not defined";
                 }
                 url && (cfg.url = url);
@@ -385,10 +385,10 @@ module.exports = MetaphorJs.model.Model = function(){
                 true
             );
 
-            if (cfg.fetch) {
+            if (cfg.fn) {
                 const df = what === "controller" ?
-                            cfg.fetch(id, ajaxCfg.data) :
-                            cfg.fetch(ajaxCfg.data),
+                            cfg.fn(id, ajaxCfg.data) :
+                            cfg.fn(ajaxCfg.data),
                       promise = new MetaphorJs.lib.Promise;
 
                 df.then(response => {
