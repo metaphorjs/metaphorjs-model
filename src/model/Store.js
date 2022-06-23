@@ -257,7 +257,7 @@ module.exports = MetaphorJs.model.Store = function(){
                         this._loadArray(initialData);
                     }
                     else {
-                        this._loadAjaxData(initialData);
+                        this._fetchData(initialData);
                     }
                 }
 
@@ -482,8 +482,8 @@ module.exports = MetaphorJs.model.Store = function(){
              * @method
              * @returns {object}
              */
-            getAjaxData: function() {
-                return this.ajaxData;
+            getFetchedData: function() {
+                return this.fetchedData;
             },
 
             /**
@@ -555,7 +555,7 @@ module.exports = MetaphorJs.model.Store = function(){
              * @method
              * @param {object} data
              */
-            _loadAjaxData: function(data, options) {
+            _fetchData: function(data, options) {
 
                 options = options || {};
 
@@ -563,7 +563,7 @@ module.exports = MetaphorJs.model.Store = function(){
                     return;
                 }
 
-                this.ajaxData = data;
+                this.fetchedData = data;
 
                 this.model._processStoreResponse("load", data, {
                     resolve: (response) => {
@@ -706,7 +706,7 @@ module.exports = MetaphorJs.model.Store = function(){
                             return;
                         }
                         this.loadingPromise = null;
-                        this.ajaxData = this.model.lastAjaxResponse;
+                        this.fetchedData = this.model.lastFetchedResponse;
                         this._onModelLoadSuccess(response, options);
                     })
                     .fail((reason) => {
@@ -714,7 +714,7 @@ module.exports = MetaphorJs.model.Store = function(){
                             return;
                         }
                         this.loadingPromise = null;
-                        this.ajaxData = this.model.lastAjaxResponse;
+                        this.fetchedData = this.model.lastFetchedResponse;
                         this._onModelLoadFail(reason, options);
                     });
             },

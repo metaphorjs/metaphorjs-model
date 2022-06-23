@@ -2,7 +2,6 @@
 const extend  = require("metaphorjs-shared/src/func/extend.js"),
     cls = require("metaphorjs-class/src/cls.js"),
     MetaphorJs = require("metaphorjs-shared/src/MetaphorJs.js"),
-    ajax = require("metaphorjs-ajax/src/func/ajax.js"),
     isString = require("metaphorjs-shared/src/func/isString.js"),
     isFunction = require("metaphorjs-shared/src/func/isFunction.js"),
     isThenable = require("metaphorjs-shared/src/func/isThenable.js");
@@ -30,7 +29,7 @@ module.exports = MetaphorJs.model.Model = function(){
         store:          null,
         plain:          false,
 
-        lastAjaxResponse: null,
+        lastFetchedResponse: null,
 
 
 
@@ -105,7 +104,7 @@ module.exports = MetaphorJs.model.Model = function(){
          *                          the field to take records from,
          *                          in other requests (if defined) this will be the field
          *                          to put payload into.
-         *      @type {object} ajax Various ajax settings from MetaphorJs.ajax module.
+         *      @type {object} remote Various fetch settings
          *      @type {function} processRequest {
          *          Custom request processor.
          *          @param {MetaphorJs.lib.Promise} returnPromise The promise 
@@ -321,7 +320,7 @@ module.exports = MetaphorJs.model.Model = function(){
                   dataProp    = this.getProp(what, type, "root"),
                   url         = this.getProp(what, type, "url"),
                   isJson      = this.getProp(what, type, "json"),
-                  ajaxCfg     = {};
+                  remoteCfg     = {};
 
             let res;
             let cfg = !isString(profile[type]) && !isFunction(profile[type]) ?
@@ -350,10 +349,10 @@ module.exports = MetaphorJs.model.Model = function(){
                 url && (cfg.url = url);
             }
 
-            ajaxCfg.url = cfg.url;
+            remoteCfg.url = cfg.url;
 
-            if (cfg.ajax) {
-                extend(ajaxCfg, cfg.ajax, true, false);
+            if (cfg.remote) {
+                extend(remoteCfg, cfg.remote, true, false);
             }
 
             if (cfg.validate) {
@@ -373,13 +372,13 @@ module.exports = MetaphorJs.model.Model = function(){
                 }
             }
 
-            ajaxCfg.data        = extend(
+            remoteCfg.data        = extend(
                 {},
                 cfg.data,
                 this.extra,
                 profile.extra,
                 profile[type] ? profile[type].extra : null,
-                ajaxCfg.data,
+                remoteCfg.data,
                 data,
                 true,
                 true
@@ -387,8 +386,8 @@ module.exports = MetaphorJs.model.Model = function(){
 
             if (cfg.fn) {
                 const df = what === "controller" ?
-                            cfg.fn(id, ajaxCfg.data) :
-                            cfg.fn(ajaxCfg.data),
+                            cfg.fn(id, remoteCfg.data) :
+                            cfg.fn(remoteCfg.data),
                       promise = new MetaphorJs.lib.Promise;
 
                 df.then(response => {
@@ -405,59 +404,65 @@ module.exports = MetaphorJs.model.Model = function(){
 
                 return promise;
             }
+            else if (!MetaphorJs.remote || !MetaphorJs.remote.fetch) {
+                console.error("MetaphorJs.remote.fetch is not available in this build");
+            }
 
             if (id && idProp) {
-                ajaxCfg.data[idProp] = id;
+                remoteCfg.data[idProp] = id;
             }
 
             if (data && dataProp && type !== "load") {
-                ajaxCfg.data[dataProp] = data;
+                remoteCfg.data[dataProp] = data;
             }
 
-            ajaxCfg.url = this._prepareRequestUrl(ajaxCfg.url, ajaxCfg.data);
+            remoteCfg.url = this._prepareRequestUrl(remoteCfg.url, remoteCfg.data);
 
-            if (!ajaxCfg.url) {
+            if (!remoteCfg.url) {
                 return MetaphorJs.lib.Promise.reject();
             }
 
-            if (!ajaxCfg.method) {
+            if (!remoteCfg.method) {
                 if (what !== "controller") {
-                    ajaxCfg.method = type === "load" ? "GET" : "POST";
+                    remoteCfg.method = type === "load" ? "GET" : "POST";
                 }
                 else {
-                    ajaxCfg.method = "GET";
+                    remoteCfg.method = "GET";
                 }
             }
 
-            if (isJson && ajaxCfg.data && ajaxCfg.method !== 'GET') { // && cfg.type != 'GET') {
-                ajaxCfg.contentType = "text/plain";
-                ajaxCfg.data        = JSON.stringify(ajaxCfg.data);
+            if (isJson && remoteCfg.data && remoteCfg.method !== 'GET') { // && cfg.type != 'GET') {
+                remoteCfg.contentType = "text/plain";
+                remoteCfg.data        = JSON.stringify(remoteCfg.data);
             }
 
-            ajaxCfg.context = this;
+            remoteCfg.context = this;
 
             let returnPromise;
 
             if (what === "record") {
-                ajaxCfg.processResponse = (response, deferred) => {
-                    this.lastAjaxResponse = response;
+                remoteCfg.processResponse = (response, deferred) => {
+                    this.lastFetchedResponse = response;
                     this._processRecordResponse(type, response, deferred);
                 };
-                returnPromise = this._processRecordRequest(ajax(ajaxCfg), type, id, data);
+                returnPromise = this._processRecordRequest(
+                                    MetaphorJs.remote.fetch(remoteCfg), type, id, data);
             }
             else if (what === "store") {
-                ajaxCfg.processResponse = (response, deferred) => {
-                    this.lastAjaxResponse = response;
+                remoteCfg.processResponse = (response, deferred) => {
+                    this.lastFetchedResponse = response;
                     this._processStoreResponse(type, response, deferred);
                 };
-                returnPromise = this._processStoreRequest(ajax(ajaxCfg), type, id, data);
+                returnPromise = this._processStoreRequest(
+                                    MetaphorJs.remote.fetch(remoteCfg), type, id, data);
             }
             else if (what === "controller") {
-                ajaxCfg.processResponse = (response, deferred) => {
-                    this.lastAjaxResponse = response;
+                remoteCfg.processResponse = (response, deferred) => {
+                    this.lastFetchedResponse = response;
                     this._processControllerResponse(type, response, deferred);
                 };
-                returnPromise = this._processControllerRequest(ajax(ajaxCfg), type, id, data);
+                returnPromise = this._processControllerRequest(
+                                    MetaphorJs.remote.fetch(remoteCfg), type, id, data);
             }
 
             if (cfg.processRequest) {
